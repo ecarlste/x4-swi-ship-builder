@@ -14,4 +14,4 @@ A web app for configuring any ship that can be built in **X4: Star Wars Interwor
 ## Scope
 
 - **SWI only.** This app targets the Star Wars Interworlds mod, not the base game of X4. Base-game ships and equipment are out of scope.
-- **Game version.** Built against the latest SWI release, which is believed to run on X4 version 8.00.01 (still to be confirmed).
+- **Game version.** Built against the latest SWI release, SWI 0.9.1 HF, which runs on X4 8.00 (latest hotfix).
