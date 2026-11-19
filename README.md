@@ -14,6 +14,18 @@ GAME_DATA_DIR=fixtures/game-data/tiny npm run dev
 
 `src/gameData.ts` is the app's only entry point to Game Data. It checks the snapshot against the shared zod schema and reference-integrity pass in `shared/game-data/`.
 
+## Extraction
+
+`npm run extract` reads Game Data from a local X4 8.00 + SWI install. Give it the install folder with `--x4`, or set `X4_INSTALL_DIR` in a gitignored `.env`:
+
+```bash
+npm run extract -- --x4 "/path/to/X4 Foundations"
+```
+
+It reads SWI's `extensions/starwarsmod_m1/content.xml` and checks its dependencies against `expectedDependencies` in `extract/config.ts`. If SWI adds or drops a dependency, extraction stops until the config is updated on purpose. It then reads base X4, the DLCs SWI depends on and SWI itself, in load order. Mini-DLCs, Reaper's Ship Pack and any other extensions are never read.
+
+So far it only writes each layer's raw files to the gitignored `.cache/extract/`. `layers.json` records the load order and versions. `layers/<NN>_<layer>/files/` holds the files from base and `ext_*` catalogs, and `subst/` holds the files from `subst_*` catalogs. Each file is pretty-printed JSON at a lowercased path that mirrors the game's (`libraries/wares.json`). Attributes become keys, child elements become arrays grouped by tag, and text becomes `#text`. If an attribute shares its name with a child element, the attribute's key gets an `@` prefix. A `<diff>` patch file keeps its order instead, because each operation applies to the result of the ones before it: the root's operations, and the elements each operation adds, go in a `#children` list of `{ "<tag>": … }` entries in document order. The added elements themselves use the grouped shape. Only libraries, the macro and component index, ship and equipment assets, and the English and language-neutral text files are converted.
+
 ## Tests
 
 ```bash
