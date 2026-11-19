@@ -125,6 +125,9 @@ export function useBuilder() {
   const [saved, setSaved] = useState<SavedLoadout[]>([]);
   const [openSavedId, setOpenSavedId] = useState<string | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
+  // The loadout as it was when loaded (from Saved Loadouts or a Share Link) or last saved.
+  // Variants diff the current loadout against it. A freshly picked ship has none.
+  const [origin, setOrigin] = useState<{ label: string; loadout: Loadout } | null>(null);
 
   // open a Share Link from the URL fragment
   useEffect(() => {
@@ -132,7 +135,7 @@ export function useBuilder() {
     if (!m) return;
     try {
       const { loadout: l, dropped } = revive(dec(m[1]).loadout);
-      if (l) setLoadout(l);
+      if (l) { setLoadout(l); setOrigin({ label: "the Share Link", loadout: l }); }
       setReport({ title: l ? "Opened a Share Link" : "This Share Link can't be opened", lines: dropped.length ? dropped : ["Everything fitted as saved."] });
     } catch { setReport({ title: "Broken Share Link", lines: ["The link could not be read."] }); }
   }, []);
@@ -141,25 +144,28 @@ export function useBuilder() {
   const missing = useMemo(() => (loadout ? missingMandatory(loadout) : []), [loadout]);
   const ship = loadout ? byId(SHIPS, loadout.ship)! : null;
   const dirty = !!openSavedId && JSON.stringify(saved.find(s => s.id === openSavedId)?.loadout) !== JSON.stringify(loadout);
+  const changed = !!origin && !!loadout && JSON.stringify(origin.loadout) !== JSON.stringify(loadout);
 
   const api = {
-    loadout, ship, stats, missing, saved, openSavedId, dirty, report,
+    loadout, ship, stats, missing, saved, openSavedId, dirty, report, origin, changed,
     dismissReport: () => setReport(null),
-    pickShip: (id: string) => { setLoadout(emptyLoadout(id)); setOpenSavedId(null); },
+    pickShip: (id: string) => { setLoadout(emptyLoadout(id)); setOpenSavedId(null); setOrigin(null); },
     setSlot: (slotId: string, eq: string | null) => setLoadout(l => { if (!l) return l; const slots = { ...l.slots }; if (eq) slots[slotId] = eq; else delete slots[slotId]; return { ...l, slots }; }),
     setGroup: (gid: string, kind: "turret" | "shield", v: { eq: string; count: number } | null) =>
-      setLoadout(l => { if (!l) return l; const g = { ...(l.groups[gid] ?? {}) }; if (v && v.count > 0) g[kind] = v; else delete g[kind]; return { ...l, groups: { ...l.groups, [gid]: g } }; }),
+      setLoadout(l => { if (!l) return l; const g = { ...(l.groups[gid] ?? {}) }; if (v && v.count > 0) g[kind] = v; else delete g[kind];
+      const groups = { ...l.groups, [gid]: g }; if (!Object.keys(g).length) delete groups[gid]; return { ...l, groups }; }),
     setConsumable: (id: string, n: number) => setLoadout(l => { if (!l) return l; const c = { ...l.consumables }; if (n > 0) c[id] = n; else delete c[id]; return { ...l, consumables: c }; }),
     setSoftware: (g: SoftwareGroup, id: string | null) => setLoadout(l => { if (!l) return l; const s = { ...l.software }; if (id) s[g] = id; else delete s[g]; return { ...l, software: s }; }),
     clear: () => setLoadout(l => (l ? emptyLoadout(l.ship) : l)),
     save: (name: string) => {
       if (!loadout) return;
       const now = Date.now();
+      setOrigin({ label: `“${name}”`, loadout });
       if (openSavedId) { setSaved(xs => xs.map(s => (s.id === openSavedId ? { ...s, name, updated: now, loadout } : s))); return; }
       const id = "s" + nextId++; setSaved(xs => [...xs, { id, name, created: now, updated: now, loadout }]); setOpenSavedId(id);
     },
-    saveAsNew: (name: string) => { if (!loadout) return; const id = "s" + nextId++; const now = Date.now(); setSaved(xs => [...xs, { id, name, created: now, updated: now, loadout }]); setOpenSavedId(id); },
-    openSaved: (id: string) => { const s = saved.find(x => x.id === id); if (s) { setLoadout(s.loadout); setOpenSavedId(id); } },
+    saveAsNew: (name: string) => { if (!loadout) return; setOrigin({ label: `“${name}”`, loadout }); const id = "s" + nextId++; const now = Date.now(); setSaved(xs => [...xs, { id, name, created: now, updated: now, loadout }]); setOpenSavedId(id); },
+    openSaved: (id: string) => { const s = saved.find(x => x.id === id); if (s) { setLoadout(s.loadout); setOpenSavedId(id); setOrigin({ label: `“${s.name}”`, loadout: s.loadout }); } },
     deleteSaved: (id: string) => { setSaved(xs => xs.filter(x => x.id !== id)); if (openSavedId === id) setOpenSavedId(null); },
     shareLink: () => (loadout ? `${location.origin}${location.pathname}${location.search}#l=${enc({ format: 1, version: GAME_DATA_VERSION, loadout })}` : ""),
     exportFile: (ids?: string[]) => {

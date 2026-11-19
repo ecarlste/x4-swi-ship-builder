@@ -1,7 +1,7 @@
 // PROTOTYPE — Variant C: "One sheet". Ship chosen by size, then ship, in the toolbar;
 // the whole loadout is one dense editable table (every Slot, Slot Group, consumable, software row
-// with its price); stats sit beside it. With a Saved Loadout open, rows and stats show what changed
-// since it was last saved. Equipment dropdowns show each option's difference from what's fitted.
+// with its price); stats sit beside it. Once a loaded loadout (saved or Share Link) is changed, rows
+// and stats show the difference from it as loaded (or as last saved). Equipment dropdowns show each option's difference from what's fitted.
 import { useEffect, useMemo, useState } from "react";
 import { CONSUMABLES, EQUIPMENT, Equipment, SHIPS, SOFTWARE, Size, byId } from "./data";
 import { Builder, computeStats, cr, fmt } from "./model";
@@ -32,7 +32,7 @@ export default function VariantC({ b }: { b: Builder }) {
   const l = b.loadout, ship = b.ship;
   const savedOpen = b.saved.find(s => s.id === b.openSavedId);
   const savedName = savedOpen?.name;
-  const was = b.dirty ? savedOpen?.loadout : undefined; // the saved version, only while there are unsaved changes
+  const was = b.changed ? b.origin?.loadout : undefined; // the loaded/last-saved version, once anything has changed
   const savedStats = useMemo(() => (was ? computeStats(was) : null), [was]);
   const Was = ({ changed, text }: { changed: boolean; text: string }) => changed ? <div className="c-was">was: {text}</div> : null;
   const eqRow = (id?: string) => byId(EQUIPMENT, id);
@@ -105,7 +105,7 @@ export default function VariantC({ b }: { b: Builder }) {
             <button style={{ marginTop: 8 }} onClick={b.clear}>Clear loadout</button>
           </div>
           <div className="c-stats">
-            <h3>Stats{savedStats && <span className="dim"> · Δ since “{savedName}” was saved</span>}</h3>
+            <h3>Stats</h3>
             <table><tbody>{b.stats.map(r => {
               const base = savedStats?.find(x => x.label === r.label); const d = base ? r.value - base.value : 0;
               return <tr key={r.label} title={r.tooltip}><td>{r.label}{r.tooltip && " ⓘ"}</td><td className="num">{fmt(r)} <span className="dim">{r.unit}</span>
