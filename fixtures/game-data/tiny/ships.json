@@ -68,5 +68,133 @@
     "drones": "fl_drones",
     "deployables": "fl_deployables",
     "countermeasures": "fl_countermeasures"
+  },
+  {
+    "id": "fx_bramble",
+    "name": "Bramble Fighter",
+    "nameId": "{900001,3}",
+    "price": { "min": 80000, "average": 100000, "max": 120000 },
+    "licence": "fx_shiplicence",
+    "sellers": ["fx_corsairs"],
+    "size": "s",
+    "type": "fighter",
+    "purpose": "fight",
+    "stats": {
+      "hull": 3000,
+      "mass": 10,
+      "radarRange": 20000,
+      "drag": { "forward": 5, "reverse": 10, "horizontal": 4, "vertical": 4, "pitch": 1.5, "yaw": 1.5, "roll": 1.2 },
+      "accFactors": { "forward": 1, "reverse": 1, "horizontal": 1, "vertical": 1 },
+      "maxRotationSpeed": null
+    },
+    "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "slots": [
+      { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_shield_01", "kind": "shield", "size": "s", "mandatory": false, "fitList": "fl_shield_s" },
+      { "id": "con_engine_01", "kind": "engine", "size": "s", "mandatory": true, "fitList": "fl_engine_s" }
+    ],
+    "slotGroups": [],
+    "thrusters": "fl_thruster_s",
+    "software": { "fitList": "fl_software", "mandatory": ["fx_flightassist"] },
+    "drones": "fl_empty",
+    "deployables": "fl_empty",
+    "countermeasures": "fl_countermeasures"
+  },
+  {
+    "id": "fx_needle",
+    "name": "Needle Interceptor",
+    "nameId": "{900001,4}",
+    "price": { "min": 80000, "average": 100000, "max": 120000 },
+    "licence": "fx_shiplicence",
+    "sellers": ["fx_corsairs", "fx_guild"],
+    "size": "s",
+    "type": "interceptor",
+    "purpose": "fight",
+    "stats": {
+      "hull": 3000,
+      "mass": 10,
+      "radarRange": 20000,
+      "drag": { "forward": 5, "reverse": 10, "horizontal": 4, "vertical": 4, "pitch": 1.5, "yaw": 1.5, "roll": 1.2 },
+      "accFactors": { "forward": 1, "reverse": 1, "horizontal": 1, "vertical": 1 },
+      "maxRotationSpeed": null
+    },
+    "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "slots": [
+      { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_shield_01", "kind": "shield", "size": "s", "mandatory": false, "fitList": "fl_shield_s" },
+      { "id": "con_engine_01", "kind": "engine", "size": "s", "mandatory": true, "fitList": "fl_engine_s" }
+    ],
+    "slotGroups": [],
+    "thrusters": "fl_thruster_s",
+    "software": { "fitList": "fl_software", "mandatory": ["fx_flightassist"] },
+    "drones": "fl_empty",
+    "deployables": "fl_empty",
+    "countermeasures": "fl_countermeasures"
+  },
+  {
+    "id": "fx_lancer_corsairs",
+    "name": "Lancer Gunship (Corsair Clans)",
+    "nameId": "{900001,5}",
+    "price": { "min": 80000, "average": 100000, "max": 120000 },
+    "licence": "fx_shiplicence",
+    "sellers": ["fx_corsairs"],
+    "size": "m",
+    "type": "gunboat",
+    "purpose": "fight",
+    "stats": {
+      "hull": 3000,
+      "mass": 10,
+      "radarRange": 20000,
+      "drag": { "forward": 5, "reverse": 10, "horizontal": 4, "vertical": 4, "pitch": 1.5, "yaw": 1.5, "roll": 1.2 },
+      "accFactors": { "forward": 1, "reverse": 1, "horizontal": 1, "vertical": 1 },
+      "maxRotationSpeed": null
+    },
+    "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "slots": [
+      { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_shield_01", "kind": "shield", "size": "s", "mandatory": false, "fitList": "fl_shield_s" },
+      { "id": "con_engine_01", "kind": "engine", "size": "s", "mandatory": true, "fitList": "fl_engine_s" }
+    ],
+    "slotGroups": [],
+    "thrusters": "fl_thruster_s",
+    "software": { "fitList": "fl_software", "mandatory": ["fx_flightassist"] },
+    "drones": "fl_empty",
+    "deployables": "fl_empty",
+    "countermeasures": "fl_countermeasures"
+  },
+  {
+    "id": "fx_lancer_guild",
+    "name": "Lancer Gunship (Freight Guild)",
+    "nameId": "{900001,5}",
+    "price": { "min": 80000, "average": 100000, "max": 120000 },
+    "licence": "fx_shiplicence",
+    "sellers": ["fx_guild"],
+    "size": "m",
+    "type": "gunboat",
+    "purpose": "fight",
+    "stats": {
+      "hull": 3000,
+      "mass": 10,
+      "radarRange": 20000,
+      "drag": { "forward": 5, "reverse": 10, "horizontal": 4, "vertical": 4, "pitch": 1.5, "yaw": 1.5, "roll": 1.2 },
+      "accFactors": { "forward": 1, "reverse": 1, "horizontal": 1, "vertical": 1 },
+      "maxRotationSpeed": null
+    },
+    "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "slots": [
+      { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
+      { "id": "con_shield_01", "kind": "shield", "size": "s", "mandatory": false, "fitList": "fl_shield_s" },
+      { "id": "con_engine_01", "kind": "engine", "size": "s", "mandatory": true, "fitList": "fl_engine_s" }
+    ],
+    "slotGroups": [],
+    "thrusters": "fl_thruster_s",
+    "software": { "fitList": "fl_software", "mandatory": ["fx_flightassist"] },
+    "drones": "fl_empty",
+    "deployables": "fl_empty",
+    "countermeasures": "fl_countermeasures"
   }
 ]
