@@ -1,0 +1,16 @@
+[
+  { "id": "fl_countermeasures", "equipment": ["fx_flare"] },
+  { "id": "fl_deployables", "equipment": ["fx_beacon"] },
+  { "id": "fl_drones", "equipment": ["fx_cargo_drone"] },
+  { "id": "fl_empty", "equipment": [] },
+  { "id": "fl_engine_l", "equipment": ["fx_engine_l"] },
+  { "id": "fl_engine_s", "equipment": ["fx_engine_s"] },
+  { "id": "fl_missiles_s", "equipment": ["fx_dart"] },
+  { "id": "fl_shield_m", "equipment": ["fx_shield_m"] },
+  { "id": "fl_shield_s", "equipment": ["fx_shield_s"] },
+  { "id": "fl_software", "equipment": ["fx_flightassist", "fx_scanner"] },
+  { "id": "fl_thruster_l", "equipment": ["fx_thruster_l"] },
+  { "id": "fl_thruster_s", "equipment": ["fx_thruster_s"] },
+  { "id": "fl_turret_m", "equipment": ["fx_turret_m"] },
+  { "id": "fl_weapon_s", "equipment": ["fx_launcher_s", "fx_pulse_s"] }
+]

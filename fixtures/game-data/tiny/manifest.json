@@ -1,0 +1,8 @@
+{
+  "swi": { "version": "999", "label": "9.9.9 Fixture", "date": "2026-01-01" },
+  "x4": { "version": "9.99" },
+  "dlcs": [{ "id": "fx_dlc_one", "version": "1.00" }],
+  "extractedAt": "2026-01-01T00:00:00Z",
+  "pipelineCommit": "0000000",
+  "contentHash": "fixture"
+}

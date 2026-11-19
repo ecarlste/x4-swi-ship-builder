@@ -1,0 +1,39 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  background: #11141a;
+  color: #d8dde6;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: #8ab4f8;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-header {
+  padding: 0 16px;
+}
+
+.app-main {
+  flex: 1;
+}
+
+.app-footer {
+  padding: 8px 16px;
+  border-top: 1px solid #2a3040;
+  font-size: 12px;
+  color: #8a93a6;
+}
+
+.app-footer p {
+  margin: 4px 0;
+}
