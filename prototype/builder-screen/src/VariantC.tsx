@@ -89,7 +89,8 @@ export default function VariantC({ b }: { b: Builder }) {
           <option value="" disabled>{size ? `Choose a ${size} ship…` : "Choose a size first"}</option>
           {SHIPS.filter(s => s.size === size).map(s => <option key={s.id} value={s.id}>{s.name} · {s.klass} · {s.sellers.join(", ")}</option>)}
         </select>
-        <span className="proto-sep" style={{ background: "var(--line)" }} />
+        {b.missing.length > 0 && <span className="warn" title={b.missing.map(m => m.label).join("\n")}>⚠ {b.missing.length} mandatory missing</span>}
+        <span style={{ flex: 1 }} />
         <select value={b.openSavedId ?? ""} onChange={e => { if (e.target.value) b.openSaved(e.target.value); }}>
           <option value="">Saved loadouts ({b.saved.length})…</option>{b.saved.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
@@ -97,8 +98,6 @@ export default function VariantC({ b }: { b: Builder }) {
         <ShareButton b={b} label="Copy link" />
         <button disabled={!b.saved.length} onClick={() => b.exportFile()}>Export</button>
         <ImportButton b={b} />
-        <span style={{ flex: 1 }} />
-        {b.missing.length > 0 && <span className="warn" title={b.missing.map(m => m.label).join("\n")}>⚠ {b.missing.length} mandatory missing</span>}
       </div>
       <div style={{ padding: "0 12px" }}><Report b={b} /></div>
       {!l || !ship ? <div className="c dim">Choose a size, then a ship, in the toolbar. It opens as an Empty Loadout.</div> :
