@@ -16,9 +16,17 @@ export default function VariantC({ b }: { b: Builder }) {
   return (
     <>
       <div className="c-top">
-        <input list="c-ships" placeholder="Type a ship name…" value={shipText} style={{ width: 260 }}
+        <label className="dim">Ship</label>
+        <input list="c-ships" placeholder="Search ships…" value={shipText} style={{ width: 180 }}
+          onFocus={e => e.target.select()}
           onChange={e => { setShipText(e.target.value); const s = SHIPS.find(x => x.name === e.target.value); if (s) b.pickShip(s.id); }} />
         <datalist id="c-ships">{SHIPS.map(s => <option key={s.id} value={s.name}>{s.size} · {s.klass} · {s.sellers.join(", ")}</option>)}</datalist>
+        <select value={ship?.id ?? ""} onChange={e => { const s = byId(SHIPS, e.target.value); if (s) { b.pickShip(s.id); setShipText(s.name); } }}>
+          <option value="" disabled>Choose a ship…</option>
+          {(["S", "M", "L", "XL"] as const).map(sz => SHIPS.some(s => s.size === sz) && (
+            <optgroup key={sz} label={`${sz} ships`}>{SHIPS.filter(s => s.size === sz).map(s => <option key={s.id} value={s.id}>{s.name} · {s.klass} · {s.sellers.join(", ")}</option>)}</optgroup>))}
+        </select>
+        <span className="proto-sep" style={{ background: "var(--line)" }} />
         <select value={b.openSavedId ?? ""} onChange={e => { if (e.target.value) { b.openSaved(e.target.value); setShipText(byId(SHIPS, b.saved.find(s => s.id === e.target.value)!.loadout.ship)!.name); } }}>
           <option value="">Saved loadouts ({b.saved.length})…</option>{b.saved.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
@@ -32,7 +40,7 @@ export default function VariantC({ b }: { b: Builder }) {
         {baseline && <button onClick={() => setBaseline(null)}>Unpin “{baseline.name}”</button>}
       </div>
       <div style={{ padding: "0 12px" }}><Report b={b} /></div>
-      {!l || !ship ? <div className="c dim">Type a ship name above. It opens as an Empty Loadout.</div> :
+      {!l || !ship ? <div className="c dim">Choose a ship in the toolbar. It opens as an Empty Loadout.</div> :
         <div className="c">
           <div>
             <div className="dim" style={{ marginBottom: 6 }}><b style={{ color: "var(--text)" }}>{ship.name}</b> · {ship.size} {ship.klass} · sold by {ship.sellers.join(", ")}{ship.licence && ` · needs ${ship.licence}`}</div>
