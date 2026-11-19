@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="SwiPresetExport" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+    <cue name="Run" instantiate="true">
+      <conditions>
+        <check_any>
+          <event_game_started/>
+          <event_game_loaded/>
+        </check_any>
+      </conditions>
+      <delay exact="5s"/>
+      <actions>
+        <raise_lua_event name="'swiPresetExport'"/>
+      </actions>
+    </cue>
+  </cues>
+</mdscript>

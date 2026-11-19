@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<content id="swi_preset_export" name="SWI preset export" description="Throwaway test: exports Minimum/Low/Medium/High presets for every ship" author="x4-swi-ship-builder" version="100" date="2026-11-19" save="0">
+  <dependency version="800"/>
+  <dependency id="SW Interworlds" optional="false"/>
+</content>
