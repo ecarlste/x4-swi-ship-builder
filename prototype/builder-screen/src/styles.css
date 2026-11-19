@@ -49,3 +49,5 @@ table { border-collapse: collapse; width: 100%; } td, th { padding: 4px 6px; bor
 .c tr.sect td { color: var(--dim); text-transform: uppercase; font-size: 11px; padding-top: 10px; border-bottom: 1px solid var(--accent); }
 .c-stats { position: sticky; top: 52px; align-self: start; }
 .c-delta.up { color: var(--ok); } .c-delta.down { color: var(--warn); }
+.c tr.changed td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.c-was { color: var(--accent); font-size: 11px; }
