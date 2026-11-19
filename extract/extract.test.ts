@@ -216,6 +216,45 @@ describe("extract: layer files", () => {
     expect(() => run(spec)).toThrow(/ext_01\.cat: libraries\/ships\.xml isn't well-formed XML/);
   });
 
+  it("keeps a diff file's operations, and what each one adds, in document order", () => {
+    const spec = standardInstall();
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "libraries/wares.xml": `<?xml version="1.0" encoding="utf-8"?>
+<diff>
+  <remove sel="//ware[@id='w1']"/>
+  <add sel="/wares">
+    <ware id="w1"><price max="9"/><owner faction="fx_a"/></ware>
+    <comment-free id="x"/>
+    <ware id="w3"/>
+  </add>
+  <replace sel="//ware[@id='w3']/@name">New name</replace>
+  <remove sel="//ware[@id='w2']" silent="true"/>
+</diff>`,
+    };
+
+    const { readJson } = run(spec);
+
+    expect(readJson("layers/03_fx_swi/files/libraries/wares.json")).toEqual({
+      diff: {
+        "#children": [
+          { remove: { sel: "//ware[@id='w1']" } },
+          {
+            add: {
+              sel: "/wares",
+              "#children": [
+                { ware: { id: "w1", price: [{ max: "9" }], owner: [{ faction: "fx_a" }] } },
+                { "comment-free": { id: "x" } },
+                { ware: { id: "w3" } },
+              ],
+            },
+          },
+          { replace: { sel: "//ware[@id='w3']/@name", "#text": "New name" } },
+          { remove: { sel: "//ware[@id='w2']", silent: "true" } },
+        ],
+      },
+    });
+  });
+
   it("keys an attribute as @name when a child element has the same name", () => {
     const spec = standardInstall();
     spec.base["01"] = { "libraries/ships.xml": `<ships><ship owner="a"><owner faction="b"/></ship></ships>` };

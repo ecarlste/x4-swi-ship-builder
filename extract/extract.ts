@@ -4,7 +4,7 @@ import { openCatalog, type Catalog, type CatalogEntry } from "./catalog.ts";
 import { extractConfig, type ExtractConfig } from "./config.ts";
 import { resolveLoadOrder, type Layer } from "./loadOrder.ts";
 import { isNeededFile } from "./neededFiles.ts";
-import { parseXml, toJson } from "./xml.ts";
+import { fileToJson, parseXml } from "./xml.ts";
 
 export interface ExtractOptions {
   /** The X4 install folder. */
@@ -94,7 +94,7 @@ function writeFiles(files: Map<string, Located>, outDir: string, loadedFolders: 
     if (!isNeededFile(path, loadedFolders)) continue;
     const source = `${basename(catalog.catPath)}: ${entry.path}`;
     const root = parseXml(catalog.read(entry).toString("utf8"), source);
-    writeJson(join(outDir, path.replace(/\.xml$/, ".json")), { [root.tag]: toJson(root) });
+    writeJson(join(outDir, path.replace(/\.xml$/, ".json")), fileToJson(root));
     count++;
   }
   return count;

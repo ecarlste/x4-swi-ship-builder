@@ -14,6 +14,11 @@ export interface JsonElement {
   [key: string]: string | JsonElement[];
 }
 
+/** An element as JSON whose child elements keep document order, in `#children`. */
+export interface OrderedJsonElement {
+  [key: string]: string | Record<string, JsonElement | OrderedJsonElement>[];
+}
+
 const parser = new XMLParser({
   preserveOrder: true,
   ignoreAttributes: false,
@@ -66,6 +71,31 @@ export function toJson(element: XmlElement): JsonElement {
     if (typeof child === "string") text.push(child);
     else ((json[child.tag] as JsonElement[] | undefined) ?? (json[child.tag] = [])).push(toJson(child));
   }
+  if (text.length > 0) json["#text"] = text.join("");
+  return json;
+}
+
+/**
+ * Converts a file's root element to JSON, as `{ <root tag>: ... }`. Ordinary
+ * files use the grouped shape of {@link toJson}. A `<diff>` patch file keeps
+ * order instead, because each operation applies to the result of the ones
+ * before it: the root's operations, and the elements each operation holds, go
+ * in a `#children` list of `{ <tag>: ... }` entries in document order. The
+ * elements an operation holds use the grouped shape inside.
+ */
+export function fileToJson(root: XmlElement): Record<string, JsonElement | OrderedJsonElement> {
+  if (root.tag !== "diff") return { [root.tag]: toJson(root) };
+  return { diff: toOrderedJson(root, (operation) => toOrderedJson(operation, toJson)) };
+}
+
+function toOrderedJson(
+  element: XmlElement,
+  convertChild: (child: XmlElement) => JsonElement | OrderedJsonElement,
+): OrderedJsonElement {
+  const json: OrderedJsonElement = { ...element.attrs };
+  const children = element.children.flatMap((c) => (typeof c === "string" ? [] : [{ [c.tag]: convertChild(c) }]));
+  if (children.length > 0) json["#children"] = children;
+  const text = element.children.filter((c) => typeof c === "string");
   if (text.length > 0) json["#text"] = text.join("");
   return json;
 }
