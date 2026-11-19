@@ -51,3 +51,11 @@ table { border-collapse: collapse; width: 100%; } td, th { padding: 4px 6px; bor
 .c-delta.up { color: var(--ok); } .c-delta.down { color: var(--warn); }
 .c tr.changed td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .c-was { color: var(--accent); font-size: 11px; }
+.c-pick { position: relative; }
+.c-pick-btn { width: 100%; display: flex; justify-content: space-between; text-align: left; }
+.c-pick-list { position: absolute; z-index: 20; left: 0; top: 100%; min-width: 100%; margin: 2px 0 0; padding: 4px 0; list-style: none; background: #232b37; border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 6px 18px #0009; }
+.c-pick-list li { position: relative; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.c-pick-list li:hover { background: #24405a; }
+.c-pick-list li.on { font-weight: 600; }
+.c-pop { position: absolute; left: calc(100% + 8px); top: -6px; z-index: 21; width: 280px; white-space: normal; cursor: default; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; box-shadow: 0 6px 18px #0009; font-weight: normal; }
+.c-pop td { border: 0; padding: 2px 4px; }

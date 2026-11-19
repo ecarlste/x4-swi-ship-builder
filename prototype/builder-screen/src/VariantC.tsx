@@ -1,8 +1,9 @@
 // PROTOTYPE — Variant C: "One sheet". Ship chosen by size, then ship, in the toolbar;
 // the whole loadout is one dense editable table (every Slot, Slot Group, consumable, software row
 // with its price); stats sit beside it. Once a loaded loadout (saved or Share Link) is changed, rows
-// and stats show the difference from it as loaded (or as last saved). Equipment dropdowns show each option's difference from what's fitted.
-import { useEffect, useMemo, useState } from "react";
+// and stats show the difference from it as loaded (or as last saved). Hovering an option in an equipment
+// dropdown pops up its difference from what's fitted.
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CONSUMABLES, EQUIPMENT, Equipment, SHIPS, SOFTWARE, Size, byId } from "./data";
 import { Builder, computeStats, cr, fmt } from "./model";
 
@@ -16,14 +17,52 @@ const figures = (e: Equipment): [string, number, string][] =>
   : e.thrust != null ? [["thrust", e.thrust, "N"], ["travel ×", e.travel ?? 0, ""]]
   : [["torque", e.torque ?? 0, ""]];
 
-// Option label: the candidate's figures, each with its difference from the fitted item.
-function optionLabel(cand: Equipment, fitted?: Equipment) {
-  if (fitted?.id === cand.id) return `✓ ${cand.name} (fitted)`;
-  const base = fitted ? figures(fitted) : [];
-  const parts = figures(cand).map(([k, v, u], i) => `${v.toLocaleString("en")}${u ? " " + u : ""} ${k} (${signed(v - (base[i]?.[1] ?? 0))})`);
-  parts.push(`${cr(cand.price.avg)} (${signed(cand.price.avg - (fitted?.price.avg ?? 0))})`);
-  return `${cand.name} · ${parts.join(" · ")}`;
+// Custom dropdown for Equipment: hovering an option shows a popover comparing it with the fitted item.
+function EquipPicker({ value, options, onChange }: { value?: string; options: string[]; onChange: (id: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+  const fitted = byId(EQUIPMENT, value);
+  const pick = (id: string | null) => { onChange(id); setOpen(false); setHover(null); };
+  return (
+    <div className="c-pick" ref={ref}>
+      <button className="c-pick-btn" onClick={() => setOpen(o => !o)}>{fitted?.name ?? <span className="dim">—</span>}<span className="dim">▾</span></button>
+      {open && <ul className="c-pick-list" onMouseLeave={() => setHover(null)}>
+        <li onClick={() => pick(null)} className="dim">— empty —</li>
+        {options.map(id => { const e = byId(EQUIPMENT, id)!; return (
+          <li key={id} className={id === value ? "on" : ""} onMouseEnter={() => setHover(id)} onClick={() => pick(id)}>
+            {id === value ? "✓ " : ""}{e.name}
+            {hover === id && <Compare cand={e} fitted={fitted} />}
+          </li>); })}
+      </ul>}
+    </div>
+  );
 }
+
+function Compare({ cand, fitted }: { cand: Equipment; fitted?: Equipment }) {
+  const same = fitted?.id === cand.id;
+  const base = fitted ? figures(fitted) : [];
+  const rows: [string, number, number | undefined, string][] = [
+    ...figures(cand).map(([k, v, u], i) => [k, v, base[i]?.[1], u] as [string, number, number | undefined, string]),
+    ["price (avg)", cand.price.avg, fitted?.price.avg, "Cr"],
+  ];
+  return (
+    <div className="c-pop" onClick={e => e.stopPropagation()}>
+      <b>{cand.name}</b>
+      <div className="dim">{same ? "Fitted now" : fitted ? `vs fitted ${fitted.name}` : "Slot is empty"}</div>
+      <table><tbody>{rows.map(([k, v, f, u]) => { const d = v - (f ?? 0); const up = k.startsWith("price") ? d < 0 : d > 0; return (
+        <tr key={k}><td className="dim">{k}</td><td className="num">{v.toLocaleString("en")} {u}</td>
+          <td className={"num " + (same || d === 0 ? "dim" : up ? "ok" : "warn")}>{same ? "" : signed(d)}</td></tr>); })}</tbody></table>
+      <div className="dim">Sold by {cand.sellers.join(", ")}</div>
+    </div>
+  );
+}
+
 import { Credits, ImportButton, Report, ShareButton, askName } from "./bits";
 
 export default function VariantC({ b }: { b: Builder }) {
@@ -73,7 +112,7 @@ export default function VariantC({ b }: { b: Builder }) {
                 {ship.slots.map(s => { const e = eqRow(l.slots[s.id]); return (
                   <tr key={s.id} className={(s.mandatory && !e ? "need" : "") + (was && was.slots[s.id] !== l.slots[s.id] ? " changed" : "")}>
                     <td>{s.size} {s.kind} <span className="dim">{s.id.replace("con_", "")}</span>{s.mandatory && <span className="warn"> *</span>}</td>
-                    <td><select value={e?.id ?? ""} onChange={ev => b.setSlot(s.id, ev.target.value || null)} style={{ width: "100%" }}><option value="">—</option>{s.compatible.map(id => <option key={id} value={id}>{optionLabel(eqRow(id)!, e)}</option>)}</select>
+                    <td><EquipPicker value={e?.id} options={s.compatible} onChange={id => b.setSlot(s.id, id)} />
                       <Was changed={!!was && was.slots[s.id] !== l.slots[s.id]} text={eqRow(was?.slots[s.id])?.name ?? "empty"} /></td>
                     <td className="num">{e ? 1 : ""}</td>
                     <td className="dim">{e && (e.dps != null ? `${e.dps} MW` : e.shield != null ? `${e.shield} MJ` : e.thrust != null ? `${e.thrust} N` : `${e.torque} torque`)}</td>
@@ -83,7 +122,7 @@ export default function VariantC({ b }: { b: Builder }) {
                   const wv = was?.groups[g.id]?.[pt.kind]; const gChanged = !!was && (wv?.eq !== v?.eq || (wv?.count ?? 0) !== (v?.count ?? 0)); return (
                   <tr key={g.id + pt.kind} className={gChanged ? "changed" : ""}>
                     <td>{g.name} <span className="dim">{pt.kind}s</span></td>
-                    <td><select value={e?.id ?? ""} onChange={ev => b.setGroup(g.id, pt.kind, ev.target.value ? { eq: ev.target.value, count: v?.count || pt.max } : null)} style={{ width: "100%" }}><option value="">—</option>{pt.compatible.map(id => <option key={id} value={id}>{optionLabel(eqRow(id)!, e)}</option>)}</select>
+                    <td><EquipPicker value={e?.id} options={pt.compatible} onChange={id => b.setGroup(g.id, pt.kind, id ? { eq: id, count: v?.count || pt.max } : null)} />
                       <Was changed={gChanged} text={wv ? `${eqRow(wv.eq)?.name} ×${wv.count}` : "empty"} /></td>
                     <td className="num"><input type="number" min={0} max={pt.max} disabled={!e} value={v?.count ?? 0} style={{ width: 52 }} onChange={ev => e && b.setGroup(g.id, pt.kind, { eq: e.id, count: Math.min(pt.max, +ev.target.value) })} /> /{pt.max}</td>
                     <td className="dim">{e && (e.dps != null ? `${e.dps * (v?.count ?? 0)} MW total` : `${(e.shield ?? 0) * (v?.count ?? 0)} MJ total`)}</td>
