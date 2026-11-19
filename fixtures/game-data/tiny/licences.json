@@ -1,1 +1,4 @@
-[{ "id": "fx_militaryequipment", "name": "Fixture Arms Licence", "reputation": 10 }]
+[
+  { "id": "fx_militaryequipment", "name": "Fixture Arms Licence", "reputation": 10 },
+  { "id": "fx_shiplicence", "name": "Fixture Ship Licence", "reputation": null }
+]
