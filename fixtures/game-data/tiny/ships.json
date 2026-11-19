@@ -103,13 +103,13 @@
   },
   {
     "id": "fx_needle",
-    "name": "Needle Interceptor",
+    "name": "Needle Striker",
     "nameId": "{900001,4}",
     "price": { "min": 80000, "average": 100000, "max": 120000 },
     "licence": "fx_shiplicence",
     "sellers": ["fx_corsairs", "fx_guild"],
     "size": "s",
-    "type": "interceptor",
+    "type": "heavyfighter",
     "purpose": "fight",
     "stats": {
       "hull": 3000,

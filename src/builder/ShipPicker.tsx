@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
 import type { Faction, Ship, Size } from "../gameData.ts";
+import { shipTypeLabel } from "./shipTypes.ts";
 
 const SIZES: { value: Size; label: string }[] = [
   { value: "s", label: "S" },
@@ -10,22 +11,24 @@ const SIZES: { value: Size; label: string }[] = [
 
 interface ShipGroup {
   type: string;
+  label: string;
   ships: Ship[];
 }
 
-/** Ships grouped under their Ship Type, groups and Ships each sorted by name. */
+/** Ships grouped under their Ship Type, groups and Ships each sorted by display name. */
 function groupByType(ships: Ship[]): ShipGroup[] {
   const groups = new Map<string, Ship[]>();
   for (const ship of ships) {
     groups.set(ship.type, [...(groups.get(ship.type) ?? []), ship]);
   }
   return [...groups]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([type, list]) => ({ type, ships: list.sort((a, b) => a.name.localeCompare(b.name)) }));
+    .map(([type, list]) => ({
+      type,
+      label: shipTypeLabel(type),
+      ships: list.sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
-
-/** "heavyfighter" → "Heavyfighter". */
-const typeLabel = (type: string) => type.charAt(0).toUpperCase() + type.slice(1);
 
 /**
  * The toolbar's left side: Size, then an optional Seller filter, then a
@@ -155,7 +158,7 @@ export function ShipPicker({
               {groups.map((group) => (
                 <div key={group.type} role="group" aria-labelledby={`${listId}-${group.type}`}>
                   <div id={`${listId}-${group.type}`} className="ship-group-label" role="presentation">
-                    {typeLabel(group.type)}
+                    {group.label}
                   </div>
                   {group.ships.map((ship) => (
                     <div

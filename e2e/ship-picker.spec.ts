@@ -19,7 +19,7 @@ test("the Size dropdown narrows the Ship list to Ships of that size", async ({ p
 
   const size = page.getByRole("combobox", { name: "Size" });
   await expect(size.getByRole("option", { selected: true })).toHaveText("S");
-  await expectListedShips(page, ["Bramble Fighter", "Swiftwing Courier", "Needle Interceptor"]);
+  await expectListedShips(page, ["Bramble Fighter", "Swiftwing Courier", "Needle Striker"]);
 
   await size.selectOption("M");
   await expectListedShips(page, ["Lancer Gunship (Corsair Clans)", "Lancer Gunship (Freight Guild)"]);
@@ -35,7 +35,7 @@ test("the Seller filter narrows the Ship list to one Faction's Ships", async ({ 
   await expect(seller.getByRole("option", { selected: true })).toHaveText("Any");
 
   await seller.selectOption("Corsair Clans");
-  await expectListedShips(page, ["Bramble Fighter", "Needle Interceptor"]);
+  await expectListedShips(page, ["Bramble Fighter", "Needle Striker"]);
 
   await page.getByRole("combobox", { name: "Size" }).selectOption("M");
   await expectListedShips(page, ["Lancer Gunship (Corsair Clans)"]);
@@ -64,7 +64,7 @@ test("typing part of a name filters the Ship list as you type", async ({ page })
 
   await shipPicker(page).fill("r");
   await expect(shipOptions(page)).toHaveCount(3);
-  await shipPicker(page).pressSequentially("i");
+  await shipPicker(page).pressSequentially("ie");
   await expect(shipOptions(page)).toHaveCount(1);
   await expect(shipOptions(page)).toHaveAccessibleName("Swiftwing Courier");
 
@@ -84,15 +84,15 @@ test("the Ship list is grouped by Ship Type, and each option shows its Sellers",
   const groups = list.getByRole("group");
   await expect(groups).toHaveCount(2);
   await expect(groups.nth(0)).toHaveAccessibleName("Fighter");
-  await expect(groups.nth(1)).toHaveAccessibleName("Interceptor");
+  await expect(groups.nth(1)).toHaveAccessibleName("Heavy Fighter");
 
   const fighters = groups.nth(0).getByRole("option");
   await expect(fighters.nth(0)).toHaveAccessibleName("Bramble Fighter");
   await expect(fighters.nth(1)).toHaveAccessibleName("Swiftwing Courier");
-  await expect(groups.nth(1).getByRole("option")).toHaveAccessibleName("Needle Interceptor");
+  await expect(groups.nth(1).getByRole("option")).toHaveAccessibleName("Needle Striker");
 
   await expect(fighters.nth(1)).toHaveAccessibleDescription("Freight Guild");
-  await expect(list.getByRole("option", { name: "Needle Interceptor" })).toHaveAccessibleDescription(
+  await expect(list.getByRole("option", { name: "Needle Striker" })).toHaveAccessibleDescription(
     "Corsair Clans, Freight Guild",
   );
 });
@@ -120,9 +120,9 @@ test("picking another Ship replaces the current one", async ({ page }) => {
   await shipPicker(page).fill("needle");
   await page.keyboard.press("Enter");
 
-  await expect(shipPicker(page)).toHaveValue("Needle Interceptor");
-  await expect(page).toHaveTitle("Needle Interceptor · X4: SWI Ship Builder");
-  await expect(page.getByRole("heading", { name: "Needle Interceptor" })).toBeVisible();
+  await expect(shipPicker(page)).toHaveValue("Needle Striker");
+  await expect(page).toHaveTitle("Needle Striker · X4: SWI Ship Builder");
+  await expect(page.getByRole("heading", { name: "Needle Striker" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bramble Fighter" })).toHaveCount(0);
 });
 
