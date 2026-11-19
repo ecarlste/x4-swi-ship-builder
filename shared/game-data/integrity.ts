@@ -1,0 +1,127 @@
+import type { EquipmentKind, SnapshotData } from "./schema.ts";
+import { slotGroupKindSchema } from "./schema.ts";
+
+/**
+ * The reference-integrity pass: every id a snapshot refers to must resolve.
+ * Runs only on data that already passed the schema. Returns one message per
+ * problem, prefixed with the file it is in.
+ */
+export function checkIntegrity(data: SnapshotData): string[] {
+  const errors: string[] = [];
+
+  const tables = [
+    ["ships", data.ships],
+    ["equipment", data.equipment],
+    ["fit-lists", data["fit-lists"]],
+    ["factions", data.factions],
+    ["licences", data.licences],
+  ] as const;
+  for (const [file, rows] of tables) {
+    for (const dup of duplicates(rows.map((r) => r.id))) {
+      errors.push(`${file}: duplicate id "${dup}"`);
+    }
+  }
+
+  const fitLists = new Map(data["fit-lists"].map((f) => [f.id, f]));
+  const equipment = new Map(data.equipment.map((e) => [e.id, e]));
+  const factions = new Set(data.factions.map((f) => f.id));
+  const licences = new Set(data.licences.map((l) => l.id));
+
+  const checkSellersAndLicence = (
+    file: string,
+    item: { id: string; sellers: string[]; licence: string | null },
+  ) => {
+    for (const seller of item.sellers) {
+      if (!factions.has(seller)) {
+        errors.push(`${file}: ${item.id} seller refers to unknown faction "${seller}"`);
+      }
+    }
+    if (item.licence !== null && !licences.has(item.licence)) {
+      errors.push(`${file}: ${item.id} licence refers to unknown licence "${item.licence}"`);
+    }
+  };
+
+  /**
+   * Checks that `fitListId` exists and holds only Equipment of `kind`.
+   * Unknown Equipment in the list is reported once, by the fit-lists check.
+   */
+  const checkFitList = (source: string, where: string, fitListId: string, kind: EquipmentKind) => {
+    const list = fitLists.get(fitListId);
+    if (!list) {
+      errors.push(`${source} ${where} refers to unknown fit list "${fitListId}"`);
+      return;
+    }
+    for (const itemId of list.equipment) {
+      const item = equipment.get(itemId);
+      if (item && item.kind !== kind) {
+        errors.push(
+          `${source} ${where} takes ${kind} but fit list "${fitListId}" has ${item.kind} "${itemId}"`,
+        );
+      }
+    }
+  };
+
+  for (const ship of data.ships) {
+    const source = `ships: ${ship.id}`;
+
+    for (const dup of duplicates(ship.slots.map((s) => s.id))) {
+      errors.push(`${source} has duplicate Slot id "${dup}"`);
+    }
+    for (const dup of duplicates(ship.slotGroups.map((g) => g.id))) {
+      errors.push(`${source} has duplicate Slot Group id "${dup}"`);
+    }
+
+    for (const slot of ship.slots) checkFitList(source, `slot ${slot.id}`, slot.fitList, slot.kind);
+    for (const group of ship.slotGroups) {
+      for (const kind of slotGroupKindSchema.options) {
+        const entry = group.kinds[kind];
+        if (entry) checkFitList(source, `slot group ${group.id} ${kind}`, entry.fitList, kind);
+      }
+    }
+    checkFitList(source, "thrusters", ship.thrusters, "thruster");
+    checkFitList(source, "software", ship.software.fitList, "software");
+    checkFitList(source, "drones", ship.drones, "drone");
+    checkFitList(source, "deployables", ship.deployables, "deployable");
+    checkFitList(source, "countermeasures", ship.countermeasures, "countermeasure");
+
+    const softwareOptions = fitLists.get(ship.software.fitList);
+    if (softwareOptions) {
+      for (const itemId of ship.software.mandatory) {
+        if (!softwareOptions.equipment.includes(itemId)) {
+          errors.push(
+            `${source} mandatory software "${itemId}" is not in fit list "${ship.software.fitList}"`,
+          );
+        }
+      }
+    }
+
+    checkSellersAndLicence("ships", ship);
+  }
+
+  for (const item of data.equipment) {
+    if ((item.kind === "weapon" || item.kind === "turret") && item.missiles !== null) {
+      checkFitList(`equipment: ${item.id}`, "missiles", item.missiles, "missile");
+    }
+    checkSellersAndLicence("equipment", item);
+  }
+
+  for (const list of data["fit-lists"]) {
+    for (const itemId of list.equipment) {
+      if (!equipment.has(itemId)) {
+        errors.push(`fit-lists: ${list.id} refers to unknown equipment "${itemId}"`);
+      }
+    }
+  }
+
+  return errors;
+}
+
+function duplicates(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const dups = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) dups.add(id);
+    seen.add(id);
+  }
+  return [...dups];
+}
