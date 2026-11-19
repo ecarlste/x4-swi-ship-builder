@@ -1,0 +1,51 @@
+/* PROTOTYPE — rough, unpolished on purpose */
+:root { --bg: #11151b; --panel: #1a2029; --line: #2b3441; --text: #dfe6ee; --dim: #8a97a8; --accent: #4fb3ff; --warn: #ff6464; --ok: #5fd38a; font: 13px/1.4 system-ui, sans-serif; color: var(--text); background: var(--bg); }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, select, input { font: inherit; color: var(--text); background: #232b37; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; }
+button { cursor: pointer; } button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #001; border-color: var(--accent); }
+.dim { color: var(--dim); } .warn { color: var(--warn); } .ok { color: var(--ok); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+h2, h3, h4 { margin: 0 0 6px; } h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--dim); }
+table { border-collapse: collapse; width: 100%; } td, th { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: left; } th { color: var(--dim); font-weight: 500; }
+.notice { border: 1px solid #c9a227; background: #2e2810; padding: 8px 10px; border-radius: 4px; margin: 8px 0; }
+.notice ul { margin: 4px 0 0 18px; padding: 0; }
+.missing { border: 1px solid var(--warn); background: #2c1515; padding: 6px 10px; border-radius: 4px; }
+.footer-notices { color: var(--dim); font-size: 11px; padding: 10px 16px 70px; border-top: 1px solid var(--line); }
+
+.proto-bar { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: #fff; color: #000; padding: 6px 10px; border-radius: 999px; box-shadow: 0 4px 18px #0008; z-index: 99; font-weight: 600; }
+.proto-bar button { background: #eee; color: #000; border-color: #bbb; border-radius: 999px; }
+.proto-sep { width: 1px; height: 18px; background: #ccc; }
+
+/* Variant A */
+.a { display: grid; grid-template-columns: 260px 1fr 340px; height: calc(100vh - 34px); }
+.a-top { height: 34px; display: flex; gap: 8px; align-items: center; padding: 0 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.a > section { overflow: auto; padding: 10px; border-right: 1px solid var(--line); }
+.a-ship { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 4px 6px; }
+.a-ship.on { background: #24405a; }
+.a-slot { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px; align-items: center; width: 100%; text-align: left; margin: 2px 0; }
+.a-slot.need { border-color: var(--warn); }
+.a-slot.sel { outline: 2px solid var(--accent); }
+.a-stat { display: flex; justify-content: space-between; padding: 2px 0; }
+
+/* Variant B */
+.b { max-width: 1100px; margin: 0 auto; padding: 12px 16px; }
+.b-steps { display: flex; gap: 4px; margin-bottom: 12px; }
+.b-steps button { flex: 1; padding: 8px; border-radius: 0; }
+.b-steps button.on { background: var(--accent); color: #001; }
+.b-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.b-tabs button { border-radius: 4px 4px 0 0; border-bottom: 0; }
+.b-tabs button.on { background: var(--panel); border-color: var(--accent); }
+.b-badge { background: var(--warn); color: #000; border-radius: 999px; padding: 0 6px; margin-left: 6px; font-size: 11px; }
+.b-strip { position: sticky; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); display: flex; gap: 18px; padding: 8px 12px; margin-top: 12px; flex-wrap: wrap; }
+.b-card { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+
+/* Variant C */
+.c-top { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.c { display: grid; grid-template-columns: 1fr 300px; gap: 12px; padding: 12px; }
+.c table td { padding: 2px 6px; }
+.c tr.need td { background: #2c1515; }
+.c tr.sect td { color: var(--dim); text-transform: uppercase; font-size: 11px; padding-top: 10px; border-bottom: 1px solid var(--accent); }
+.c-stats { position: sticky; top: 52px; align-self: start; }
+.c-delta.up { color: var(--ok); } .c-delta.down { color: var(--warn); }
