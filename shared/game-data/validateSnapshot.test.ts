@@ -119,6 +119,17 @@ describe("validateSnapshot", () => {
       ]);
     });
 
+    it("reports Slot Group ids that collide once trimmed, since the game merges them (#52)", () => {
+      const errors = errorsAfter((raw) => {
+        const hauler = raw.ships[1];
+        hauler.slotGroups.push({ ...hauler.slotGroups[1], id: "enginegroup  " });
+      });
+
+      expect(errors).toEqual([
+        'ships: fx_hauler has Slot Group ids "enginegroup", "enginegroup  " that are one Slot Group in game, as they differ only by spaces',
+      ]);
+    });
+
     it("reports a Ship whose engines don't share one fit list, since they take one engine type (#50)", () => {
       const errors = errorsAfter((raw) => {
         raw.ships[1].slotGroups.push({ id: "enginegroup_aft", kinds: { engine: { count: 1, fitList: "fl_engine_s" } } });

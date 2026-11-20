@@ -23,12 +23,21 @@ export interface ShipFittings {
   shipClass: string;
   /** Slot id → the connection's tags. */
   slots: Map<string, string[]>;
-  /** Slot Group id → kind → the tags of each of its connections of that kind. */
-  groups: Map<string, Partial<Record<SlotGroupKind, string[][]>>>;
+  /**
+   * Slot Group id → kind → each of its connections of that kind: its tags, and
+   * the group name as written, which may have spaces around it (#52).
+   */
+  groups: Map<string, Partial<Record<SlotGroupKind, GroupConnection[]>>>;
   /** The tags of each of the macro's `<thruster>` elements. */
   thrusters: string[][];
   /** The macro's `<software>` list; `default="1"` software is mandatory. */
   software: { ware: string; mandatory: boolean }[];
+}
+
+export interface GroupConnection {
+  /** The connection's `group` as written. */
+  writtenAs: string;
+  tags: string[];
 }
 
 export interface LeftOut {
@@ -152,7 +161,7 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): { shi
   const componentRef = attr(child(macro, "component"), "ref");
   if (componentRef === undefined) throw new ExtractError(`${where}: its macro has no <component ref>`);
   const component = files.component(componentRef, `${where} macro`).element;
-  const { slots, slotGroups, slotTags, groupTags } = readSlots(component, size, id, warnings);
+  const { slots, slotGroups, slotTags, groupConnections } = readSlots(component, size, id, warnings);
   const prices = {
     min: numberAttr(price, "min", `${where} <price>`) ?? 0,
     average: numberAttr(price, "average", `${where} <price>`) ?? 0,
@@ -165,7 +174,7 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): { shi
   const fittings: ShipFittings = {
     shipClass,
     slots: slotTags,
-    groups: groupTags,
+    groups: groupConnections,
     thrusters: children(props, "thruster").map((t) => list(attr(t, "tags"))),
     software: children(child(props, "software"), "software").flatMap((s) => {
       const softwareWare = attr(s, "ware");
@@ -270,7 +279,9 @@ function readCargo(
 /**
  * Slots are the component's connections tagged weapon, turret, shield or
  * engine; those with a `group` make up Slot Groups instead. A slot with no
- * size tag takes the Ship's size, and is listed as a warning.
+ * size tag takes the Ship's size, and is listed as a warning. Group names
+ * equal once trimmed are one Slot Group, as in game (#52); its id is the
+ * trimmed name.
  */
 function readSlots(
   component: JsonElement,
@@ -281,12 +292,13 @@ function readSlots(
   slots: Slot[];
   slotGroups: SlotGroup[];
   slotTags: ShipFittings["slots"];
-  groupTags: ShipFittings["groups"];
+  groupConnections: ShipFittings["groups"];
 } {
   const slots: Slot[] = [];
   const slotTags: ShipFittings["slots"] = new Map();
-  const groupTags: ShipFittings["groups"] = new Map();
+  const groupConnections: ShipFittings["groups"] = new Map();
   const groups = new Map<string, SlotGroup["kinds"]>();
+  const spacedNames = new Set<string>();
   for (const connection of children(child(component, "connections"), "connection")) {
     const tags = list(attr(connection, "tags"));
     const kinds = SLOT_KINDS.filter((k) => tags.includes(k));
@@ -312,21 +324,23 @@ function readSlots(
     if (kind === "weapon") {
       throw new ExtractError(`ware ${shipId}: weapon connection ${name} is in group ${group}; groups take turrets, shields and engines`);
     }
-    if (group !== group.trim() && !groups.has(group)) {
-      warnings.push(`${shipId}: Slot Group "${group}" has spaces around its name`);
+    const id = group.trim();
+    if (group !== id && !spacedNames.has(group)) {
+      spacedNames.add(group);
+      warnings.push(`${shipId}: Slot Group "${group}" has spaces around its name; it's merged into "${id}"`);
     }
-    const kindsOfGroup = groups.get(group) ?? {};
+    const kindsOfGroup = groups.get(id) ?? {};
     const entry = kindsOfGroup[kind];
     kindsOfGroup[kind] = { count: (entry?.count ?? 0) + 1, fitList: EMPTY_FIT_LIST };
-    groups.set(group, kindsOfGroup);
-    const tagsOfGroup = groupTags.get(group) ?? {};
-    tagsOfGroup[kind] = [...(tagsOfGroup[kind] ?? []), tags];
-    groupTags.set(group, tagsOfGroup);
+    groups.set(id, kindsOfGroup);
+    const connectionsOfGroup = groupConnections.get(id) ?? {};
+    connectionsOfGroup[kind] = [...(connectionsOfGroup[kind] ?? []), { writtenAs: group, tags }];
+    groupConnections.set(id, connectionsOfGroup);
   }
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const slotGroups = [...groups].map(([id, kinds]) => ({
     id,
     kinds: Object.fromEntries(GROUP_KINDS.flatMap((k) => (kinds[k] ? [[k, kinds[k]]] : []))),
   }));
-  return { slots: slots.sort(byId), slotGroups: slotGroups.sort(byId), slotTags, groupTags };
+  return { slots: slots.sort(byId), slotGroups: slotGroups.sort(byId), slotTags, groupConnections };
 }

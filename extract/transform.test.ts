@@ -400,20 +400,27 @@ describe("transform: Ships", () => {
     expect(report()).toContain("fx_frigate: shield slot con_shield_01 has no size tag; it takes the Ship's size");
   });
 
-  it("keeps group names exactly as written, and warns about ones with stray spaces", () => {
+  it("merges Slot Groups whose names are equal once trimmed, as the game does, summing each kind's count", () => {
     const { ship, report } = run(
       oneShipWorld().ship({
         id: "fx_gunboat",
         owners: ["fx_guild"],
         slots: [
           { name: "con_shield_01", tags: "shield small", group: "group_left" },
-          { name: "con_turret_01", tags: "turret small", group: "group_left " },
+          { name: "con_turret_01", tags: "turret small", group: "group_left" },
+          { name: "con_turret_02", tags: "turret small", group: "group_left " },
+          { name: "con_turret_03", tags: "turret small", group: " group_left  " },
+          { name: "con_shield_02", tags: "shield small", group: "group_right " },
         ],
       }),
     );
 
-    expect(ship("fx_gunboat").slotGroups.map((g: { id: string }) => g.id)).toEqual(["group_left", "group_left "]);
-    expect(report()).toContain(`fx_gunboat: Slot Group "group_left " has spaces around its name`);
+    expect(ship("fx_gunboat").slotGroups).toEqual([
+      { id: "group_left", kinds: { turret: { count: 3, fitList: "empty" }, shield: { count: 1, fitList: "empty" } } },
+      { id: "group_right", kinds: { shield: { count: 1, fitList: "empty" } } },
+    ]);
+    expect(report()).toContain(`fx_gunboat: Slot Group "group_left " has spaces around its name; it's merged into "group_left"`);
+    expect(report()).toContain(`fx_gunboat: Slot Group "group_right " has spaces around its name; it's merged into "group_right"`);
   });
 
   it("fails on a weapon connection in a Slot Group", () => {

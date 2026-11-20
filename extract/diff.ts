@@ -57,13 +57,37 @@ function diffItems(previous: Item[], next: Item[]): ItemDiff {
   };
 }
 
-/** Dotted paths of the fields that differ, going into objects but not arrays. */
+/**
+ * Dotted paths of the fields that differ, going into objects, and into arrays
+ * whose items all have ids (Slots, Slot Groups) by id: `slotGroups[enginegroup].kinds.engine.count`.
+ * Other arrays are compared whole.
+ */
 function changedFields(a: unknown, b: unknown, prefix = ""): string[] {
   if (isObject(a) && isObject(b)) {
     const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
     return keys.flatMap((key) => changedFields(a[key], b[key], prefix ? `${prefix}.${key}` : key));
   }
+  const byIdA = itemsById(a);
+  const byIdB = itemsById(b);
+  if (byIdA && byIdB) {
+    const ids = [...new Set([...byIdA.keys(), ...byIdB.keys()])].sort();
+    return ids.flatMap((id) => {
+      const key = /^[\w-]+$/.test(id) ? id : JSON.stringify(id);
+      return changedFields(byIdA.get(id), byIdB.get(id), `${prefix}[${key}]`);
+    });
+  }
   return JSON.stringify(a) === JSON.stringify(b) ? [] : [prefix];
+}
+
+/** An array's items by id, if every item has a string id and none repeats. */
+function itemsById(value: unknown): Map<string, unknown> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = new Map<string, unknown>();
+  for (const item of value) {
+    if (!isObject(item) || typeof item.id !== "string" || items.has(item.id)) return undefined;
+    items.set(item.id, item);
+  }
+  return items;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
