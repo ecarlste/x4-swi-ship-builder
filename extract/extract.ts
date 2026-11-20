@@ -33,7 +33,7 @@ export interface ExtractResult {
 export function extract({ x4Dir, cacheDir, config = extractConfig }: ExtractOptions): ExtractResult {
   const order = resolveLoadOrder(x4Dir, config);
 
-  for (const old of ["layers", "files", "layers.json", REPORT]) {
+  for (const old of ["layers", "files", "layers.json", REPORT, MERGE_LOG]) {
     rmSync(join(cacheDir, old), { recursive: true, force: true });
   }
 
@@ -44,6 +44,8 @@ export function extract({ x4Dir, cacheDir, config = extractConfig }: ExtractOpti
     writeJson(join(cacheDir, "files", path.replace(/\.xml$/, ".json")), fileToJson(root));
   }
   writeFileSync(join(cacheDir, REPORT), renderReport(merged.log));
+  // Kept so Stage 2 can re-render the report without merging again.
+  writeJson(join(cacheDir, MERGE_LOG), merged.log);
 
   const layersJson = {
     x4: order.x4,
@@ -64,6 +66,7 @@ export function extract({ x4Dir, cacheDir, config = extractConfig }: ExtractOpti
 }
 
 const REPORT = "extract-report.md";
+const MERGE_LOG = "merge-log.json";
 
 interface Located {
   catalog: Catalog;

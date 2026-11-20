@@ -29,6 +29,7 @@ export function ship(overrides: Partial<Ship> & { slots?: Slot[]; slotGroups?: S
       maxRotationSpeed: null,
     },
     capacities: { missiles: 0, drones: 0, deployables: 0, countermeasures: 0, crew: 0, cargo: 0 },
+    cargoTypes: [],
     slots: [],
     slotGroups: [],
     thrusters: "fl_any",

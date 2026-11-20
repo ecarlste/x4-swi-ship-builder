@@ -14,12 +14,12 @@ const count = z.number().int().nonnegative();
 export const sizeSchema = z.enum(["s", "m", "l", "xl"]);
 export type Size = z.infer<typeof sizeSchema>;
 
-const priceSchema = z
-  .object({ min: nonNegative, average: nonNegative, max: nonNegative })
-  .strict()
-  .refine((p) => p.min <= p.average && p.average <= p.max, {
-    message: "price must satisfy min <= average <= max",
-  });
+/**
+ * A ware's price as the game files give it. Usually min <= average <= max,
+ * but SWI has a few wares that break that; they are kept as written and
+ * listed in the extraction report.
+ */
+const priceSchema = z.object({ min: nonNegative, average: nonNegative, max: nonNegative }).strict();
 
 /** Fields every Ship and piece of Equipment has. */
 const tradeableFields = {
@@ -99,6 +99,10 @@ export const slotGroupSchema = z
   .strict();
 export type SlotGroup = z.infer<typeof slotGroupSchema>;
 
+/** A storage's transport type, from its `<cargo tags>`. */
+export const cargoTypeSchema = z.enum(["container", "solid", "liquid", "condensate"]);
+export type CargoType = z.infer<typeof cargoTypeSchema>;
+
 export const shipSchema = z
   .object({
     ...tradeableFields,
@@ -141,9 +145,12 @@ export const shipSchema = z
         deployables: count,
         countermeasures: count,
         crew: count,
+        /** Total cargo capacity of the Ship's storage, in m³. */
         cargo: count,
       })
       .strict(),
+    /** The kinds of cargo the Ship's storage takes, sorted; empty when it has no storage. */
+    cargoTypes: z.array(cargoTypeSchema),
     slots: z.array(slotSchema),
     slotGroups: z.array(slotGroupSchema),
     thrusters: id,

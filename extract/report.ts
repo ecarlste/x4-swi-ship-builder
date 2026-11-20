@@ -1,10 +1,21 @@
 import type { MergeLog } from "./merge.ts";
 
-/** Renders `extract-report.md`: what the maintainer should review after an extraction. */
-export function renderReport(log: MergeLog): string {
+/**
+ * Renders `extract-report.md`: what the maintainer should review after an
+ * extraction. The merge log comes from Stage 1; Stage 2 adds its own
+ * sections (already rendered lines) after it.
+ */
+export function renderReport(log: MergeLog | undefined, sections: string[] = []): string {
   return [
     "# Extraction report",
     "",
+    ...(log ? mergeLog(log) : []),
+    ...sections,
+  ].join("\n");
+}
+
+function mergeLog(log: MergeLog): string[] {
+  return [
     "## Merge log",
     "",
     "These merges follow rules assumed in #6, not checked in game. Check in game only if a Ship or",
@@ -40,10 +51,11 @@ export function renderReport(log: MergeLog): string {
       ["File", "Patch", "Selector"],
       log.unmatchedRemovals.map((r) => [r.path, r.source, r.sel]),
     ),
-  ].join("\n");
+  ];
 }
 
-function table(headers: string[], rows: string[][]): string[] {
+/** A Markdown table, or "None." when there are no rows. */
+export function table(headers: string[], rows: string[][]): string[] {
   if (rows.length === 0) return ["None.", ""];
   return [
     `| ${headers.join(" | ")} |`,
