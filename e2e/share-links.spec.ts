@@ -1,22 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
-/** Opens a Ship through the toolbar's picker. */
-async function openShip(page: Page, size: "S" | "M" | "L" | "XL", name: string) {
-  await page.getByRole("combobox", { name: "Size" }).selectOption(size);
-  await page.getByRole("combobox", { name: "Ship" }).fill(name);
-  await page.getByRole("option", { name }).click();
-}
-
-const loadoutTable = (page: Page) => page.getByRole("table", { name: "Loadout" });
-const row = (page: Page, label: string | RegExp) =>
-  loadoutTable(page)
-    .getByRole("row")
-    .filter({ has: page.getByRole("rowheader", { name: label }) });
-
-async function fit(page: Page, label: string | RegExp, equipment: string) {
-  await row(page, label).getByRole("combobox").click();
-  await page.getByRole("listbox").getByRole("option", { name: equipment, exact: true }).click();
-}
+import { fit, fragmentFor, loadoutTable, pickShip, row } from "./helpers.ts";
 
 const copyLink = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: "Copy link" });
 const saveButton = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: "Save", exact: true });
@@ -25,16 +8,6 @@ const saveDialog = (page: Page) => page.getByRole("dialog", { name: "Save Loadou
 /** What the page's clipboard holds. (A string expression, since the e2e tsconfig has no DOM types.) */
 const readClipboard = (page: Page) => page.evaluate<string>("navigator.clipboard.readText()");
 
-/** A Share Link fragment carrying this value, built in the page the way the app builds one. */
-async function fragmentFor(page: Page, value: unknown) {
-  return page.evaluate(async (json) => {
-    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
-    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-    const base64url = btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-    return `#l=${base64url}`;
-  }, JSON.stringify(value));
-}
-
 test.beforeEach(async ({ context, page }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
@@ -42,12 +15,12 @@ test.beforeEach(async ({ context, page }) => {
 
 test("Copy link is disabled until a Ship is picked", async ({ page }) => {
   await expect(copyLink(page)).toBeDisabled();
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await expect(copyLink(page)).toBeEnabled();
 });
 
 test("a copied link opens the same Loadout, with its name, in a new page", async ({ context, page }) => {
-  await openShip(page, "L", "Ironback Hauler");
+  await pickShip(page, "L", "Ironback Hauler");
   await fit(page, /con_shield_01/, "Bubble Shield M");
   await saveButton(page).click();
   await saveDialog(page).getByRole("textbox", { name: "Name" }).fill("Heavy Freighter");
@@ -70,7 +43,7 @@ test("a copied link opens the same Loadout, with its name, in a new page", async
 });
 
 test("a link copied from an unsaved Loadout opens without a name", async ({ context, page }) => {
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await fit(page, /con_weapon_01/, "Zephyr Cannon");
   await copyLink(page).click();
   await expect(page.getByRole("status")).toContainText("Link copied");
@@ -88,7 +61,7 @@ test("a tampered link shows an error and leaves the app usable", async ({ page }
   await expect(page.getByRole("alert")).toContainText("Share Link is damaged");
   await expect(loadoutTable(page)).toBeHidden();
 
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await expect(loadoutTable(page)).toBeVisible();
 });
 

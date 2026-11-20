@@ -4,6 +4,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { fragmentFor, row } from "./helpers.ts";
 
 const KEY = "swi-builder:saved-loadouts:v1";
 
@@ -12,11 +13,6 @@ const toolbarButton = (page: Page, name: string) =>
 const savedList = (page: Page) => page.getByRole("region", { name: "Saved Loadouts" });
 const savedEntry = (page: Page, name: string | RegExp) => savedList(page).getByRole("listitem").filter({ hasText: name });
 const notice = (page: Page) => page.getByRole("region", { name: "This Loadout changed with the Game Data" });
-const loadoutTable = (page: Page) => page.getByRole("table", { name: "Loadout" });
-const row = (page: Page, label: string | RegExp) =>
-  loadoutTable(page)
-    .getByRole("row")
-    .filter({ has: page.getByRole("rowheader", { name: label }) });
 
 async function showSavedLoadouts(page: Page) {
   await toolbarButton(page, "Saved Loadouts").click();
@@ -61,16 +57,6 @@ const relic = savedLoadout({
   name: "Relic",
   ship: "fx_ship_gone",
 });
-
-/** A Share Link fragment carrying this value, built in the page the way the app builds one. */
-async function fragmentFor(page: Page, value: unknown) {
-  return page.evaluate(async (json) => {
-    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
-    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-    const base64url = btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-    return `#l=${base64url}`;
-  }, JSON.stringify(value));
-}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");

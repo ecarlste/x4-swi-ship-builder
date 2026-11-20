@@ -1,22 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
-/** Opens a Ship through the toolbar's picker. */
-async function openShip(page: Page, size: "S" | "M" | "L" | "XL", name: string) {
-  await page.getByRole("combobox", { name: "Size" }).selectOption(size);
-  await page.getByRole("combobox", { name: "Ship" }).fill(name);
-  await page.getByRole("option", { name }).click();
-}
-
-const loadoutTable = (page: Page) => page.getByRole("table", { name: "Loadout" });
-const row = (page: Page, label: string | RegExp) =>
-  loadoutTable(page)
-    .getByRole("row")
-    .filter({ has: page.getByRole("rowheader", { name: label }) });
-
-async function fit(page: Page, label: string | RegExp, equipment: string) {
-  await row(page, label).getByRole("combobox").click();
-  await page.getByRole("listbox").getByRole("option", { name: equipment, exact: true }).click();
-}
+import { fit, fragmentFor, loadoutTable, pickShip, row } from "./helpers.ts";
 
 const stats = (page: Page) => page.getByRole("complementary", { name: "Stats" });
 /** The cells of the first Stats row with this label: its value, then its change once there is one. */
@@ -138,7 +121,7 @@ test("saving makes the saved version the new snapshot", async ({ page }) => {
 });
 
 test("a first save of a freshly picked Ship starts tracking changes from the saved version", async ({ page }) => {
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await saveAs(page, "Courier A");
 
   await fit(page, /con_shield_01/, "Bubble Shield S");
@@ -153,23 +136,13 @@ test("a freshly picked Ship has no snapshot and shows no changes", async ({ page
   await fit(page, /con_shield_01/, "— empty —");
   await expect(changedMarks(page)).toHaveCount(1);
 
-  await openShip(page, "S", "Bramble Fighter");
+  await pickShip(page, "S", "Bramble Fighter");
   await fit(page, /con_weapon_01/, "Zephyr Cannon");
 
   await expect(changedMarks(page)).toHaveCount(0);
   await expect(wasLines(page)).toHaveCount(0);
   await expect(statCells(page, "Hull (MJ)")).toHaveCount(1);
 });
-
-/** A Share Link fragment carrying this value, built in the page the way the app builds one. */
-async function fragmentFor(page: Page, value: unknown) {
-  return page.evaluate(async (json) => {
-    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
-    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-    const base64url = btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-    return `#l=${base64url}`;
-  }, JSON.stringify(value));
-}
 
 test("a Loadout opened from a Share Link is the snapshot changes are measured from", async ({ page }) => {
   const fragment = await fragmentFor(page, {
@@ -192,7 +165,7 @@ test("a Loadout opened from a Share Link is the snapshot changes are measured fr
 });
 
 test("a Slot Group row shows what it held, with its count", async ({ page }) => {
-  await openShip(page, "L", "Ironback Hauler");
+  await pickShip(page, "L", "Ironback Hauler");
   await fit(page, /Shields group_front/, "Bubble Shield M");
   await saveAs(page, "Hauler");
 

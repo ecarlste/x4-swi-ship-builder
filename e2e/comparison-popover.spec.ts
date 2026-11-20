@@ -1,25 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-
-/** Opens a Ship through the toolbar's picker. */
-async function openShip(page: Page, size: "S" | "M" | "L" | "XL", name: string) {
-  await page.goto("/");
-  await page.getByRole("combobox", { name: "Size" }).selectOption(size);
-  await page.getByRole("combobox", { name: "Ship" }).fill(name);
-  await page.getByRole("option", { name }).click();
-}
-
-/** The Loadout table's row whose first cell names this Slot or Slot Group kind. */
-const row = (page: Page, label: string | RegExp) =>
-  page
-    .getByRole("table", { name: "Loadout" })
-    .getByRole("row")
-    .filter({ has: page.getByRole("rowheader", { name: label }) });
-
-/** Picks an option from a row's Equipment dropdown. */
-async function fit(page: Page, label: string | RegExp, equipment: string) {
-  await row(page, label).getByRole("combobox").click();
-  await page.getByRole("listbox").getByRole("option", { name: equipment, exact: true }).click();
-}
+import { fit, openShip, row } from "./helpers.ts";
 
 /** Opens a row's Equipment dropdown and hovers one option; returns its comparison popover. */
 async function hover(page: Page, label: string | RegExp, equipment: string): Promise<Locator> {

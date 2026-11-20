@@ -1,24 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fit, loadoutTable, pickShip, row } from "./helpers.ts";
 
 const KEY = "swi-builder:saved-loadouts:v1";
-
-/** Opens a Ship through the toolbar's picker. */
-async function openShip(page: Page, size: "S" | "M" | "L" | "XL", name: string) {
-  await page.getByRole("combobox", { name: "Size" }).selectOption(size);
-  await page.getByRole("combobox", { name: "Ship" }).fill(name);
-  await page.getByRole("option", { name }).click();
-}
-
-const loadoutTable = (page: Page) => page.getByRole("table", { name: "Loadout" });
-const row = (page: Page, label: string | RegExp) =>
-  loadoutTable(page)
-    .getByRole("row")
-    .filter({ has: page.getByRole("rowheader", { name: label }) });
-
-async function fit(page: Page, label: string | RegExp, equipment: string) {
-  await row(page, label).getByRole("combobox").click();
-  await page.getByRole("listbox").getByRole("option", { name: equipment, exact: true }).click();
-}
 
 const saveButton = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: "Save", exact: true });
 const saveDialog = (page: Page) => page.getByRole("dialog", { name: "Save Loadout" });
@@ -60,7 +43,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("a first save asks for a name, suggesting the Ship's, and the Loadout reopens after a reload", async ({ page }) => {
-  await openShip(page, "L", "Ironback Hauler");
+  await pickShip(page, "L", "Ironback Hauler");
   await fit(page, /con_shield_01/, "Bubble Shield M");
 
   await saveButton(page).click();
@@ -84,7 +67,7 @@ test("a first save asks for a name, suggesting the Ship's, and the Loadout reope
 });
 
 test("saving again updates the opened Saved Loadout without asking for a name", async ({ page }) => {
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await saveAs(page, "Courier A");
 
   await fit(page, /con_weapon_01/, "Zephyr Cannon");
@@ -100,10 +83,10 @@ test("saving again updates the opened Saved Loadout without asking for a name", 
 });
 
 test("picking another Ship and saving asks for a name again and adds a new Saved Loadout", async ({ page }) => {
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await saveAs(page, "Courier A");
 
-  await openShip(page, "S", "Bramble Fighter");
+  await pickShip(page, "S", "Bramble Fighter");
   await saveAs(page, "Bramble A");
 
   await showSavedLoadouts(page);
@@ -111,9 +94,9 @@ test("picking another Ship and saving asks for a name again and adds a new Saved
 });
 
 test("a Saved Loadout can be deleted", async ({ page }) => {
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await saveAs(page, "Courier A");
-  await openShip(page, "S", "Bramble Fighter");
+  await pickShip(page, "S", "Bramble Fighter");
   await saveAs(page, "Bramble A");
 
   await showSavedLoadouts(page);
@@ -151,7 +134,7 @@ test("a stored value that isn't a list shows an error and is left untouched", as
   await expect(savedList(page).getByRole("alert")).toContainText("couldn't be read");
   await expect(savedList(page).getByRole("listitem")).toHaveCount(0);
 
-  await openShip(page, "S", "Swiftwing Courier");
+  await pickShip(page, "S", "Swiftwing Courier");
   await saveButton(page).click();
   await saveDialog(page).getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("alert").first()).toContainText("couldn't be read");

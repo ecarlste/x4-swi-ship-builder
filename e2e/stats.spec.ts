@@ -1,23 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
-/** Opens a Ship through the toolbar's picker. */
-async function openShip(page: Page, size: "S" | "M" | "L" | "XL", name: string) {
-  await page.goto("/");
-  await page.getByRole("combobox", { name: "Size" }).selectOption(size);
-  await page.getByRole("combobox", { name: "Ship" }).fill(name);
-  await page.getByRole("option", { name }).click();
-}
-
-/** Picks an option from a Loadout table row's Equipment dropdown. */
-async function fit(page: Page, label: string | RegExp, equipment: string) {
-  await page
-    .getByRole("table", { name: "Loadout" })
-    .getByRole("row")
-    .filter({ has: page.getByRole("rowheader", { name: label }) })
-    .getByRole("combobox")
-    .click();
-  await page.getByRole("listbox").getByRole("option", { name: equipment, exact: true }).click();
-}
+import { fit, openShip } from "./helpers.ts";
 
 const stats = (page: Page) => page.getByRole("complementary", { name: "Stats" });
 /** The value cell of the first Stats row with this label. */
