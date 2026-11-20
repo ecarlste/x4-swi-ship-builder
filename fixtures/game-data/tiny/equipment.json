@@ -77,5 +77,22 @@
   {
     "kind": "software", "id": "fx_scanner", "name": "Long Scanner", "nameId": "{900002,15}",
     "price": { "min": 10000, "average": 11000, "max": 12000 }, "licence": null, "sellers": ["fx_guild"]
+  },
+  {
+    "kind": "weapon", "id": "fx_cannon_s", "name": "Zephyr Cannon", "nameId": "{900002,16}",
+    "price": { "min": 25000, "average": 30000, "max": 35000 }, "licence": null, "sellers": ["fx_guild"],
+    "size": "s", "damage": { "value": 300, "noShield": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "magazine": null, "heat": { "perShot": 100, "overheat": 1000, "coolDelay": 1, "coolRate": 200 }, "missiles": null
+  },
+  {
+    "kind": "weapon", "id": "fx_tube_s", "name": "Torpedo Tube", "nameId": "{900002,17}",
+    "price": { "min": 20000, "average": 24000, "max": 28000 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
+    "size": "s", "damage": { "value": 0, "noShield": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "magazine": null, "heat": null, "missiles": "fl_torpedoes_s"
+  },
+  {
+    "kind": "missile", "id": "fx_torpedo", "name": "Heavy Torpedo", "nameId": "{900002,18}",
+    "price": { "min": 2000, "average": 2500, "max": 3000 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
+    "explosionDamage": 9000, "hullDamage": 1000, "reloadTime": 12
   }
 ]

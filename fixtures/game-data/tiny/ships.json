@@ -18,6 +18,7 @@
       "maxRotationSpeed": null
     },
     "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "cargoTypes": ["container"],
     "slots": [
       { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
       { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
@@ -50,8 +51,9 @@
       "maxRotationSpeed": null
     },
     "capacities": { "missiles": 0, "drones": 20, "deployables": 10, "countermeasures": 20, "crew": 20, "cargo": 30000 },
+    "cargoTypes": ["container"],
     "slots": [
-      { "id": "con_shield_01", "kind": "shield", "size": "m", "mandatory": false, "fitList": "fl_shield_m" }
+      { "id": "con_shield_01", "kind": "shield", "size": "m", "mandatory": true, "fitList": "fl_shield_m" }
     ],
     "slotGroups": [
       {
@@ -88,6 +90,7 @@
       "maxRotationSpeed": null
     },
     "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "cargoTypes": ["container"],
     "slots": [
       { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
       { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
@@ -120,6 +123,7 @@
       "maxRotationSpeed": null
     },
     "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "cargoTypes": ["container"],
     "slots": [
       { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
       { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
@@ -152,6 +156,7 @@
       "maxRotationSpeed": null
     },
     "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "cargoTypes": ["container"],
     "slots": [
       { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
       { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
@@ -184,6 +189,7 @@
       "maxRotationSpeed": null
     },
     "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "cargoTypes": ["container"],
     "slots": [
       { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
       { "id": "con_weapon_02", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },

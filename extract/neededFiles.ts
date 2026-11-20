@@ -1,7 +1,7 @@
 /**
  * Whether a game file is one the later stages need: library files, the macro
  * and component index, the macros and components of ships and equipment
- * (including bullets and deployables), and the English and language-neutral
+ * (including bullets and deployables), station module macros, and the English and language-neutral
  * text files. `path` is lowercased with forward slashes. A path under
  * `extensions/<folder>/` is one extension overriding another's file: it's
  * needed only if that folder is in `loadedFolders` (lowercased), and is then
@@ -22,5 +22,7 @@ const NEEDED: RegExp[] = [
   /^assets\/props\/.+\.xml$/,
   /^assets\/fx\/weaponfx\/.+\.xml$/,
   /^assets\/wares\/.+\.xml$/,
+  // Station module macros: build modules say which ship classes a station builds.
+  /^assets\/structures\/.+\/macros\/[^/]+\.xml$/,
   /^t\/0001(-l044)?\.xml$/,
 ];

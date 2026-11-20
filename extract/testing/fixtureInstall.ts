@@ -54,6 +54,7 @@ export function writeInstall(spec: FixtureInstallSpec): string {
 export const fixtureConfig: ExtractConfig = {
   swiFolder: "fx_swi",
   expectedDependencies: ["fx_dlc_a", "fx_dlc_b"],
+  patchAllowlist: { unmatchedRemovals: [], orphanPatches: [] },
 };
 
 export function dlcContent(id: string, deps: string[] = []): string {
