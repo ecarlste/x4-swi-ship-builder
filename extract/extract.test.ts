@@ -122,7 +122,7 @@ describe("extract: layer files", () => {
     });
   });
 
-  it("converts only libraries, the macro and component index, ship and equipment assets, and text", () => {
+  it("converts only libraries, the macro and component index, ship and equipment assets, station module macros, and text", () => {
     const spec = standardInstall();
     const needed = [
       "libraries/ships.xml",
@@ -133,6 +133,7 @@ describe("extract: layer files", () => {
       "assets/props/Engines/macros/fx_engine_macro.xml",
       "assets/fx/weaponFx/macros/fx_bullet_macro.xml",
       "assets/wares/macros/fx_satellite_macro.xml",
+      "assets/structures/buildmodule/macros/fx_buildmodule_macro.xml",
       "t/0001.xml",
     ];
     const notNeeded = [
@@ -140,6 +141,7 @@ describe("extract: layer files", () => {
       "md/fx_script.xml",
       "aiscripts/fx_order.xml",
       "assets/environments/fx_rock.xml",
+      "assets/structures/buildmodule/fx_buildmodule.xml",
       "assets/units/size_s/fx_ship.xmf",
       "t/0001-L049.xml",
       "index/mapdefaults.xml",
