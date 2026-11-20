@@ -39,13 +39,13 @@ function mergeLog(log: MergeLog): string[] {
       ["File", "Replaced", "By"],
       log.replacements.map((r) => [r.path, r.replaced, r.by]),
     ),
-    "### Patches skipped: no earlier layer has the file",
+    "### Patches skipped: no earlier layer has the file (allowlisted in extract/config.ts)",
     "",
     ...table(
       ["File", "Patch"],
       log.orphanPatches.map((p) => [p.path, p.source]),
     ),
-    "### Patch removals that matched nothing (the node was already gone)",
+    "### Patch removals that matched nothing (allowlisted in extract/config.ts)",
     "",
     ...table(
       ["File", "Patch", "Selector"],

@@ -39,7 +39,7 @@ export function extract({ x4Dir, cacheDir, config = extractConfig }: ExtractOpti
 
   const loadedFolders = new Set(order.layers.flatMap((l) => (l.folder ? [basename(l.folder).toLowerCase()] : [])));
   const layerFiles = order.layers.map((layer) => readLayer(layer, loadedFolders));
-  const merged = mergeLayers(layerFiles);
+  const merged = mergeLayers(layerFiles, config.patchAllowlist);
   for (const [path, root] of [...merged.files].sort(([a], [b]) => (a < b ? -1 : 1))) {
     writeJson(join(cacheDir, "files", path.replace(/\.xml$/, ".json")), fileToJson(root));
   }

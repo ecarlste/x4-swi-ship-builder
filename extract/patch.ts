@@ -12,32 +12,47 @@ import type { XmlElement, XmlNode } from "./xml.ts";
  * An operation with an `if` is skipped when its condition is false.
  *
  * Hard failures, each naming the patch and selector: a selector outside the
- * supported forms (see {@link parseSelector}), an `add` or `replace` whose
- * `sel` matches nothing (unless the operation has `silent="true"` or
- * `silent="1"`), a `sel` that matches more than one node, and an operation
- * other than these.
+ * supported forms (see {@link parseSelector}), a `sel` that matches nothing
+ * (unless the operation has `silent="true"` or `silent="1"`), a `sel` that
+ * matches more than one node, and an operation other than these.
  *
- * A `remove` whose `sel` matches nothing leaves the file as the game has it
- * (without that node), so it isn't a failure: its selector is returned in
+ * The one exception is a `remove` whose `sel` matches nothing and that
+ * `options.allowUnmatchedRemoval` accepts (a known removal of a node the game
+ * doesn't have): it is skipped, and its selector returned in
  * `unmatchedRemovals` for the report.
  */
-export function applyPatch(target: XmlElement, diff: XmlElement, source: string): PatchResult {
+export function applyPatch(
+  target: XmlElement,
+  diff: XmlElement,
+  source: string,
+  options: PatchOptions = {},
+): PatchResult {
   const doc = new Document(target);
   const unmatchedRemovals: string[] = [];
   for (const op of diff.children) {
     if (typeof op === "string") continue;
-    if (applyOperation(doc, op, source) === "unmatched removal") unmatchedRemovals.push(op.attrs.sel!);
+    if (applyOperation(doc, op, source, options) === "unmatched removal") unmatchedRemovals.push(op.attrs.sel!);
   }
   return { file: doc.root, unmatchedRemovals };
 }
 
+export interface PatchOptions {
+  /** Whether a `remove` with this `sel`, which matches nothing, is a known one to skip instead of failing. */
+  allowUnmatchedRemoval?: (sel: string) => boolean;
+}
+
 export interface PatchResult {
   file: XmlElement;
-  /** The `sel` of each `remove` (without `silent`) that matched nothing. */
+  /** The `sel` of each allowed `remove` (without `silent`) that matched nothing. */
   unmatchedRemovals: string[];
 }
 
-function applyOperation(doc: Document, op: XmlElement, source: string): "unmatched removal" | undefined {
+function applyOperation(
+  doc: Document,
+  op: XmlElement,
+  source: string,
+  options: PatchOptions,
+): "unmatched removal" | undefined {
   if (op.tag !== "add" && op.tag !== "replace" && op.tag !== "remove") {
     throw new ExtractError(`${source}: unsupported operation <${op.tag}>`);
   }
@@ -49,7 +64,7 @@ function applyOperation(doc: Document, op: XmlElement, source: string): "unmatch
   const matches = select(doc, path);
   if (matches.length === 0) {
     if (op.attrs.silent === "true" || op.attrs.silent === "1") return;
-    if (op.tag === "remove") return "unmatched removal";
+    if (op.tag === "remove" && options.allowUnmatchedRemoval?.(sel)) return "unmatched removal";
     throw new ExtractError(`${source}: sel "${sel}" matches nothing`);
   }
   if (matches.length > 1) throw new ExtractError(`${source}: sel "${sel}" matches ${matches.length} nodes, not 1`);

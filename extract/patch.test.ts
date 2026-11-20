@@ -248,11 +248,18 @@ describe("applyPatch: failures", () => {
     );
   });
 
-  it("doesn't fail on a remove whose sel matches nothing, since the node is already gone, but returns it", () => {
+  it("fails, naming the file and selector, when a remove sel matches nothing", () => {
+    expect(() => patch(target, `<diff><remove sel="/wares/ware[@id='zz']"/></diff>`)).toThrow(
+      `${SOURCE}: sel "/wares/ware[@id='zz']" matches nothing`,
+    );
+  });
+
+  it("doesn't fail on an allowed remove whose sel matches nothing, but returns it", () => {
     const result = applyPatch(
       parseXml(target, "target"),
       parseXml(`<diff><remove sel="/wares/ware[@id='zz']"/><remove sel="/wares/ware[@id='a']/@name"/></diff>`, SOURCE),
       SOURCE,
+      { allowUnmatchedRemoval: (sel) => sel === "/wares/ware[@id='zz']" },
     );
 
     expect(result.file).toEqual(xml(`<wares><ware id="a"/></wares>`));

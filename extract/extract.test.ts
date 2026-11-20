@@ -2,13 +2,14 @@ import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import type { ExtractConfig, PatchAllowlist } from "./config.ts";
 import { extract } from "./extract.ts";
 import { fixtureConfig, swiContent, standardInstall, writeInstall, type FixtureInstallSpec } from "./testing/fixtureInstall.ts";
 
-function run(spec: FixtureInstallSpec = standardInstall()) {
+function run(spec: FixtureInstallSpec = standardInstall(), config: ExtractConfig = fixtureConfig) {
   const x4Dir = writeInstall(spec);
   const cacheDir = mkdtempSync(join(tmpdir(), "extract-cache-"));
-  const result = extract({ x4Dir, cacheDir, config: fixtureConfig });
+  const result = extract({ x4Dir, cacheDir, config });
   const readJson = (path: string) => JSON.parse(readFileSync(join(cacheDir, path), "utf8"));
   const report = () => readFileSync(join(cacheDir, "extract-report.md"), "utf8");
   return { result, cacheDir, readJson, report, exists: (path: string) => existsSync(join(cacheDir, path)) };
@@ -391,29 +392,77 @@ describe("extract: merging layers", () => {
     expect(exists("files/t/0001.json")).toBe(false);
   });
 
-  it("skips a <diff> for a file no earlier layer has, and lists it in the report", () => {
+  const allowlisted = (allowlist: Partial<PatchAllowlist>) => ({
+    ...fixtureConfig,
+    patchAllowlist: { unmatchedRemovals: [], orphanPatches: [], ...allowlist },
+  });
+
+  it("fails, naming the patch, on a <diff> for a file no earlier layer has", () => {
     const spec = standardInstall();
     spec.extensions.fx_swi!.catalogs.ext_01 = {
       "assets/fx/weaponfx/backup/fx_bullet.xml": `<diff><replace sel="//components"><components/></replace></diff>`,
     };
 
-    const { exists, report } = run(spec);
+    expect(() => run(spec)).toThrow(
+      "FX SWI ext_01.cat: assets/fx/weaponfx/backup/fx_bullet.xml patches extensions/fx_swi/assets/fx/weaponfx/backup/fx_bullet.xml, which no earlier layer has",
+    );
+  });
+
+  it("skips an allowlisted <diff> for a file no earlier layer has, and lists it in the report", () => {
+    const spec = standardInstall();
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "assets/fx/weaponFx/backup/fx_bullet.xml": `<diff><replace sel="//components"><components/></replace></diff>`,
+    };
+    const config = allowlisted({
+      orphanPatches: [{ extension: "fx_swi", patch: "assets/fx/weaponFx/backup/fx_bullet.xml", reason: "test" }],
+    });
+
+    const { exists, report } = run(spec, config);
 
     expect(exists("files/extensions/fx_swi/assets/fx/weaponfx/backup/fx_bullet.json")).toBe(false);
     expect(exists("files/assets/fx/weaponfx/backup/fx_bullet.json")).toBe(false);
     expect(report()).toContain(
-      "| extensions/fx_swi/assets/fx/weaponfx/backup/fx_bullet.xml | FX SWI ext_01.cat: assets/fx/weaponfx/backup/fx_bullet.xml |",
+      "| extensions/fx_swi/assets/fx/weaponfx/backup/fx_bullet.xml | FX SWI ext_01.cat: assets/fx/weaponFx/backup/fx_bullet.xml |",
     );
   });
 
-  it("lists a <diff> remove whose sel matches nothing in the report", () => {
+  it("fails, naming the patch and selector, when a <diff> remove's sel matches nothing", () => {
     const spec = standardInstall();
     spec.base["01"] = { "libraries/wares.xml": `<wares/>` };
     spec.extensions.fx_swi!.catalogs.ext_01 = {
       "libraries/wares.xml": `<diff><remove sel="/wares/ware[@id='gone']"/></diff>`,
     };
 
-    const { report } = run(spec);
+    expect(() => run(spec)).toThrow(`FX SWI ext_01.cat: libraries/wares.xml: sel "/wares/ware[@id='gone']" matches nothing`);
+  });
+
+  it("fails on an unmatched remove allowlisted only for another selector or extension", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "libraries/wares.xml": `<wares/>` };
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "libraries/wares.xml": `<diff><remove sel="/wares/ware[@id='gone']"/></diff>`,
+    };
+    const config = allowlisted({
+      unmatchedRemovals: [
+        { extension: "fx_swi", patch: "libraries/wares.xml", sel: "/wares/ware[@id='other']", reason: "test" },
+        { extension: "fx_dlc_a", patch: "libraries/wares.xml", sel: "/wares/ware[@id='gone']", reason: "test" },
+      ],
+    });
+
+    expect(() => run(spec, config)).toThrow(`sel "/wares/ware[@id='gone']" matches nothing`);
+  });
+
+  it("lists an allowlisted <diff> remove whose sel matches nothing in the report", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "libraries/wares.xml": `<wares/>` };
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "libraries/wares.xml": `<diff><remove sel="/wares/ware[@id='gone']"/></diff>`,
+    };
+    const config = allowlisted({
+      unmatchedRemovals: [{ extension: "fx_swi", patch: "libraries/wares.xml", sel: "/wares/ware[@id='gone']", reason: "test" }],
+    });
+
+    const { report } = run(spec, config);
 
     expect(report()).toContain("| libraries/wares.xml | FX SWI ext_01.cat: libraries/wares.xml | /wares/ware[@id='gone'] |");
   });

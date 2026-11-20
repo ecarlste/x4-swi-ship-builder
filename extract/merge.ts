@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { ExtractError } from "./errors.ts";
 import type { Layer } from "./loadOrder.ts";
+import type { PatchAllowlist } from "./config.ts";
 import { applyPatch } from "./patch.ts";
 import type { XmlElement, XmlNode } from "./xml.ts";
 
@@ -31,9 +32,9 @@ export interface MergeLog {
   duplicates: { path: string; entry: string; earlier: string; later: string }[];
   /** A file replaced whole: a macro or component at a base-game path, or a subst catalog's copy. */
   replacements: { path: string; replaced: string; by: string }[];
-  /** A `<diff>` file for a path no earlier layer has, so it patches nothing and is skipped. */
+  /** An allowlisted `<diff>` file for a path no earlier layer has, so it patches nothing and is skipped. */
   orphanPatches: { path: string; source: string }[];
-  /** A `<diff>` remove whose sel matched nothing: the node was already gone. */
+  /** An allowlisted `<diff>` remove whose sel matched nothing: the node was already gone. */
   unmatchedRemovals: { path: string; source: string; sel: string }[];
 }
 
@@ -47,8 +48,10 @@ export interface Merged {
  * Merges the layers, in load order, into one file per game path. Within a
  * layer, files from `ext_*` (or base) catalogs go first, then `subst_*` ones.
  *
- * - A file with a `<diff>` root is passed to the patch step, or skipped
- *   (and logged) if no earlier layer has the file it patches.
+ * - A file with a `<diff>` root is passed to the patch step. If no earlier
+ *   layer has the file it patches, that is a hard failure unless `allowlist`
+ *   lists it, and then it is skipped and logged. Likewise a `remove` whose
+ *   `sel` matches nothing fails unless `allowlist` lists it.
  * - A library, index or text file is a collection: it's merged into the
  *   earlier file, and a duplicate id is won by the later definition.
  * - Any other file at a path that already has one (a macro or component at a
@@ -58,7 +61,7 @@ export interface Merged {
  *   `t/0001-l044.xml` when it has none (SWI ships only the neutral file), and
  *   is otherwise ignored, since only English is extracted.
  */
-export function mergeLayers(layers: LayerFiles[]): Merged {
+export function mergeLayers(layers: LayerFiles[], allowlist: PatchAllowlist): Merged {
   const files = new Map<string, XmlElement>();
   // The last source to change each file, and the source of each collection entry.
   const fileSource = new Map<string, string>();
@@ -102,11 +105,22 @@ export function mergeLayers(layers: LayerFiles[]): Merged {
       const path = file.path === NEUTRAL_TEXT && neutralIsEnglish ? ENGLISH_TEXT : gamePath(layer.layer, file, files);
       const earlier = files.get(path);
       if (file.root.tag === "diff") {
+        const extension = layer.layer.folder && basename(layer.layer.folder).toLowerCase();
+        const isThisPatch = (entry: { extension: string; patch: string }) =>
+          entry.extension.toLowerCase() === extension && entry.patch.toLowerCase() === file.path;
         if (earlier === undefined) {
+          if (!allowlist.orphanPatches.some(isThisPatch)) {
+            throw new ExtractError(
+              `${file.source} patches ${path}, which no earlier layer has. ` +
+                "If that is expected, add it to patchAllowlist.orphanPatches in extract/config.ts",
+            );
+          }
           log.orphanPatches.push({ path, source: file.source });
           continue;
         }
-        const patched = applyPatch(earlier, file.root, file.source);
+        const patched = applyPatch(earlier, file.root, file.source, {
+          allowUnmatchedRemoval: (sel) => allowlist.unmatchedRemovals.some((r) => isThisPatch(r) && r.sel === sel),
+        });
         files.set(path, patched.file);
         for (const sel of patched.unmatchedRemovals) log.unmatchedRemovals.push({ path, source: file.source, sel });
         fileSource.set(path, file.source);
