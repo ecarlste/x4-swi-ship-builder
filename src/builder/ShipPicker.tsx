@@ -49,6 +49,11 @@ export function ShipPicker({
   const [size, setSize] = useState<Size>(value?.size ?? "s");
   /** A Faction id, or "" for any Seller. */
   const [seller, setSeller] = useState("");
+  // A Ship opened from elsewhere (a Saved Loadout) brings its size with it.
+  const valueSize = value?.size;
+  useEffect(() => {
+    if (valueSize) setSize(valueSize);
+  }, [value?.id, valueSize]);
   const [open, setOpen] = useState(false);
   /** What the user has typed since opening the list, or null to list everything. */
   const [query, setQuery] = useState<string | null>(null);
