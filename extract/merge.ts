@@ -31,6 +31,10 @@ export interface MergeLog {
   duplicates: { path: string; entry: string; earlier: string; later: string }[];
   /** A file replaced whole: a macro or component at a base-game path, or a subst catalog's copy. */
   replacements: { path: string; replaced: string; by: string }[];
+  /** A `<diff>` file for a path no earlier layer has, so it patches nothing and is skipped. */
+  orphanPatches: { path: string; source: string }[];
+  /** A `<diff>` remove whose sel matched nothing: the node was already gone. */
+  unmatchedRemovals: { path: string; source: string; sel: string }[];
 }
 
 export interface Merged {
@@ -43,7 +47,8 @@ export interface Merged {
  * Merges the layers, in load order, into one file per game path. Within a
  * layer, files from `ext_*` (or base) catalogs go first, then `subst_*` ones.
  *
- * - A file with a `<diff>` root is passed to the patch step.
+ * - A file with a `<diff>` root is passed to the patch step, or skipped
+ *   (and logged) if no earlier layer has the file it patches.
  * - A library, index or text file is a collection: it's merged into the
  *   earlier file, and a duplicate id is won by the later definition.
  * - Any other file at a path that already has one (a macro or component at a
@@ -55,7 +60,7 @@ export function mergeLayers(layers: LayerFiles[]): Merged {
   // The last source to change each file, and the source of each collection entry.
   const fileSource = new Map<string, string>();
   const entrySource = new WeakMap<XmlElement, string>();
-  const log: MergeLog = { merges: [], duplicates: [], replacements: [] };
+  const log: MergeLog = { merges: [], duplicates: [], replacements: [], orphanPatches: [], unmatchedRemovals: [] };
 
   const tagEntries = (root: XmlElement, source: string) => {
     for (const child of root.children) if (typeof child !== "string") entrySource.set(child, source);
@@ -91,7 +96,13 @@ export function mergeLayers(layers: LayerFiles[]): Merged {
       const path = gamePath(layer.layer, file, files);
       const earlier = files.get(path);
       if (file.root.tag === "diff") {
-        files.set(path, applyPatch(earlier, file.root, file.source));
+        if (earlier === undefined) {
+          log.orphanPatches.push({ path, source: file.source });
+          continue;
+        }
+        const patched = applyPatch(earlier, file.root, file.source);
+        files.set(path, patched.file);
+        for (const sel of patched.unmatchedRemovals) log.unmatchedRemovals.push({ path, source: file.source, sel });
         fileSource.set(path, file.source);
       } else if (earlier && isCollection(path)) merge(path, earlier, file);
       else replace(path, file);

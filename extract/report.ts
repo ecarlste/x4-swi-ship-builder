@@ -28,6 +28,18 @@ export function renderReport(log: MergeLog): string {
       ["File", "Replaced", "By"],
       log.replacements.map((r) => [r.path, r.replaced, r.by]),
     ),
+    "### Patches skipped: no earlier layer has the file",
+    "",
+    ...table(
+      ["File", "Patch"],
+      log.orphanPatches.map((p) => [p.path, p.source]),
+    ),
+    "### Patch removals that matched nothing (the node was already gone)",
+    "",
+    ...table(
+      ["File", "Patch", "Selector"],
+      log.unmatchedRemovals.map((r) => [r.path, r.source, r.sel]),
+    ),
   ].join("\n");
 }
 

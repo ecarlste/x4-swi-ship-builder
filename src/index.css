@@ -159,6 +159,48 @@ input {
   list-style: none;
 }
 
+.stats-table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.stats-table tbody + tbody tr:first-child > * {
+  padding-top: 10px;
+}
+
+.stats-table th {
+  text-align: left;
+  font-weight: normal;
+}
+
+.stats-table th.stat-sub {
+  padding-left: 16px;
+}
+
+.stats-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-price h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8a93a6;
+}
+
+.stats-price-average {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.stats-price-range {
+  font-size: 12px;
+  color: #8a93a6;
+}
+
 @media (max-width: 720px) {
   .builder {
     grid-template-columns: 1fr;

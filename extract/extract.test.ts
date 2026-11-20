@@ -346,15 +346,67 @@ describe("extract: merging layers", () => {
     );
   });
 
-  it("passes a file with a <diff> root to the patch step, which fails until patching exists", () => {
+  it("applies <diff> patches to the merged file, in load order", () => {
     const spec = standardInstall();
-    spec.base["01"] = { "assets/props/engines/macros/fx_engine_macro.xml": `<macros><macro name="fx_engine"/></macros>` };
+    spec.base["01"] = {
+      "libraries/wares.xml": `<wares><ware id="w1" price="1"/></wares>`,
+      "assets/props/engines/macros/fx_engine_macro.xml": `<macros><macro name="fx_engine"><thrust forward="1"/></macro></macros>`,
+    };
+    spec.extensions.fx_dlc_a!.catalogs.ext_01 = {
+      "libraries/wares.xml": `<diff><add sel="/wares"><ware id="w2" price="2"/></add></diff>`,
+    };
+    spec.extensions.fx_dlc_b!.catalogs.ext_01 = {
+      "libraries/wares.xml": `<diff><replace sel="/wares/ware[@id='w2']/@price">3</replace></diff>`,
+    };
     spec.extensions.fx_swi!.catalogs.ext_01 = {
-      "assets/props/Engines/macros/fx_engine_macro.xml": `<diff><replace sel="//macro/@name">x</replace></diff>`,
+      "libraries/wares.xml": `<diff><remove sel="/wares/ware[@id='w1']"/></diff>`,
+      "assets/props/Engines/macros/fx_engine_macro.xml": `<diff><replace sel="//thrust/@forward">5</replace></diff>`,
+    };
+
+    const { readJson } = run(spec);
+
+    expect(readJson("files/libraries/wares.json")).toEqual({ wares: { ware: [{ id: "w2", price: "3" }] } });
+    expect(readJson("files/assets/props/engines/macros/fx_engine_macro.json")).toEqual({
+      macros: { macro: [{ name: "fx_engine", thrust: [{ forward: "5" }] }] },
+    });
+  });
+
+  it("skips a <diff> for a file no earlier layer has, and lists it in the report", () => {
+    const spec = standardInstall();
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "assets/fx/weaponfx/backup/fx_bullet.xml": `<diff><replace sel="//components"><components/></replace></diff>`,
+    };
+
+    const { exists, report } = run(spec);
+
+    expect(exists("files/extensions/fx_swi/assets/fx/weaponfx/backup/fx_bullet.json")).toBe(false);
+    expect(exists("files/assets/fx/weaponfx/backup/fx_bullet.json")).toBe(false);
+    expect(report()).toContain(
+      "| extensions/fx_swi/assets/fx/weaponfx/backup/fx_bullet.xml | FX SWI ext_01.cat: assets/fx/weaponfx/backup/fx_bullet.xml |",
+    );
+  });
+
+  it("lists a <diff> remove whose sel matches nothing in the report", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "libraries/wares.xml": `<wares/>` };
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "libraries/wares.xml": `<diff><remove sel="/wares/ware[@id='gone']"/></diff>`,
+    };
+
+    const { report } = run(spec);
+
+    expect(report()).toContain("| libraries/wares.xml | FX SWI ext_01.cat: libraries/wares.xml | /wares/ware[@id='gone'] |");
+  });
+
+  it("fails, naming the patch and selector, when a <diff> sel matches nothing", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "libraries/wares.xml": `<wares/>` };
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "libraries/wares.xml": `<diff><replace sel="/wares/ware[@id='gone']/@price">1</replace></diff>`,
     };
 
     expect(() => run(spec)).toThrow(
-      /FX SWI ext_01\.cat: assets\/props\/Engines\/macros\/fx_engine_macro\.xml: diff patching not implemented yet/,
+      `FX SWI ext_01.cat: libraries/wares.xml: sel "/wares/ware[@id='gone']/@price" matches nothing`,
     );
   });
 });
