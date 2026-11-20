@@ -10,7 +10,8 @@ function run(spec: FixtureInstallSpec = standardInstall()) {
   const cacheDir = mkdtempSync(join(tmpdir(), "extract-cache-"));
   const result = extract({ x4Dir, cacheDir, config: fixtureConfig });
   const readJson = (path: string) => JSON.parse(readFileSync(join(cacheDir, path), "utf8"));
-  return { result, cacheDir, readJson, exists: (path: string) => existsSync(join(cacheDir, path)) };
+  const report = () => readFileSync(join(cacheDir, "extract-report.md"), "utf8");
+  return { result, cacheDir, readJson, report, exists: (path: string) => existsSync(join(cacheDir, path)) };
 }
 
 describe("extract: load order", () => {
@@ -27,23 +28,20 @@ describe("extract: load order", () => {
       date: "2026-01-02",
     });
     expect(layers.layers).toEqual([
-      { dir: "layers/00_x4", id: "x4", version: "700", catalogs: ["01.cat", "02.cat"] },
+      { id: "x4", version: "700", catalogs: ["01.cat", "02.cat"] },
       {
-        dir: "layers/01_fx_dlc_a",
         id: "fx_dlc_a",
         folder: "extensions/fx_dlc_a",
         version: "700",
         catalogs: ["ext_01.cat"],
       },
       {
-        dir: "layers/02_fx_dlc_b",
         id: "fx_dlc_b",
         folder: "extensions/fx_dlc_b",
         version: "700",
         catalogs: ["ext_01.cat"],
       },
       {
-        dir: "layers/03_fx_swi",
         id: "FX SWI",
         folder: "extensions/fx_swi",
         version: "123",
@@ -106,7 +104,7 @@ describe("extract: layer files", () => {
 
     const { readJson } = run(spec);
 
-    expect(readJson("layers/00_x4/files/libraries/wares.json")).toEqual({
+    expect(readJson("files/libraries/wares.json")).toEqual({
       wares: {
         ware: [
           {
@@ -119,7 +117,7 @@ describe("extract: layer files", () => {
         ],
       },
     });
-    expect(readJson("layers/00_x4/files/t/0001-l044.json")).toEqual({
+    expect(readJson("files/t/0001-l044.json")).toEqual({
       language: { id: "44", page: [{ id: "1", t: [{ id: "1", "#text": "Hello & welcome" }] }] },
     });
   });
@@ -136,7 +134,6 @@ describe("extract: layer files", () => {
       "assets/fx/weaponFx/macros/fx_bullet_macro.xml",
       "assets/wares/macros/fx_satellite_macro.xml",
       "t/0001.xml",
-      "extensions/fx_dlc_a/libraries/wares.xml",
     ];
     const notNeeded = [
       "libraries/backup/ships.xml",
@@ -147,32 +144,30 @@ describe("extract: layer files", () => {
       "t/0001-L049.xml",
       "index/mapdefaults.xml",
     ];
-    spec.extensions.fx_swi!.catalogs.ext_01 = Object.fromEntries(
-      [...needed, ...notNeeded].map((path) => [path, "<x/>"]),
-    );
+    spec.base["02"] = Object.fromEntries([...needed, ...notNeeded].map((path) => [path, "<x/>"]));
 
     const { exists, result } = run(spec);
 
     for (const path of needed) {
-      expect(exists(`layers/03_fx_swi/files/${path.toLowerCase().replace(/\.xml$/, ".json")}`), path).toBe(true);
+      expect(exists(`files/${path.toLowerCase().replace(/\.xml$/, ".json")}`), path).toBe(true);
     }
     for (const path of notNeeded) {
-      expect(exists(`layers/03_fx_swi/files/${path.toLowerCase().replace(/\.xml$/, ".json")}`), path).toBe(false);
+      expect(exists(`files/${path.toLowerCase().replace(/\.xml$/, ".json")}`), path).toBe(false);
     }
-    expect(result.layers.at(-1)).toEqual({ id: "FX SWI", files: needed.length, substFiles: 0 });
+    expect(result.layers[0]).toEqual({ id: "x4", files: needed.length + 1, substFiles: 0 });
   });
 
   it("keeps SWI's overrides of files in its dependencies, but not of extensions outside the load order", () => {
     const spec = standardInstall();
     spec.extensions.fx_swi!.catalogs.ext_01 = {
-      "extensions/fx_dlc_a/libraries/wares.xml": "<wares/>",
-      "extensions/fx_dlc_mini/libraries/wares.xml": "<wares/>",
+      "extensions/fx_dlc_a/assets/units/size_s/macros/fx_a_macro.xml": "<macros/>",
+      "extensions/fx_dlc_mini/assets/units/size_s/macros/fx_mini_macro.xml": "<macros/>",
     };
 
     const { exists } = run(spec);
 
-    expect(exists("layers/03_fx_swi/files/extensions/fx_dlc_a/libraries/wares.json")).toBe(true);
-    expect(exists("layers/03_fx_swi/files/extensions/fx_dlc_mini/libraries/wares.json")).toBe(false);
+    expect(exists("files/extensions/fx_dlc_a/assets/units/size_s/macros/fx_a_macro.json")).toBe(true);
+    expect(exists("files/extensions/fx_dlc_mini/assets/units/size_s/macros/fx_mini_macro.json")).toBe(false);
   });
 
   it("keeps text exactly as written, dropping only whitespace between elements", () => {
@@ -181,7 +176,7 @@ describe("extract: layer files", () => {
 
     const { readJson } = run(spec);
 
-    expect(readJson("layers/00_x4/files/t/0001.json")).toEqual({
+    expect(readJson("files/t/0001.json")).toEqual({
       language: { page: [{ id: "1", t: [{ id: "1", "#text": " padded " }] }] },
     });
   });
@@ -193,20 +188,7 @@ describe("extract: layer files", () => {
 
     const { readJson } = run(spec);
 
-    expect(readJson("layers/00_x4/files/libraries/wares.json")).toEqual({ wares: { from: "02" } });
-  });
-
-  it("keeps subst catalog files apart from ext catalog files", () => {
-    const spec = standardInstall();
-    spec.extensions.fx_swi!.catalogs = {
-      ext_01: { "libraries/wares.xml": `<diff from="ext"/>` },
-      subst_01: { "libraries/wares.xml": `<wares from="subst"/>` },
-    };
-
-    const { readJson } = run(spec);
-
-    expect(readJson("layers/03_fx_swi/files/libraries/wares.json")).toEqual({ diff: { from: "ext" } });
-    expect(readJson("layers/03_fx_swi/subst/libraries/wares.json")).toEqual({ wares: { from: "subst" } });
+    expect(readJson("files/libraries/wares.json")).toEqual({ wares: { from: "02" } });
   });
 
   it("fails, naming the archive and file, on XML that isn't well-formed", () => {
@@ -216,53 +198,163 @@ describe("extract: layer files", () => {
     expect(() => run(spec)).toThrow(/ext_01\.cat: libraries\/ships\.xml isn't well-formed XML/);
   });
 
-  it("keeps a diff file's operations, and what each one adds, in document order", () => {
-    const spec = standardInstall();
-    spec.extensions.fx_swi!.catalogs.ext_01 = {
-      "libraries/wares.xml": `<?xml version="1.0" encoding="utf-8"?>
-<diff>
-  <remove sel="//ware[@id='w1']"/>
-  <add sel="/wares">
-    <ware id="w1"><price max="9"/><owner faction="fx_a"/></ware>
-    <comment-free id="x"/>
-    <ware id="w3"/>
-  </add>
-  <replace sel="//ware[@id='w3']/@name">New name</replace>
-  <remove sel="//ware[@id='w2']" silent="true"/>
-</diff>`,
-    };
-
-    const { readJson } = run(spec);
-
-    expect(readJson("layers/03_fx_swi/files/libraries/wares.json")).toEqual({
-      diff: {
-        "#children": [
-          { remove: { sel: "//ware[@id='w1']" } },
-          {
-            add: {
-              sel: "/wares",
-              "#children": [
-                { ware: { id: "w1", price: [{ max: "9" }], owner: [{ faction: "fx_a" }] } },
-                { "comment-free": { id: "x" } },
-                { ware: { id: "w3" } },
-              ],
-            },
-          },
-          { replace: { sel: "//ware[@id='w3']/@name", "#text": "New name" } },
-          { remove: { sel: "//ware[@id='w2']", silent: "true" } },
-        ],
-      },
-    });
-  });
-
   it("keys an attribute as @name when a child element has the same name", () => {
     const spec = standardInstall();
     spec.base["01"] = { "libraries/ships.xml": `<ships><ship owner="a"><owner faction="b"/></ship></ships>` };
 
     const { readJson } = run(spec);
 
-    expect(readJson("layers/00_x4/files/libraries/ships.json")).toEqual({
+    expect(readJson("files/libraries/ships.json")).toEqual({
       ships: { ship: [{ "@owner": "a", owner: [{ faction: "b" }] }] },
     });
+  });
+});
+
+describe("extract: merging layers", () => {
+  it("merges a library file without a <diff> root into the earlier file", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "libraries/ships.xml": `<ships><ship id="s1"/></ships>` };
+    spec.extensions.fx_dlc_a!.catalogs.ext_01 = { "libraries/ships.xml": `<ships><ship id="s2"/><ship id="s3"/></ships>` };
+
+    const { readJson, report } = run(spec);
+
+    expect(readJson("files/libraries/ships.json")).toEqual({
+      ships: { ship: [{ id: "s1" }, { id: "s2" }, { id: "s3" }] },
+    });
+    expect(report()).toContain(
+      "| libraries/ships.xml | fx_dlc_a ext_01.cat: libraries/ships.xml |",
+    );
+  });
+
+  it("keeps the later definition of a duplicate id or index name, in the earlier one's place", () => {
+    const spec = standardInstall();
+    spec.base["01"] = {
+      "libraries/ships.xml": `<ships><ship id="s1" v="base"/><ship id="s2" v="base"/></ships>`,
+      "index/macros.xml": `<index><entry name="m1" value="base"/></index>`,
+    };
+    spec.extensions.fx_dlc_a!.catalogs.ext_01 = {
+      "libraries/ships.xml": `<ships><ship id="s1" v="a"/><ship id="s3" v="a"/></ships>`,
+      "index/macros.xml": `<index><entry name="m1" value="a"/></index>`,
+    };
+
+    const { readJson, report } = run(spec);
+
+    expect(readJson("files/libraries/ships.json")).toEqual({
+      ships: { ship: [{ id: "s1", v: "a" }, { id: "s2", v: "base" }, { id: "s3", v: "a" }] },
+    });
+    expect(readJson("files/index/macros.json")).toEqual({ index: { entry: [{ name: "m1", value: "a" }] } });
+    expect(report()).toContain(
+      "| libraries/ships.xml | ship s1 | x4 01.cat: libraries/ships.xml | fx_dlc_a ext_01.cat: libraries/ships.xml |",
+    );
+    expect(report()).toContain(
+      "| index/macros.xml | entry m1 | x4 01.cat: index/macros.xml | fx_dlc_a ext_01.cat: index/macros.xml |",
+    );
+  });
+
+  it("replaces a macro or component file at a base-game path whole, and keeps new ones in the extension's folder", () => {
+    const spec = standardInstall();
+    spec.base["01"] = {
+      "assets/props/Engines/macros/fx_engine_macro.xml": `<macros><macro name="fx_engine" v="base"/><macro name="fx_extra"/></macros>`,
+      "assets/props/Engines/fx_engine.xml": `<components><component name="fx_engine" v="base"/></components>`,
+    };
+    spec.extensions.fx_dlc_a!.catalogs.ext_01 = {
+      "assets/props/engines/macros/fx_engine_macro.xml": `<macros><macro name="fx_engine" v="a"/></macros>`,
+      "assets/props/engines/fx_engine.xml": `<components><component name="fx_engine" v="a"/></components>`,
+      "assets/props/engines/macros/fx_new_macro.xml": `<macros><macro name="fx_new"/></macros>`,
+    };
+
+    const { readJson, exists, report } = run(spec);
+
+    expect(report()).toContain(
+      "| assets/props/engines/macros/fx_engine_macro.xml | x4 01.cat: assets/props/Engines/macros/fx_engine_macro.xml | fx_dlc_a ext_01.cat: assets/props/engines/macros/fx_engine_macro.xml |",
+    );
+    expect(report()).not.toContain("fx_new_macro");
+    expect(readJson("files/assets/props/engines/macros/fx_engine_macro.json")).toEqual({
+      macros: { macro: [{ name: "fx_engine", v: "a" }] },
+    });
+    expect(readJson("files/assets/props/engines/fx_engine.json")).toEqual({
+      components: { component: [{ name: "fx_engine", v: "a" }] },
+    });
+    expect(readJson("files/extensions/fx_dlc_a/assets/props/engines/macros/fx_new_macro.json")).toEqual({
+      macros: { macro: [{ name: "fx_new" }] },
+    });
+    expect(exists("files/assets/props/engines/macros/fx_new_macro.json")).toBe(false);
+  });
+
+  it("replaces a file whole with a subst catalog's copy, taking the catalog that loads last", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "libraries/ships.xml": `<ships><ship id="s1"/></ships>` };
+    spec.extensions.fx_dlc_a!.catalogs = {
+      ext_01: { "libraries/ships.xml": `<ships><ship id="s2"/></ships>` },
+      subst_01: { "libraries/ships.xml": `<ships><ship id="from_a"/></ships>` },
+    };
+    spec.extensions.fx_swi!.catalogs = {
+      ext_01: {},
+      subst_01: { "libraries/ships.xml": `<ships><ship id="from_swi_01"/></ships>` },
+      subst_02: {
+        "libraries/ships.xml": `<ships><ship id="from_swi_02"/></ships>`,
+        "extensions/fx_dlc_a/assets/units/size_s/macros/fx_a_macro.xml": `<macros><macro name="fx_a" v="swi"/></macros>`,
+      },
+    };
+
+    const { readJson, report } = run(spec);
+
+    expect(readJson("files/libraries/ships.json")).toEqual({ ships: { ship: [{ id: "from_swi_02" }] } });
+    expect(report()).toContain(
+      "| libraries/ships.xml | fx_dlc_a ext_01.cat: libraries/ships.xml | fx_dlc_a subst_01.cat: libraries/ships.xml |",
+    );
+    expect(report()).toContain(
+      "| libraries/ships.xml | fx_dlc_a subst_01.cat: libraries/ships.xml | FX SWI subst_02.cat: libraries/ships.xml |",
+    );
+    expect(readJson("files/extensions/fx_dlc_a/assets/units/size_s/macros/fx_a_macro.json")).toEqual({
+      macros: { macro: [{ name: "fx_a", v: "swi" }] },
+    });
+  });
+
+  it("merges an extension after the extensions it depends on, and SWI last", () => {
+    const spec = standardInstall();
+    // SWI declares fx_dlc_b first, but fx_dlc_b depends on fx_dlc_a.
+    spec.extensions.fx_swi!.catalogs.ext_01 = { "libraries/ships.xml": `<ships><ship id="s2" v="swi"/></ships>` };
+    spec.extensions.fx_dlc_b!.catalogs.ext_01 = {
+      "libraries/ships.xml": `<ships><ship id="s1" v="b"/><ship id="s2" v="b"/></ships>`,
+    };
+    spec.extensions.fx_dlc_a!.catalogs.ext_01 = { "libraries/ships.xml": `<ships><ship id="s1" v="a"/></ships>` };
+
+    const { readJson } = run(spec);
+
+    expect(readJson("files/libraries/ships.json")).toEqual({
+      ships: { ship: [{ id: "s1", v: "b" }, { id: "s2", v: "swi" }] },
+    });
+  });
+
+  it("fails when a library file to merge has a different root element from the earlier file", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "libraries/ships.xml": `<ships/>` };
+    spec.extensions.fx_dlc_a!.catalogs.ext_01 = { "libraries/ships.xml": `<macros><macro name="m"/></macros>` };
+
+    expect(() => run(spec)).toThrow(
+      /fx_dlc_a ext_01\.cat: libraries\/ships\.xml has a <macros> root, but the file it merges into has <ships>/,
+    );
+  });
+
+  it("fails on an extension's copy of another extension's library, index or text file, which it can't place", () => {
+    const spec = standardInstall();
+    spec.extensions.fx_swi!.catalogs.ext_01 = { "extensions/fx_dlc_a/libraries/ships.xml": `<ships/>` };
+
+    expect(() => run(spec)).toThrow(
+      /FX SWI ext_01\.cat: extensions\/fx_dlc_a\/libraries\/ships\.xml overrides another extension's library, index or text file/,
+    );
+  });
+
+  it("passes a file with a <diff> root to the patch step, which fails until patching exists", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "assets/props/engines/macros/fx_engine_macro.xml": `<macros><macro name="fx_engine"/></macros>` };
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "assets/props/Engines/macros/fx_engine_macro.xml": `<diff><replace sel="//macro/@name">x</replace></diff>`,
+    };
+
+    expect(() => run(spec)).toThrow(
+      /FX SWI ext_01\.cat: assets\/props\/Engines\/macros\/fx_engine_macro\.xml: diff patching not implemented yet/,
+    );
   });
 });

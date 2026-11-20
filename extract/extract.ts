@@ -3,49 +3,52 @@ import { basename, dirname, join } from "node:path";
 import { openCatalog, type Catalog, type CatalogEntry } from "./catalog.ts";
 import { extractConfig, type ExtractConfig } from "./config.ts";
 import { resolveLoadOrder, type Layer } from "./loadOrder.ts";
+import { mergeLayers, type LayerFile, type LayerFiles } from "./merge.ts";
 import { isNeededFile } from "./neededFiles.ts";
+import { renderReport } from "./report.ts";
 import { fileToJson, parseXml } from "./xml.ts";
 
 export interface ExtractOptions {
   /** The X4 install folder. */
   x4Dir: string;
-  /** The gitignored folder the layers are written to. */
+  /** The gitignored folder the merged files and report are written to. */
   cacheDir: string;
   config?: ExtractConfig;
 }
 
 export interface ExtractResult {
   layers: { id: string; files: number; substFiles: number }[];
+  /** How many merged game files were written. */
+  files: number;
+  reportPath: string;
 }
 
 /**
- * Stage 1, first half: reads every layer's archives in load order and writes
- * the files later stages need to `<cacheDir>/layers/<NN>_<layer>/`, as JSON at
- * paths that mirror the game's (lowercased, `.xml` → `.json`). Files from
- * `ext_*` or base catalogs go under `files/`, files from `subst_*` catalogs
- * under `subst/`. `layers.json` records the load order and versions.
- * Layers aren't merged yet.
+ * Stage 1: reads every layer's archives in load order, merges the layers
+ * (see {@link mergeLayers}) and writes one JSON file per game path to
+ * `<cacheDir>/files/`, at paths that mirror the game's (lowercased,
+ * `.xml` → `.json`). `layers.json` records the load order and versions, and
+ * `extract-report.md` lists the merges the maintainer should review.
  */
 export function extract({ x4Dir, cacheDir, config = extractConfig }: ExtractOptions): ExtractResult {
   const order = resolveLoadOrder(x4Dir, config);
 
-  rmSync(join(cacheDir, "layers"), { recursive: true, force: true });
-  rmSync(join(cacheDir, "layers.json"), { force: true });
+  for (const old of ["layers", "files", "layers.json", REPORT]) {
+    rmSync(join(cacheDir, old), { recursive: true, force: true });
+  }
 
   const loadedFolders = new Set(order.layers.flatMap((l) => (l.folder ? [basename(l.folder).toLowerCase()] : [])));
-  const layerDirs = order.layers.map((layer, i) => `layers/${String(i).padStart(2, "0")}_${dirName(layer)}`);
-  const result: ExtractResult = {
-    layers: order.layers.map((layer, i) => {
-      const counts = writeLayer(layer, join(cacheDir, layerDirs[i]!), loadedFolders);
-      return { id: layer.id, ...counts };
-    }),
-  };
+  const layerFiles = order.layers.map((layer) => readLayer(layer, loadedFolders));
+  const merged = mergeLayers(layerFiles);
+  for (const [path, root] of [...merged.files].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    writeJson(join(cacheDir, "files", path.replace(/\.xml$/, ".json")), fileToJson(root));
+  }
+  writeFileSync(join(cacheDir, REPORT), renderReport(merged.log));
 
   const layersJson = {
     x4: order.x4,
     swi: order.swi,
-    layers: order.layers.map((layer, i) => ({
-      dir: layerDirs[i],
+    layers: order.layers.map((layer) => ({
       id: layer.id,
       ...(layer.folder ? { folder: layer.folder.replaceAll("\\", "/") } : {}),
       version: layer.version,
@@ -53,24 +56,23 @@ export function extract({ x4Dir, cacheDir, config = extractConfig }: ExtractOpti
     })),
   };
   writeJson(join(cacheDir, "layers.json"), layersJson);
-  return result;
+  return {
+    layers: layerFiles.map(({ layer, files, subst }) => ({ id: layer.id, files: files.length, substFiles: subst.length })),
+    files: merged.files.size,
+    reportPath: join(cacheDir, REPORT),
+  };
 }
 
-function dirName(layer: Layer): string {
-  return layer.folder ? basename(layer.folder) : layer.id;
-}
+const REPORT = "extract-report.md";
 
 interface Located {
   catalog: Catalog;
   entry: CatalogEntry;
 }
 
-function writeLayer(
-  layer: Layer,
-  outDir: string,
-  loadedFolders: ReadonlySet<string>,
-): { files: number; substFiles: number } {
-  // Lowercased path → where its latest copy is. A later catalog overrides an earlier one.
+/** Reads the needed files of one layer. Within a layer, a later catalog overrides an earlier one. */
+function readLayer(layer: Layer, loadedFolders: ReadonlySet<string>): LayerFiles {
+  // Lowercased path → where its latest copy is.
   const files = new Map<string, Located>();
   const subst = new Map<string, Located>();
   for (const catPath of layer.catalogPaths) {
@@ -82,22 +84,17 @@ function writeLayer(
       else target.set(key, { catalog, entry });
     }
   }
-  return {
-    files: writeFiles(files, join(outDir, "files"), loadedFolders),
-    substFiles: writeFiles(subst, join(outDir, "subst"), loadedFolders),
-  };
+  return { layer, files: readFiles(layer, files, loadedFolders), subst: readFiles(layer, subst, loadedFolders) };
 }
 
-function writeFiles(files: Map<string, Located>, outDir: string, loadedFolders: ReadonlySet<string>): number {
-  let count = 0;
-  for (const [path, { catalog, entry }] of [...files].sort(([a], [b]) => (a < b ? -1 : 1))) {
-    if (!isNeededFile(path, loadedFolders)) continue;
-    const source = `${basename(catalog.catPath)}: ${entry.path}`;
-    const root = parseXml(catalog.read(entry).toString("utf8"), source);
-    writeJson(join(outDir, path.replace(/\.xml$/, ".json")), fileToJson(root));
-    count++;
-  }
-  return count;
+function readFiles(layer: Layer, files: Map<string, Located>, loadedFolders: ReadonlySet<string>): LayerFile[] {
+  return [...files]
+    .filter(([path]) => isNeededFile(path, loadedFolders))
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([path, { catalog, entry }]) => {
+      const source = `${layer.id} ${basename(catalog.catPath)}: ${entry.path}`;
+      return { path, source, root: parseXml(catalog.read(entry).toString("utf8"), source) };
+    });
 }
 
 function writeJson(path: string, value: unknown): void {

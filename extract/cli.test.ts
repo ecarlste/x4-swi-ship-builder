@@ -44,8 +44,9 @@ describe("npm run extract", () => {
     const { status, stdout, cacheDir } = runCli(["--x4", installMatchingConfig()]);
 
     expect(status).toBe(0);
-    expect(stdout).toMatch(/Wrote 7 layers to /);
-    expect(existsSync(join(cacheDir, "layers.json"))).toBe(true);
+    expect(stdout).toMatch(/Merged 7 layers into 1 files in /);
+    expect(existsSync(join(cacheDir, "files/libraries/wares.json"))).toBe(true);
+    expect(existsSync(join(cacheDir, "extract-report.md"))).toBe(true);
   });
 
   it("takes the install path from X4_INSTALL_DIR", () => {
