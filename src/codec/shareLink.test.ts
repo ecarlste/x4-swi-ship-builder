@@ -46,6 +46,22 @@ describe("Share Links", () => {
     expect(await readShareLink(hashOf(await shareLinkUrl(BASE, empty)))).toEqual({ ok: true, loadout: empty });
   });
 
+  test("a Loadout's Crew survives the trip through a Share Link (ADR 0004)", async () => {
+    const boarding = { ...shared, crew: { service: 2, marines: 3 } };
+    expect(await readShareLink(hashOf(await shareLinkUrl(BASE, boarding)))).toEqual({ ok: true, loadout: boarding });
+  });
+
+  test("a link from before Crew opens with no Crew", async () => {
+    expect(await readShareLink(await fragmentOf(json(shared)))).toEqual({ ok: true, loadout: shared });
+  });
+
+  test("rejects a link whose Crew count isn't a positive integer", async () => {
+    for (const crew of [{ service: 0 }, { marines: -1 }, { service: 1.5 }]) {
+      const result = await readShareLink(await fragmentOf(json({ ...shared, crew })));
+      expect(result).toMatchObject({ ok: false, error: expect.stringContaining("isn't a valid Loadout") });
+    }
+  });
+
   test("a fragment without a Share Link isn't one", async () => {
     expect(await readShareLink("")).toBeNull();
     expect(await readShareLink("#")).toBeNull();
