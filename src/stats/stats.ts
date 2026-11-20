@@ -101,12 +101,19 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   }
   add("RadarRange", "Radar Range", "km", 0, "combat", ship.stats.radarRange / 1000);
 
+  /** Every fitted weapon and turret: weapons only fit Slots; Slot Group turrets count once per count. */
+  const fittedGuns = [
+    ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
+    ...Object.values(loadout.groups ?? {}).flatMap((kinds): [string, number][] =>
+      kinds.turret ? [[kinds.turret.equipment, kinds.turret.count]] : [],
+    ),
+  ].flatMap(([id, count]) => {
+    const item = ofKind(id, "weapon") ?? ofKind(id, "turret");
+    return item ? [{ item, count }] : [];
+  });
   const output = (gun: Extract<Equipment, { kind: "weapon" | "turret" }>) =>
     gunOutput(gun, launcherMissile(gun, loadout.consumables ?? {}, index));
-  const forward = Object.values(loadout.slots ?? {}).flatMap((id) => {
-    const item = ofKind(id, "weapon");
-    return item ? [output(item)] : [];
-  });
+  const forward = fittedGuns.flatMap(({ item }) => (item.kind === "weapon" ? [output(item)] : []));
   add("BurstDPS", "Burst Weapon Output", "MW", 0, "combat", sum(forward.map((o) => o.burst)));
   add("SustainedDPS", "Sustained Weapon Output", "MW", 0, "combat", sum(forward.map((o) => o.sustained)));
 
@@ -114,15 +121,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   // over a flat six directions (#12). Its rate of fire already counts
   // magazine reloads; heat isn't applied, as confirmed in game. L/XL Ships
   // show it as the game's grouped field, with the same formula.
-  const turrets = [
-    ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
-    ...Object.values(loadout.groups ?? {}).flatMap((kinds): [string, number][] =>
-      kinds.turret ? [[kinds.turret.equipment, kinds.turret.count]] : [],
-    ),
-  ].flatMap(([id, count]) => {
-    const item = ofKind(id, "turret");
-    return item ? [output(item).burst * count] : [];
-  });
+  const turrets = fittedGuns.flatMap(({ item, count }) => (item.kind === "turret" ? [output(item).burst * count] : []));
   const turretId = capShip ? "GroupedTurretSustainedDPS" : "TurretSustainedDPS";
   add(turretId, "Avg. Turret Output", "MW", 0, "combat", sum(turrets) / 6);
 
@@ -133,7 +132,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     if (ship.cargoTypes.includes(type)) add(id, label, "m³", 0, "storage", ship.capacities.cargo);
   }
 
-  // Flight (#12). Engines in Slots count once, engines in Slot Groups once per count.
+  // Flight (#12, #39). Engines in Slots count once, engines in Slot Groups once per count.
   const engines = [
     ...Object.values(loadout.slots ?? {}).flatMap((id) => {
       const item = ofKind(id, "engine");
@@ -171,8 +170,8 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   // `boost@recharge` is the seconds for a full recharge.
   add("BoostRechargeRate", "Boost Recharge Rate", "%/s", 1, "flight", boostRecharge > 0 ? 100 / boostRecharge : 0);
   add("TravelSpeed", "Travel Speed", "m/s", 0, "flight", travelSpeed);
-  // Checked in game only for `travel@attack="0"` (acceleration unchanged). Otherwise taken as
-  // the seconds to reach travel speed, which is unconfirmed.
+  // `travel@attack="0"` leaves acceleration unchanged (#12); otherwise it is the
+  // seconds to reach travel speed (#39: the TIE Fighter's 2,560 / 10 = 256).
   add(
     "TravelAcceleration",
     "Travel Acceleration",
@@ -198,7 +197,9 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   add("CrewCapacity", "Crew", "", 0, "crew", ship.capacities.crew + 1);
   add("UnitCapacity", "Units", "", 0, "crew", ship.capacities.drones);
-  add("MissileCapacity", "Missiles", "", 0, "crew", ship.capacities.missiles);
+  // A launcher's own storage adds to the Ship's (#39: the Light Rocket Launcher's 6).
+  const launcherStorage = sum(fittedGuns.map(({ item, count }) => item.missileStorage * count));
+  add("MissileCapacity", "Missiles", "", 0, "crew", ship.capacities.missiles + launcherStorage);
   add("DeployableCapacity", "Deployables", "", 0, "crew", ship.capacities.deployables);
   add("CountermeasureCapacity", "Countermeasures", "", 0, "crew", ship.capacities.countermeasures);
 

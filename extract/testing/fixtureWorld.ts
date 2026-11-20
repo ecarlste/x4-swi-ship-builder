@@ -106,11 +106,14 @@ export class FixtureWorld {
     files["libraries/constructionplans.xml"] = xml("plans", plans);
 
     // Class defaults.
-    files["libraries/defaults.xml"] = xml("defaults", Object.entries(CLASS_DEFAULTS).map(
-      ([cls, d]) =>
-        `<dataset class="${cls}"><properties><radar range="${d.radar}"/><people capacity="${d.crew}"/>` +
-        `<storage countermeasure="${d.countermeasures}" deployable="${d.deployables}"/></properties></dataset>`,
-    ));
+    files["libraries/defaults.xml"] = xml("defaults", [
+      ...Object.entries(CLASS_DEFAULTS).map(
+        ([cls, d]) =>
+          `<dataset class="${cls}"><properties><radar range="${d.radar}"/><people capacity="${d.crew}"/>` +
+          `<storage countermeasure="${d.countermeasures}" deployable="${d.deployables}"/></properties></dataset>`,
+      ),
+      `<dataset class="engine"><properties><boost recharge="${ENGINE_DEFAULTS.boostRecharge}"/></properties></dataset>`,
+    ]);
 
     // Ships: ware → macro → component, and storage macros.
     const wares: string[] = [];
@@ -349,6 +352,12 @@ export const CLASS_DEFAULTS = {
   ship_l: { radar: 40000, crew: 70, countermeasures: 25, deployables: 40 },
   ship_xl: { radar: 50000, crew: 100, countermeasures: 30, deployables: 60 },
 };
+
+/**
+ * The engine class default the fixture's `libraries/defaults.xml` sets. The
+ * game's is 30 s; this one differs so tests can tell it was read from the file.
+ */
+export const ENGINE_DEFAULTS = { boostRecharge: 25 };
 
 /** The layers.json Stage 1 writes, for a fixture cache. */
 export const FIXTURE_LAYERS = {

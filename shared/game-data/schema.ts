@@ -201,6 +201,11 @@ const gunFields = {
    * fields are zero damage, one barrel, a rate of 1, and no magazine or heat.
    */
   missiles: id.nullable(),
+  /**
+   * A launcher's own missile storage (`storage@capacity`), which adds to the
+   * Ship's Missiles (#39); 0 for other guns and for launchers without one.
+   */
+  missileStorage: count,
 };
 
 export const equipmentSchema = z.discriminatedUnion("kind", [
@@ -251,6 +256,8 @@ export const equipmentSchema = z.discriminatedUnion("kind", [
       ...tradeableFields,
       explosionDamage: nonNegative,
       hullDamage: nonNegative,
+      /** `missile@barrelamount`: missiles fired per shot (#39); 1 when not given. */
+      barrelAmount: z.number().int().positive(),
       reloadTime: z.number().positive(),
     })
     .strict(),

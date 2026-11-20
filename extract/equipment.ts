@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Equipment, EquipmentKind, FitList, Ship, Size, SlotGroupKind } from "../shared/game-data/schema.ts";
 import { ExtractError } from "./errors.ts";
 import { attr, child, children, list, numberAttr, type GameFiles } from "./gameFiles.ts";
-import { EMPTY_FIT_LIST, type LeftOut, type ShipFittings } from "./ships.ts";
+import { classDefaults, EMPTY_FIT_LIST, type LeftOut, type ShipFittings } from "./ships.ts";
 import type { StationClasses } from "./stations.ts";
 import type { TextResolver } from "./text.ts";
 import type { JsonElement } from "./xml.ts";
@@ -133,6 +133,7 @@ export function readEquipment(
   stations: Map<string, StationClasses>,
 ): EquipmentResult {
   const candidates = readCandidates(files);
+  const defaults = classDefaults(files);
   const leftOut: LeftOut[] = [];
   const warnings: string[] = [];
   const ofKind = (kind: EquipmentKind) => candidates.filter((c) => c.kind === kind);
@@ -253,7 +254,7 @@ export function readEquipment(
       });
       return;
     }
-    const item = readItem(files, text, candidate, sellers);
+    const item = readItem(files, text, candidate, sellers, defaults);
     if (typeof item === "string") {
       leftOut.push({ ware: id, reason: item });
       warnings.push(`${id}: ${item}`);
@@ -338,7 +339,13 @@ export function readEquipment(
  * An included item's name, price, licence, Sellers and raw inputs; or, when
  * its data breaks our rules, the reason it is left out.
  */
-function readItem(files: GameFiles, text: TextResolver, c: Candidate, sellers: string[]): Equipment | string {
+function readItem(
+  files: GameFiles,
+  text: TextResolver,
+  c: Candidate,
+  sellers: string[],
+  defaults: Map<string, JsonElement>,
+): Equipment | string {
   const where = `ware ${c.id}`;
   const nameId = attr(c.ware, "name");
   if (nameId === undefined) throw new ExtractError(`${where} has no name`);
@@ -373,6 +380,7 @@ function readItem(files: GameFiles, text: TextResolver, c: Candidate, sellers: s
           magazine: null,
           heat: null,
           missiles: EMPTY_FIT_LIST,
+          missileStorage: num(props, "storage", "capacity"),
         };
       }
       const bulletRef = attr(child(props, "bullet"), "class");
@@ -405,6 +413,7 @@ function readItem(files: GameFiles, text: TextResolver, c: Candidate, sellers: s
             ? { perShot: num(bullet, "heat", "value"), overheat, coolDelay: num(props, "heat", "cooldelay"), coolRate }
             : null,
         missiles: null,
+        missileStorage: 0,
       };
     }
     case "shield":
@@ -416,17 +425,26 @@ function readItem(files: GameFiles, text: TextResolver, c: Candidate, sellers: s
         rechargeRate: num(props, "recharge", "rate"),
         rechargeDelay: num(props, "recharge", "delay"),
       };
-    case "engine":
+    case "engine": {
+      // A boost attribute the macro leaves out comes from its class's dataset in
+      // libraries/defaults.xml (the game's engine one has recharge 30 s), and a
+      // missing acceleration is 1: what the game shows for SWI's Gozanti Engine (#39).
+      const cls = attr(c.macro, "class") ?? "engine";
+      const classBoost = child(defaults.get(cls), "boost");
+      const boost = (name: string, fallback: number) =>
+        numberAttr(child(props, "boost"), name, `${where} <boost>`) ??
+        numberAttr(classBoost, name, `defaults.xml ${cls} <boost>`) ??
+        fallback;
       return {
         kind: "engine",
         ...common,
         size: c.size,
         thrust: { forward: num(props, "thrust", "forward"), reverse: num(props, "thrust", "reverse") },
         boost: {
-          thrust: num(props, "boost", "thrust"),
-          acceleration: num(props, "boost", "acceleration"),
-          duration: num(props, "boost", "duration"),
-          recharge: num(props, "boost", "recharge"),
+          thrust: boost("thrust", 0),
+          acceleration: boost("acceleration", 1),
+          duration: boost("duration", 0),
+          recharge: boost("recharge", 0),
         },
         travel: {
           thrust: num(props, "travel", "thrust"),
@@ -434,6 +452,7 @@ function readItem(files: GameFiles, text: TextResolver, c: Candidate, sellers: s
           attack: num(props, "travel", "attack"),
         },
       };
+    }
     case "thruster":
       return {
         kind: "thruster",
@@ -454,6 +473,7 @@ function readItem(files: GameFiles, text: TextResolver, c: Candidate, sellers: s
         ...common,
         explosionDamage: num(props, "explosiondamage", "value"),
         hullDamage: num(props, "explosiondamage", "hull"),
+        barrelAmount: num(props, "missile", "barrelamount", 1),
         reloadTime,
       };
     }
