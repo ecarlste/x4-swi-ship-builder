@@ -71,11 +71,13 @@ test("editing an opened Saved Loadout shows the change column and a was line on 
   await fit(page, /con_shield_01/, "— empty —");
 
   await expect(statCells(page, "Shield (MJ)")).toHaveText(["0", "−1,000"]);
-  await expect(statCells(page, "Shield (MJ)").nth(1)).toHaveClass(/down/);
+  await expect(statCells(page, "Shield (MJ)").nth(1)).toHaveClass(/worse/);
   await expect(statCells(page, "Recharge Rate (MW)")).toHaveText(["0", "−100"]);
   // Rows the edit left alone get an empty change cell.
   await expect(statCells(page, "Hull (MJ)")).toHaveText(["3,000", ""]);
   await expect(stats(page).getByRole("region", { name: "Price" })).toContainText("−9,000 Cr");
+  // A lower Price is better.
+  await expect(stats(page).getByRole("region", { name: "Price" }).getByText("−9,000 Cr")).toHaveClass(/better/);
 
   await expect(row(page, /con_shield_01/)).toContainText("was: Bubble Shield S");
   await expect(changedMarks(page)).toHaveCount(1);
@@ -127,7 +129,7 @@ test("a first save of a freshly picked Ship starts tracking changes from the sav
   await fit(page, /con_shield_01/, "Bubble Shield S");
   await expect(row(page, /con_shield_01/)).toContainText("was: empty");
   await expect(statCells(page, "Shield (MJ)")).toHaveText(["1,000", "+1,000"]);
-  await expect(statCells(page, "Shield (MJ)").nth(1)).toHaveClass(/up/);
+  await expect(statCells(page, "Shield (MJ)").nth(1)).toHaveClass(/better/);
 });
 
 test("a freshly picked Ship has no snapshot and shows no changes", async ({ page }) => {

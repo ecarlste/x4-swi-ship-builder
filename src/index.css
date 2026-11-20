@@ -466,11 +466,11 @@ input {
   font-size: 12px;
 }
 
-.stat-change.up {
+.stat-change.better {
   color: #5fd38d;
 }
 
-.stat-change.down {
+.stat-change.worse {
   color: #ff6b6b;
 }
 

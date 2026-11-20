@@ -8,8 +8,7 @@ import type { Equipment, GameData } from "../gameData.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import type { Loadout } from "../builder/loadout.ts";
 import { gunOutput, launcherMissile, missilesBestFirst, type Gun, type Missile } from "./firepower.ts";
-
-export type Verdict = "better" | "worse" | "same";
+import { compareFigure, shownPrice, shownValue, type Verdict } from "./figure.ts";
 
 export interface Figure {
   label: string;
@@ -51,11 +50,6 @@ interface RawFigure {
   unit: string;
   decimals: number;
   value: number;
-}
-
-function floorTo(value: number, decimals: number): number {
-  const scale = 10 ** decimals;
-  return Math.floor(value * scale) / scale;
 }
 
 /** A gun's output as figures: a launcher's with `missile`, or with none. */
@@ -106,22 +100,16 @@ export function compareEquipment(
   const theirs = fitted ? figures(index, loadout, fitted) : [];
   const against = (mine: RawFigure[]): Figure[] =>
     mine.map((f) => {
-      const shown = floorTo(f.value, f.decimals);
+      const shown = shownValue(f.value, f.decimals);
       const other = theirs.find((t) => t.label === f.label);
-      // Rounded to the figure's decimals, so float noise never shows as a difference.
-      const scale = 10 ** f.decimals;
-      const difference = Math.round((shown - (other ? floorTo(other.value, other.decimals) : 0)) * scale) / scale;
-      return { label: f.label, unit: f.unit, shown, difference, verdict: verdict(difference) };
+      const against = other ? shownValue(other.value, other.decimals) : 0;
+      return { label: f.label, unit: f.unit, shown, ...compareFigure(shown, against, { decimals: f.decimals }) };
     });
   const isLauncher = (option.kind === "weapon" || option.kind === "turret") && option.missiles !== null;
   return {
     figures: isLauncher ? [] : against(figures(index, loadout, option)),
     missiles: isLauncher ? missileRows(index, loadout, option, against) : null,
-    price: {
-      shown: option.price.average,
-      difference: option.price.average - (fitted?.price.average ?? 0),
-      verdict: verdict((fitted?.price.average ?? 0) - option.price.average),
-    },
+    price: priceDifference(option, fitted),
   };
 }
 
@@ -140,6 +128,8 @@ function missileRows(
   }));
 }
 
-function verdict(difference: number): Verdict {
-  return difference > 0 ? "better" : difference < 0 ? "worse" : "same";
+function priceDifference(option: Equipment, fitted: Equipment | null): PriceDifference {
+  const shown = shownPrice(option.price.average);
+  const against = fitted ? shownPrice(fitted.price.average) : 0;
+  return { shown, ...compareFigure(shown, against, { decimals: 0, lowerIsBetter: true }) };
 }
