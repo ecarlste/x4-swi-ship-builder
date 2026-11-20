@@ -60,6 +60,27 @@ test("the Stats panel updates as equipment changes", async ({ page }) => {
   await expect(stats(page).getByRole("region", { name: "Price" })).toContainText("100,000 Cr");
 });
 
+test("weapons fill the burst and sustained weapon output rows", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+
+  // Pulse Blaster: 100 × 4/s = 400 burst; overheats in 5 s, cools in 1 + 5 s.
+  await fit(page, /con_weapon_01/, "Pulse Blaster");
+  await expect(stat(page, "Burst Weapon Output (MW)")).toHaveText("400");
+  await expect(stat(page, "Sustained Weapon Output (MW)")).toHaveText("181");
+});
+
+test("Avg. Turret Output averages Slot Group turrets over six directions, with the game's tooltip", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+
+  // 4 Flak Turrets: (80 + 10) × 2 barrels × 20 / (5 + 20 / 3) per s each, / 6.
+  await fit(page, /Turrets group_front/, "Flak Turret");
+
+  const row = stats(page).getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Avg. Turret Output (MW)" }) });
+  await expect(row.getByRole("cell")).toHaveText("205");
+  await expect(row).toHaveAttribute("title", "all turrets' damage averaged over six directions");
+  await expect(stat(page, "Burst Weapon Output (MW)")).toHaveText("0");
+});
+
 test("an L Ship's group shields show in the Avg. Group Shield rows, not the main Shield row", async ({ page }) => {
   await openShip(page, "L", "Ironback Hauler");
 
