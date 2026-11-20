@@ -63,6 +63,7 @@ function figures(gameData: GameData, loadout: Loadout, item: Equipment): RawFigu
     case "engine":
       return [
         { label: "Thrust", unit: "N", decimals: 0, value: item.thrust.forward },
+        // unconfirmed (#63): no in-game screen has been checked for this figure.
         { label: "Travel Thrust", unit: "N", decimals: 0, value: item.thrust.forward * item.travel.thrust },
       ];
     case "thruster":

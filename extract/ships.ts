@@ -151,7 +151,8 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): { shi
 
   const cargo = readCargo(files, macro, where);
   // The builder shows each cargo type's storage row with the total, which is
-  // right only when every storage takes the same types.
+  // right only when every storage takes the same types. unconfirmed (#63):
+  // storages of mixed types.
   if (cargo.typeSets.length > 1) {
     warnings.push(
       `${id}: its storages take different cargo types (${cargo.typeSets.join("; ")}), ` +
@@ -263,6 +264,7 @@ function readCargo(
       const connected = files.extractedMacro(name, `${where} macro`)?.element;
       if (attr(connected, "class") !== "storage") continue;
       const cargo = child(child(connected, "properties"), "cargo");
+      // unconfirmed (#63): the sum over several storages. Every reference Ship has one.
       capacity += numberAttr(cargo, "max", `storage macro ${name} <cargo>`) ?? 0;
       const own = list(attr(cargo, "tags")).map((tag) => {
         const type = cargoTypeSchema.safeParse(tag);
