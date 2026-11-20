@@ -21,8 +21,8 @@ slug=$2
 [ -n "$slug" ] || usage
 
 # The main checkout owns the common git dir, wherever this is run from.
-common=$(git rev-parse --path-format=absolute --git-common-dir)
-main=$(dirname "$common")
+common_git_dir=$(git rev-parse --path-format=absolute --git-common-dir)
+main=$(dirname "$common_git_dir")
 worktree="$(dirname "$main")/$(basename "$main")-$issue"
 branch="$issue-$slug"
 

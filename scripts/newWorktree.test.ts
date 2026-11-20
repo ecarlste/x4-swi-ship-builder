@@ -13,7 +13,9 @@ describe("new-worktree.sh", () => {
   let main: string;
   let npmLog: string;
   let env: NodeJS.ProcessEnv;
-  const worktree = () => join(tmp, "x4-swi-ship-builder-76");
+  /** Where the script puts issue N's worktree: beside the main checkout. */
+  const worktreeFor = (issue: number) => join(tmp, `x4-swi-ship-builder-${issue}`);
+  const worktree = () => worktreeFor(76);
 
   beforeEach(() => {
     ({ dir: tmp, cleanup } = tempDir());
@@ -105,7 +107,7 @@ describe("new-worktree.sh", () => {
   });
 
   it("prints the path to open the session in", () => {
-    expect(newWorktree("76", "ticket-worktrees")).toContain(realpathSync(main).replace(/x4-swi-ship-builder$/, "x4-swi-ship-builder-76"));
+    expect(newWorktree("76", "ticket-worktrees")).toContain(realpathSync(worktree()));
   });
 
   it("still makes the worktree when the main checkout has no extraction, and says so", () => {
@@ -120,7 +122,7 @@ describe("new-worktree.sh", () => {
 
     run("bash", ["scripts/new-worktree.sh", "77", "next"], { cwd: worktree(), env });
 
-    expect(git(join(tmp, "x4-swi-ship-builder-77"), "branch", "--show-current")).toBe("77-next");
+    expect(git(worktreeFor(77), "branch", "--show-current")).toBe("77-next");
   });
 
   it("refuses without an issue number and a slug", () => {
