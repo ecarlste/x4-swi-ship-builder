@@ -11,7 +11,7 @@ const signed = (n: number, decimals = 0) => (n === 0 ? "±0" : formatSigned(n, d
 const decimalsOf = (n: number) => (Number.isInteger(n) ? 0 : 1);
 
 /** A figure's value with its unit, and its difference, at the decimals either needs. */
-function cells(f: Figure) {
+function formatFigure(f: Figure) {
   const decimals = Math.max(decimalsOf(f.shown), decimalsOf(f.difference));
   return {
     value: `${formatNumber(f.shown, decimals)}${f.unit ? ` ${f.unit}` : ""}`,
@@ -43,7 +43,7 @@ export function ComparisonPopover({
   const { factions, licences } = indexGameData(gameData);
   const licence = licenceText(option.licence === null ? undefined : licences.get(option.licence));
   const lines = [
-    ...comparison.figures.map((f) => ({ label: f.label, ...cells(f) })),
+    ...comparison.figures.map((f) => ({ label: f.label, ...formatFigure(f) })),
     {
       label: "Price",
       value: formatCredits(comparison.price.shown),
@@ -77,7 +77,7 @@ export function ComparisonPopover({
                   {row.missile?.name ?? "No missile"}
                   {row.loaded && <span className="dim"> ◂ loaded</span>}
                 </th>
-                {row.figures.map(cells).flatMap((c, i) => [
+                {row.figures.map(formatFigure).flatMap((c, i) => [
                   <td key={`${i}-value`} className="num">
                     {c.value}
                   </td>,

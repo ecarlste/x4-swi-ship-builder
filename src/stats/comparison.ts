@@ -7,10 +7,7 @@
 import type { Equipment, GameData } from "../gameData.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import type { Loadout } from "../builder/loadout.ts";
-import { compatibleMissiles, gunOutput, launcherMissile } from "./firepower.ts";
-
-type Gun = Extract<Equipment, { kind: "weapon" | "turret" }>;
-type Missile = Extract<Equipment, { kind: "missile" }>;
+import { gunOutput, launcherMissile, missilesBestFirst, type Gun, type Missile } from "./firepower.ts";
 
 export type Verdict = "better" | "worse" | "same";
 
@@ -136,10 +133,7 @@ function missileRows(
   against: (mine: RawFigure[]) => Figure[],
 ): MissileRow[] {
   const loaded = launcherMissile(launcher, loadout.consumables ?? {}, index) ?? null;
-  const best = compatibleMissiles(launcher, index)
-    .map((missile) => ({ missile, burst: gunOutput(launcher, missile).burst }))
-    .sort((a, b) => b.burst - a.burst);
-  return [...best.map(({ missile }) => missile), null].map((missile) => ({
+  return [...missilesBestFirst(launcher, index), null].map((missile) => ({
     missile,
     loaded: missile?.id === loaded?.id,
     figures: against(outputFigures(launcher, missile ?? undefined)),

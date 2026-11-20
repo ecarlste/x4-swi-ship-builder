@@ -20,6 +20,6 @@ The UI doesn't say that these figures differ from the game.
 
 ## Consequences
 
-- `launcherMissile` (`src/stats/firepower.ts`) is the one place the rule lives; the stats panel and the comparison popover both use it.
+- The rule lives in `src/stats/firepower.ts`: `missilesBestFirst` ranks a launcher's missiles and `launcherMissile` picks the best loaded one. The stats panel and the comparison popover both use them.
 - Reference rows for launchers (`src/stats/reference.test.ts`) load the missile the game showed, so both rules agree on the screen's value. Tests of what the builder does differently cite this ADR, not a game screen.
 - A launcher with an empty fit list, or with nothing compatible loaded, adds nothing to any output row.

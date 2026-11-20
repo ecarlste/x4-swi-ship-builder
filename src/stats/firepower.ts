@@ -6,8 +6,8 @@
 import type { Equipment } from "../gameData.ts";
 import { type GameDataIndex } from "../gameDataIndex.ts";
 
-type Gun = Extract<Equipment, { kind: "weapon" | "turret" }>;
-type Missile = Extract<Equipment, { kind: "missile" }>;
+export type Gun = Extract<Equipment, { kind: "weapon" | "turret" }>;
+export type Missile = Extract<Equipment, { kind: "missile" }>;
 
 /** One weapon's or turret's output. */
 export interface GunOutput {
@@ -41,13 +41,19 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
   return { rateOfFire, burst, sustained: burst * heatUptime(gun, rateOfFire) };
 }
 
-/** The missiles a launcher can fire, in its fit list's order; none for a gun. */
-export function compatibleMissiles(gun: Gun, { fitLists, equipment }: GameDataIndex): Missile[] {
+/**
+ * The missiles a launcher can fire, highest output first, in its fit list's
+ * order on a tie; none for a gun.
+ */
+export function missilesBestFirst(gun: Gun, { fitLists, equipment }: GameDataIndex): Missile[] {
   if (gun.missiles === null) return [];
-  return (fitLists.get(gun.missiles) ?? []).flatMap((id) => {
-    const item = equipment.get(id);
-    return item?.kind === "missile" ? [item] : [];
-  });
+  return (fitLists.get(gun.missiles) ?? [])
+    .flatMap((id) => {
+      const item = equipment.get(id);
+      return item?.kind === "missile" ? [{ missile: item, burst: gunOutput(gun, item).burst }] : [];
+    })
+    .sort((a, b) => b.burst - a.burst)
+    .map(({ missile }) => missile);
 }
 
 /**
@@ -57,13 +63,7 @@ export function compatibleMissiles(gun: Gun, { fitLists, equipment }: GameDataIn
  * last compatible missile by ware id whatever is loaded (ADR 0002).
  */
 export function launcherMissile(gun: Gun, consumables: Record<string, number>, index: GameDataIndex): Missile | undefined {
-  let best: { missile: Missile; burst: number } | undefined;
-  for (const missile of compatibleMissiles(gun, index)) {
-    if ((consumables[missile.id] ?? 0) <= 0) continue;
-    const { burst } = gunOutput(gun, missile);
-    if (!best || burst > best.burst) best = { missile, burst };
-  }
-  return best?.missile;
+  return missilesBestFirst(gun, index).find((m) => (consumables[m.id] ?? 0) > 0);
 }
 
 /**
