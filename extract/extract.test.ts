@@ -373,6 +373,24 @@ describe("extract: merging layers", () => {
     });
   });
 
+  it("applies an extension's language-neutral t/0001.xml to the English text when it has no t/0001-l044.xml", () => {
+    const spec = standardInstall();
+    spec.base["01"] = { "t/0001-L044.xml": `<language id="44"><page id="1"><t id="1">Base</t></page></language>` };
+    spec.extensions.fx_dlc_a!.catalogs.ext_01 = {
+      "t/0001.xml": `<diff><add sel="/language"><page id="2"><t id="1">Neutral A</t></page></add></diff>`,
+      "t/0001-L044.xml": `<diff><add sel="/language"><page id="3"><t id="1">English A</t></page></add></diff>`,
+    };
+    spec.extensions.fx_swi!.catalogs.ext_01 = {
+      "t/0001.xml": `<diff><add sel="/language"><page id="4"><t id="1">Neutral SWI</t></page></add></diff>`,
+    };
+
+    const { readJson, exists } = run(spec);
+
+    const pages = readJson("files/t/0001-l044.json").language.page.map((p: { id: string }) => p.id);
+    expect(pages).toEqual(["1", "3", "4"]);
+    expect(exists("files/t/0001.json")).toBe(false);
+  });
+
   it("skips a <diff> for a file no earlier layer has, and lists it in the report", () => {
     const spec = standardInstall();
     spec.extensions.fx_swi!.catalogs.ext_01 = {

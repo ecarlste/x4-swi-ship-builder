@@ -54,6 +54,9 @@ export interface Merged {
  * - Any other file at a path that already has one (a macro or component at a
  *   base-game path) replaces it whole.
  * - A subst catalog's file replaces the file at its path whole.
+ * - An extension's language-neutral `t/0001.xml` stands in for its English
+ *   `t/0001-l044.xml` when it has none (SWI ships only the neutral file), and
+ *   is otherwise ignored, since only English is extracted.
  */
 export function mergeLayers(layers: LayerFiles[]): Merged {
   const files = new Map<string, XmlElement>();
@@ -92,8 +95,11 @@ export function mergeLayers(layers: LayerFiles[]): Merged {
   };
 
   for (const layer of layers) {
+    // An extension's language-neutral text is its English text when it has no English file of its own.
+    const neutralIsEnglish = layer.layer.folder !== undefined && !layer.files.some((f) => f.path === ENGLISH_TEXT);
     for (const file of layer.files) {
-      const path = gamePath(layer.layer, file, files);
+      if (layer.layer.folder !== undefined && file.path === NEUTRAL_TEXT && !neutralIsEnglish) continue;
+      const path = file.path === NEUTRAL_TEXT && neutralIsEnglish ? ENGLISH_TEXT : gamePath(layer.layer, file, files);
       const earlier = files.get(path);
       if (file.root.tag === "diff") {
         if (earlier === undefined) {
@@ -112,6 +118,9 @@ export function mergeLayers(layers: LayerFiles[]): Merged {
   }
   return { files, log };
 }
+
+const ENGLISH_TEXT = "t/0001-l044.xml";
+const NEUTRAL_TEXT = "t/0001.xml";
 
 /** Library, index and text files gather entries from every layer. */
 function isCollection(path: string): boolean {
