@@ -64,6 +64,12 @@ export function readSavedLoadouts(storage: LoadoutStorage): SavedLoadoutList {
   };
 }
 
+/** A Loadout's name, with the id of the Saved Loadout it is, if it is one. */
+export interface LoadoutName {
+  id?: string;
+  name: string;
+}
+
 /**
  * Saves a Loadout under a name. Without an id it's added as a new Saved
  * Loadout; with the id of a stored one, that one is updated in place.
@@ -71,7 +77,7 @@ export function readSavedLoadouts(storage: LoadoutStorage): SavedLoadoutList {
 export function saveLoadout(
   storage: LoadoutStorage,
   loadout: Loadout,
-  target: { id?: string; name: string },
+  target: LoadoutName,
   { now = new Date(), newId = () => crypto.randomUUID() }: { now?: Date; newId?: () => string } = {},
 ): { ok: true; saved: SavedLoadout } | { ok: false; error: string } {
   const read = readRaw(storage);

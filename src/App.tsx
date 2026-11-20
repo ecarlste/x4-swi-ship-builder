@@ -18,6 +18,7 @@ import {
   deleteSavedLoadout,
   readSavedLoadouts,
   saveLoadout,
+  type LoadoutName,
   type SavedLoadoutEntry,
 } from "./codec/savedLoadouts.ts";
 import {
@@ -50,12 +51,12 @@ export function App() {
    * it's a Saved Loadout, which Save updates; without one it came from a Share
    * Link, and Save asks for a name, suggesting this one.
    */
-  const [opened, setOpened] = useState<{ id?: string; name: string } | null>(null);
+  const [opened, setOpened] = useState<LoadoutName | null>(null);
   /**
    * The Loadout as it was opened or last saved, for changes since loading.
    * A freshly picked Ship has none.
    */
-  const [snapshot, setSnapshot] = useState<Loadout | null>(null);
+  const [loadedLoadout, setLoadedLoadout] = useState<Loadout | null>(null);
   const [savedList, setSavedList] = useState(() => readSavedLoadouts(localStorage));
   const [showSaved, setShowSaved] = useState(false);
   const [naming, setNaming] = useState(false);
@@ -69,18 +70,18 @@ export function App() {
 
   const stats = loadout && ship ? loadoutStats(gameData, loadout) : null;
   const missing = stats?.missing ?? [];
-  const was = changedSince(snapshot, loadout);
+  const was = changedSince(loadedLoadout, loadout);
   const wasStats = was ? loadoutStats(gameData, was) : null;
 
   const refreshSaved = () => setSavedList(readSavedLoadouts(localStorage));
 
-  const save = (target: { id?: string; name: string }) => {
+  const save = (target: LoadoutName) => {
     if (!loadout) return;
     const result = saveLoadout(localStorage, loadout, target);
     setNaming(false);
     if (result.ok) {
       setOpened({ id: result.saved.id, name: result.saved.name });
-      setSnapshot(loadout);
+      setLoadedLoadout(loadout);
       setNotice(null);
       setMessage({ kind: "status", text: `Saved “${result.saved.name}”.` });
     } else {
@@ -90,15 +91,15 @@ export function App() {
   };
 
   /**
-   * Opens a Loadout and keeps it as the snapshot for changes since loading.
+   * Opens a Loadout and keeps it as the loaded Loadout, for changes since loading.
    * The one entry point for opening a Saved Loadout, a Share Link or a
-   * repaired Loadout (whose snapshot is the repaired version). `named` is the
+   * repaired Loadout (whose loaded Loadout is the repaired version). `named` is the
    * name it was opened under, with the id of the Saved Loadout that Save
    * should update, if any.
    */
-  const openLoadout = (opening: Loadout, named: { id?: string; name: string } | null) => {
+  const openLoadout = (opening: Loadout, named: LoadoutName | null) => {
     setLoadout(opening);
-    setSnapshot(opening);
+    setLoadedLoadout(opening);
     setOpened(named);
     setShowSaved(false);
     setMessage(null);
@@ -110,7 +111,7 @@ export function App() {
    * repaired version, with a notice when anything was dropped or clamped.
    * Returns the Ship's id when the Loadout is Unavailable.
    */
-  const resolveAndOpen = (stored: Loadout, named: { id?: string; name: string } | null) => {
+  const resolveAndOpen = (stored: Loadout, named: LoadoutName | null) => {
     const resolved = resolveLoadout(gameData, stored);
     if (resolved.status === "unavailable") return { unavailable: resolved.ship };
     openLoadout(resolved.loadout, named);
@@ -211,7 +212,7 @@ export function App() {
           value={ship}
           onPick={(picked) => {
             setLoadout(emptyLoadout(gameData, picked));
-            setSnapshot(null);
+            setLoadedLoadout(null);
             setOpened(null);
             setMessage(null);
             setNotice(null);

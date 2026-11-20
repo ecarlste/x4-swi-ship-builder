@@ -82,7 +82,7 @@ export function LoadoutTable({
 }) {
   const { equipment, fitListEquipment: options } = indexGameData(gameData);
   const nameOf = (id: string | undefined) => (id ? (equipment.get(id)?.name ?? id) : "empty");
-  /** The row's "was: …" text when it differs from the snapshot, else undefined. */
+  /** The row's "was: …" text when it differs from the loaded Loadout, else undefined. */
   const wasText = (before: string, now: string) => (was && before !== now ? before : undefined);
   const groupText = (entry: { equipment: string; count: number } | undefined) =>
     entry ? `${nameOf(entry.equipment)} ×${entry.count}` : "empty";
