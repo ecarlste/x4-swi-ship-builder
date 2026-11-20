@@ -401,12 +401,10 @@ function readItem(
       const bulletRef = attr(child(props, "bullet"), "class");
       if (bulletRef === undefined) return "its macro has no <bullet class>";
       const bullet = child(files.macro(bulletRef, `${where} macro`).element, "properties");
-      const reload = child(bullet, "reload");
-      const rate = numberAttr(reload, "rate", `${where} bullet <reload>`);
-      const time = numberAttr(reload, "time", `${where} bullet <reload>`);
-      // unconfirmed (#63): 1 / reload@time. Every reference gun has reload@rate.
-      const fireRate = rate !== undefined && rate > 0 ? rate : time !== undefined && time > 0 ? 1 / time : undefined;
-      if (fireRate === undefined) return "its bullet has no reload@rate or reload@time";
+      const rate = numberAttr(child(bullet, "reload"), "rate", `${where} bullet <reload>`);
+      // With no reload@rate the game shows one shot a second and ignores reload@time (#63). Every such
+      // bullet in 091_x4-800 has attach="1", so "an attached bullet deals its damage per second" fits too.
+      const fireRate = rate !== undefined && rate > 0 ? rate : 1;
       const ammunition = child(bullet, "ammunition");
       const magazineSize = numberAttr(ammunition, "value", `${where} bullet <ammunition>`);
       const magazineReload = numberAttr(ammunition, "reload", `${where} bullet <ammunition>`);

@@ -2,7 +2,8 @@
  * In-game reference Loadouts (#39): each screenshot's exact Loadout, checked on
  * the ship configuration screen of X4 8.00 + SWI 0.9.1 HF. Raw inputs are
  * copied from that install's Game Data as plain values; expected values are
- * what the screen showed. Only the rows #39 checked for each Ship are asserted.
+ * what the screen showed. Only the rows checked for each Ship are asserted. Later
+ * checks (#50, #63) add their own describe blocks, citing their issue.
  *
  * The S Ships' Loadouts are the screenshots' in full. On the M, L and XL Ships
  * #39 checked only flight, radar and capacities, so their Loadouts leave out
@@ -12,7 +13,7 @@
  */
 import { describe, expect, test } from "vitest";
 import { loadoutStats, type LoadoutStats } from "./stats.ts";
-import { engine, engineSlot, gameData, gun, launcher, loadout, missile, shield, ship, thruster } from "./testing/fixtures.ts";
+import { engine, engineSlot, gameData, gun, launcher, loadout, missile, shield, ship, thruster, weaponSlot } from "./testing/fixtures.ts";
 import type { Equipment, Ship } from "../gameData.ts";
 
 /** The shown value of each named row. */
@@ -89,6 +90,11 @@ const gozanti = ship({
   },
   capacities: { missiles: 0, drones: 0, deployables: 15, countermeasures: 16, crew: 17, cargo: 9300 },
 });
+
+const mWeaponSlot = (id: string) => ({ ...weaponSlot(id), size: "m" as const });
+
+// Only the two weapon Slots #63 fitted.
+const gozantiMiner = ship({ id: "gozanti_civ_miner", size: "m", slots: [mWeaponSlot("con_weapon_01"), mWeaponSlot("con_weapon_02")] });
 
 const cruiser546 = ship({
   id: "imp_cruiser_546",
@@ -200,6 +206,8 @@ const equipment: Equipment[] = [
     fireRate: 1.5,
     heat: { perShot: 450, overheat: 11000, coolDelay: 0.63, coolRate: 3000 },
   }),
+  // The Seismic Mining Drill's bullet has <reload time="4"/> and no reload@rate: extraction gives 1 shot a second (#66).
+  gun("weapon", "weapon_mining_drill", { damage: { value: 6, noShield: 0 }, fireRate: 1 }),
   // The Light Rocket Launcher has <storage capacity="6"/>; the Heavy Proton Torpedo Launcher has none.
   launcher("weapon", "weapon_light_rocket_launcher", "fl_rockets", 6),
   missile("missile_rocket_light", 1500, 1000, 2, 3),
@@ -207,7 +215,7 @@ const equipment: Equipment[] = [
   missile("missile_proton_heavy", 24000, 24000, 23),
 ];
 
-const data = gameData([tieFighter, n1, n1Modified, gozanti, cruiser546, settie, venator, aa9, providence], equipment, [
+const data = gameData([tieFighter, n1, n1Modified, gozanti, gozantiMiner, cruiser546, settie, venator, aa9, providence], equipment, [
   { id: "fl_rockets", equipment: ["missile_rocket_light"] },
   { id: "fl_torpedoes", equipment: ["missile_proton_heavy"] },
 ]);
@@ -420,5 +428,15 @@ describe("one engine type across engine Slot Groups, in game on X4 8.00 + SWI 0.
   test("Providence-class carrier/destroyer, 3× MM Essum across two Slot Groups (1 + 2)", () => {
     const stats = loadoutStats(data, loadout("ship_providence_carrier_01", { engine: "engine_l_essum" }));
     expectScreen(stats, rows(engineRows, [119, 24, 238, 36, 100, 1, 6430, 24, 16]));
+  });
+});
+
+describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
+  test("Gozanti-class Miner, 2× Seismic Mining Drill (no reload@rate): Burst 12, Sustained 12, one shot a second", () => {
+    const stats = loadoutStats(
+      data,
+      loadout("gozanti_civ_miner", { slots: { con_weapon_01: "weapon_mining_drill", con_weapon_02: "weapon_mining_drill" } }),
+    );
+    expectScreen(stats, { BurstDPS: 12, SustainedDPS: 12 });
   });
 });
