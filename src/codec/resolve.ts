@@ -4,15 +4,18 @@
  *
  * A Ship that isn't in the Game Data makes the Loadout Unavailable. Unknown
  * Equipment, Slots or Slot Groups, and Equipment that no longer fits, are
- * dropped; a count above the new capacity is clamped. Ids are matched as
+ * dropped; a count above the new capacity is clamped. Crew over the Ship's
+ * crew capacity is cut to fit, service crew first (ADR 0004). Ids are matched as
  * they are: there are no rename tables. A version change on its own isn't a
  * change.
  */
 import type { GameData } from "../../shared/game-data/validateSnapshot.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import {
+  CREW_ROLES,
   consumableOptions,
   setConsumable,
+  setCrew,
   setEngine,
   setGroup,
   setSlot,
@@ -32,12 +35,17 @@ export type ChangePlace =
   | { kind: "engine" }
   | { kind: "thruster" }
   | { kind: "software" }
-  | { kind: "consumable" };
+  | { kind: "consumable" }
+  | { kind: "crew" };
 
 /** Why an entry was dropped. */
 export type DropReason = "unknown-equipment" | "unknown-slot" | "unknown-slot-group" | "no-longer-fits";
 
-/** One drop or clamp. `name` is the Equipment's name, or its raw id when it isn't in the Game Data. */
+/**
+ * One drop or clamp. `name` is the Equipment's name, or its raw id when it
+ * isn't in the Game Data. A Crew role is reported under the `crew` ware it's
+ * bought as, named for its role.
+ */
 export type LoadoutChange =
   | { type: "dropped"; place: ChangePlace; equipment: string; name: string; reason: DropReason }
   | { type: "clamped"; place: ChangePlace; equipment: string; name: string; from: number; to: number };
@@ -67,6 +75,8 @@ function placeText(place: ChangePlace): string {
       return "in software";
     case "consumable":
       return "in consumables";
+    case "crew":
+      return "in crew";
   }
 }
 
@@ -152,6 +162,17 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
       if (count < stored) changes.push({ type: "clamped", place, equipment: id, name: nameOf(id), from: stored, to: count });
       repaired = setConsumable(repaired, id, count);
     }
+  }
+
+  // Service crew and marines share the Ship's crew capacity. Service crew is
+  // cut first, since marines are the deliberate choice (ADR 0004).
+  let over = (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0) - ship.capacities.crew;
+  for (const [role, name] of CREW_ROLES) {
+    const stored = loadout.crew?.[role] ?? 0;
+    const count = stored - Math.max(0, Math.min(over, stored));
+    over -= stored - count;
+    if (count < stored) changes.push({ type: "clamped", place: { kind: "crew" }, equipment: "crew", name, from: stored, to: count });
+    repaired = setCrew(repaired, role, count);
   }
 
   return { status: "ok", loadout: repaired, changes, versions: { from: loadout.gameData, to } };

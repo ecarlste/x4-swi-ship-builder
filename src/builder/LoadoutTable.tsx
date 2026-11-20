@@ -6,6 +6,7 @@ import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
 import {
+  CREW_ROLES,
   consumableOptions,
   setConsumable,
   setCrew,
@@ -17,7 +18,6 @@ import {
   shipEngines,
   withoutUncarriedConsumables,
   type ConsumableKind,
-  type CrewRole,
   type Loadout,
   type SlotGroupKind,
 } from "./loadout.ts";
@@ -297,11 +297,6 @@ export function LoadoutTable({
     </table>
   );
 }
-
-const CREW_ROLES: [CrewRole, string][] = [
-  ["service", "Service crew"],
-  ["marines", "Marines"],
-];
 
 /**
  * The Crew, after the Equipment: service crew and marines, sharing the Ship's
