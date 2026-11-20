@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { engineSlot, loadout, ship } from "../stats/testing/fixtures.ts";
-import { setCrew, setEngine, shipEngines } from "./loadout.ts";
+import { crewCount, setCrew, setEngine, shipEngines } from "./loadout.ts";
 
 describe("shipEngines", () => {
   test("counts the Ship's engine Slots and the sizes of all its engine Slot Groups (AA-9 Gas Miner: 1 + 2 = 3)", () => {
@@ -46,5 +46,13 @@ describe("setCrew", () => {
     const marinesOnly = setCrew(both, "service", 0);
     expect(marinesOnly).toEqual(loadout("fx_ship", { crew: { marines: 2 } }));
     expect(setCrew(marinesOnly, "marines", 0)).toEqual(loadout("fx_ship"));
+  });
+});
+
+describe("crewCount", () => {
+  test("counts service crew and marines together, and no Crew as 0 (the Captain isn't Crew)", () => {
+    expect(crewCount(loadout("fx_ship", { crew: { service: 3, marines: 2 } }))).toBe(5);
+    expect(crewCount(loadout("fx_ship", { crew: { marines: 2 } }))).toBe(2);
+    expect(crewCount(loadout("fx_ship"))).toBe(0);
   });
 });

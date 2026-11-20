@@ -54,11 +54,22 @@ export function setConsumable(loadout: Loadout, equipment: string, count: number
 /** One of the Crew's two counts. */
 export type CrewRole = keyof NonNullable<Loadout["crew"]>;
 
-/** The Crew's roles, in the order they're shown and cut, with their names. */
-export const CREW_ROLES: [CrewRole, string][] = [
-  ["service", "Service crew"],
-  ["marines", "Marines"],
-];
+/** The Crew's roles, in the order they're shown. */
+export const CREW_ROLES: readonly CrewRole[] = ["service", "marines"];
+
+/** Each Crew role's name, as shown. */
+export const CREW_ROLE_NAMES: Record<CrewRole, string> = { service: "Service crew", marines: "Marines" };
+
+/**
+ * The order Crew over the Ship's crew capacity is cut in: service crew first,
+ * since marines are the deliberate choice (ADR 0004).
+ */
+export const CREW_CUT_ORDER: readonly CrewRole[] = ["service", "marines"];
+
+/** How many Crew a Loadout carries, service crew and marines together. The Captain isn't Crew. */
+export function crewCount(loadout: Loadout): number {
+  return (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
+}
 
 /**
  * Sets one Crew count; 0 removes it, and with both at 0 the Loadout has no

@@ -7,7 +7,7 @@
  * decimals, as the screen does.
  */
 import type { CargoType, Equipment, GameData, Price } from "../gameData.ts";
-import { shipEngines, type Loadout } from "../builder/loadout.ts";
+import { crewCount, shipEngines, type Loadout } from "../builder/loadout.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
@@ -241,7 +241,7 @@ function price(
     total.average += item.price.average * count;
     total.max += item.price.max * count;
   }
-  const crew = (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
+  const crew = crewCount(loadout);
   total.min += crewPrice.min * crew;
   total.average += crewPrice.average * crew;
   total.max += crewPrice.max * crew;

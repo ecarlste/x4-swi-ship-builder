@@ -257,7 +257,7 @@ describe("resolveLoadout: consumables", () => {
 
     const withoutLauncher = resolved(loadout({ slots: { con_weapon_09: "fx_launcher_s" }, consumables: { fx_dart: 2 } }));
     expect(withoutLauncher.loadout).not.toHaveProperty("consumables");
-    expect(withoutLauncher.changes.map((c) => c.equipment)).toEqual(["fx_launcher_s", "fx_dart"]);
+    expect(withoutLauncher.changes.map((c) => ("equipment" in c ? c.equipment : c.role))).toEqual(["fx_launcher_s", "fx_dart"]);
   });
 
   test("counts above the Ship's capacity for a kind are clamped, in the order they were stored", () => {
@@ -304,7 +304,7 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, changes } = resolved(loadout({ ship: "fx_hauler", crew: { service: 15, marines: 10 } }));
     expect(repaired.crew).toEqual({ service: 10, marines: 10 });
     expect(changes).toEqual([
-      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Service crew", from: 15, to: 10 },
+      { type: "crew-cut", role: "service", from: 15, to: 10 },
     ]);
   });
 
@@ -313,8 +313,8 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, changes } = resolved(loadout({ crew: { service: 2, marines: 3 } }));
     expect(repaired.crew).toEqual({ marines: 1 });
     expect(changes).toEqual([
-      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Service crew", from: 2, to: 0 },
-      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Marines", from: 3, to: 1 },
+      { type: "crew-cut", role: "service", from: 2, to: 0 },
+      { type: "crew-cut", role: "marines", from: 3, to: 1 },
     ]);
   });
 
@@ -322,8 +322,8 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, changes } = resolved(loadout({ ship: "fx_needle", crew: { service: 1, marines: 2 } }));
     expect(repaired).not.toHaveProperty("crew");
     expect(changes).toEqual([
-      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Service crew", from: 1, to: 0 },
-      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Marines", from: 2, to: 0 },
+      { type: "crew-cut", role: "service", from: 1, to: 0 },
+      { type: "crew-cut", role: "marines", from: 2, to: 0 },
     ]);
   });
 });

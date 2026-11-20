@@ -6,7 +6,9 @@ import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
 import {
+  CREW_ROLE_NAMES,
   CREW_ROLES,
+  crewCount,
   consumableOptions,
   setConsumable,
   setCrew,
@@ -317,7 +319,7 @@ function CrewSection({
   onChange: (loadout: Loadout) => void;
 }) {
   const headingId = useId();
-  const used = (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
+  const used = crewCount(loadout);
   return (
     <tbody aria-labelledby={headingId}>
       <tr className="section">
@@ -328,7 +330,8 @@ function CrewSection({
           </span>
         </th>
       </tr>
-      {CREW_ROLES.map(([role, label]) => {
+      {CREW_ROLES.map((role) => {
+        const label = CREW_ROLE_NAMES[role];
         const count = loadout.crew?.[role] ?? 0;
         const before = was?.crew?.[role] ?? 0;
         return (
