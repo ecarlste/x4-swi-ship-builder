@@ -404,6 +404,7 @@ function readItem(
       const reload = child(bullet, "reload");
       const rate = numberAttr(reload, "rate", `${where} bullet <reload>`);
       const time = numberAttr(reload, "time", `${where} bullet <reload>`);
+      // unconfirmed (#63): 1 / reload@time. Every reference gun has reload@rate.
       const fireRate = rate !== undefined && rate > 0 ? rate : time !== undefined && time > 0 ? 1 / time : undefined;
       if (fireRate === undefined) return "its bullet has no reload@rate or reload@time";
       const ammunition = child(bullet, "ammunition");

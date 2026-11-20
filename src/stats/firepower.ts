@@ -32,16 +32,19 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
     return { rateOfFire, burst, sustained: burst };
   }
   // With a magazine, the reload between magazines counts. A turret macro's own reload is ignored.
+  // unconfirmed (#63): #12 saw it in the encyclopedia, but no reference Loadout has a magazine.
   const rateOfFire = gun.magazine
     ? gun.magazine.size / (gun.magazine.reloadTime + gun.magazine.size / gun.fireRate)
     : gun.fireRate;
+  // unconfirmed (#63): the bullet's `barrelamount`. Every reference gun has 1.
   const burst = (gun.damage.value + gun.damage.noShield) * gun.barrelAmount * rateOfFire;
   return { rateOfFire, burst, sustained: burst * heatUptime(gun, rateOfFire) };
 }
 
 /**
  * The missile a launcher fires from the Loadout's consumables: the first
- * loaded missile in the launcher's fit list.
+ * loaded missile in the launcher's fit list. unconfirmed (#63): every
+ * reference launcher's fit list has one missile.
  */
 export function launcherMissile(
   gun: Gun,

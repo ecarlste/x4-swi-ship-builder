@@ -33,3 +33,16 @@ Code in `extract/` that reads game files names things in the game's XML terms as
 **Why:** the integrity pass is the backstop for extraction. A helper shared by both would carry one bug into both, and extraction would approve its own broken output.
 
 **Flag:** an import from `extract/` in `shared/game-data/`, or a helper the two share. Logic repeated between `extract/` and the integrity pass is this rule followed; keep it out of Duplicated Code findings.
+
+## 4. A stat formula is confirmed in game, or says it isn't
+
+A diff that adds or changes how a stat row is computed (`src/stats/`), or how extraction derives an input the stats use, does one of these:
+
+- adds or updates a row in `src/stats/reference.test.ts`, with values from an in-game screen and the issue that recorded them, **or**
+- marks the formula `unconfirmed (#N)` in a comment, where `#N` is an open ticket to check it in game.
+
+Fixture inputs in `src/stats/testing/` that were chosen to produce an expected number, rather than copied from Game Data, are marked the same way.
+
+**Why:** a stat test can't tell a formula that's right from one written to match its own fixture. Only the game decides. #39 checked formulas that had shipped untested in game and found three wrong (launcher storage, a missile's `barrelamount`, the engine class's boost default). #53 fixed them.
+
+**Flag:** a new or changed stat formula with neither a reference row nor an `unconfirmed (#N)` marker, or a marker whose ticket is closed. Judging what counts as a stat input is up to the reviewer. No check can decide it, which is why this rule is here and not in a lint rule.
