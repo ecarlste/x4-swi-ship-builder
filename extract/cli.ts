@@ -33,7 +33,8 @@ function main(): void {
   for (const layer of result.layers) {
     console.log(`  ${layer.id}: ${layer.files} files, ${layer.substFiles} subst files`);
   }
-  console.log(`Wrote ${result.layers.length} layers to ${cacheDir}`);
+  console.log(`Merged ${result.layers.length} layers into ${result.files} files in ${cacheDir}`);
+  console.log(`Report: ${result.reportPath}`);
 }
 
 try {

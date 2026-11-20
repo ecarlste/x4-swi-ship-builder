@@ -24,7 +24,16 @@ npm run extract -- --x4 "/path/to/X4 Foundations"
 
 It reads SWI's `extensions/starwarsmod_m1/content.xml` and checks its dependencies against `expectedDependencies` in `extract/config.ts`. If SWI adds or drops a dependency, extraction stops until the config is updated on purpose. It then reads base X4, the DLCs SWI depends on and SWI itself, in load order. Mini-DLCs, Reaper's Ship Pack and any other extensions are never read.
 
-So far it only writes each layer's raw files to the gitignored `.cache/extract/`. `layers.json` records the load order and versions. `layers/<NN>_<layer>/files/` holds the files from base and `ext_*` catalogs, and `subst/` holds the files from `subst_*` catalogs. Each file is pretty-printed JSON at a lowercased path that mirrors the game's (`libraries/wares.json`). Attributes become keys, child elements become arrays grouped by tag, and text becomes `#text`. If an attribute shares its name with a child element, the attribute's key gets an `@` prefix. A `<diff>` patch file keeps its order instead, because each operation applies to the result of the ones before it: the root's operations, and the elements each operation adds, go in a `#children` list of `{ "<tag>": … }` entries in document order. The added elements themselves use the grouped shape. Only libraries, the macro and component index, ship and equipment assets, and the English and language-neutral text files are converted.
+It merges the layers in load order into one file per game path, in the gitignored `.cache/extract/files/`. The merge rules are the assumptions from #6:
+
+- A `subst_*.cat` file replaces the file at its path whole, and the catalog that loads last wins.
+- A library, index or text file without a `<diff>` root is merged into the earlier file. For a duplicate id (or `name`, for index entries), the later definition wins, in the earlier one's place.
+- Any other file (a macro or component) at a base-game path replaces the base file whole. A new one stays in its extension's folder (`extensions/<folder>/assets/…`), where the index points to it.
+- A file with a `<diff>` root goes to the patch step, which isn't written yet (#29), so for now extraction stops there.
+
+Every duplicate id, whole-file replacement and non-diff library merge is listed in `.cache/extract/extract-report.md`. `layers.json` records the load order and versions.
+
+Each merged file is pretty-printed JSON at a lowercased path that mirrors the game's (`libraries/wares.json`). Attributes become keys, child elements become arrays grouped by tag, and text becomes `#text`. If an attribute shares its name with a child element, the attribute's key gets an `@` prefix. Only libraries, the macro and component index, ship and equipment assets, and the English and language-neutral text files are read.
 
 ## Tests
 
