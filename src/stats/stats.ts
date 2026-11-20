@@ -201,7 +201,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   return {
     rows,
-    price: price(ship.price, loadout, engineCount, index),
+    price: price(ship.price, gameData.wares.crew, loadout, engineCount, index),
     missing: missingMandatory(gameData, ship, loadout),
   };
 }
@@ -216,12 +216,19 @@ function turningInDegrees(degreesPerSecond: number): number {
 }
 
 /**
- * Ship + Equipment (the engine once per engine) + consumables + software, each at its min, average and max.
+ * Ship + Equipment (the engine once per engine) + consumables + software + Crew, each at its min, average and max.
  * The game's total is the sum of the same lines, confirmed in game by the #63 reference row.
+ * Each member of the Crew is bought as the `crew` ware; the Captain is free (ADR 0004).
  * Differs from the game on purpose (ADR 0003): each line is at Game Data's average with
- * min–max as the range, not the station's price, and crew is left out.
+ * min–max as the range, not the station's price.
  */
-function price(shipPrice: Price, loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): Price {
+function price(
+  shipPrice: Price,
+  crewPrice: Price,
+  loadout: Loadout,
+  engineCount: number,
+  { equipment }: GameDataIndex,
+): Price {
   const bought: [string, number][] = [
     ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
     ...Object.values(loadout.groups ?? {}).flatMap((kinds) =>
@@ -240,5 +247,9 @@ function price(shipPrice: Price, loadout: Loadout, engineCount: number, { equipm
     total.average += item.price.average * count;
     total.max += item.price.max * count;
   }
+  const crew = (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
+  total.min += crewPrice.min * crew;
+  total.average += crewPrice.average * crew;
+  total.max += crewPrice.max * crew;
   return total;
 }
