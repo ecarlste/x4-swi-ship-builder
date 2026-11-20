@@ -1,5 +1,7 @@
 # Price is an estimate without crew
 
+> Crew: superseded by [ADR 0004](0004-crew-is-part-of-the-loadout.md). Crew is now part of the Loadout and of Price. The rest of this ADR stands.
+
 In game, a shipyard charges each ware at its own price, and its total for a new Ship includes crew. #63 checked this at a real shipyard: a Gozanti-class Miner at Rendili Drive Yards, reputation 0 ([#63's Price comment](https://github.com/ecarlste/x4-swi-ship-builder/issues/63#issuecomment-7046160635)).
 
 - **The total is the sum of the lines.** Each engine, consumable and piece of software is charged separately, as the builder does.

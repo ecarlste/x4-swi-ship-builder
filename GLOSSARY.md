@@ -45,15 +45,23 @@ A named set of Slots on a large Ship, filled together instead of one Slot at a t
 _Avoid_: battery, cluster, group slot
 
 **Loadout**:
-A specific choice of equipment for one ship. A loadout fits one engine type to all of the ship's engine Slots, including those in Slot Groups, or no engines at all. Equipment mods, paint and crew (service crew and marines) are not part of a loadout, so a loadout's Price leaves crew out.
+A specific choice of equipment and Crew for one ship. A loadout fits one engine type to all of the ship's engine Slots, including those in Slot Groups, or no engines at all. Equipment mods, paint and the Captain are not part of a loadout.
 _Avoid_: build, fit, config
 
+**Crew**:
+The service crew and marines a Loadout carries, as two counts that share the Ship's crew capacity. Both are bought as the same ware at the same price per head. The Captain is not Crew.
+_Avoid_: personnel, people, workforce
+
+**Captain**:
+The one person who flies a Ship, which every Ship gets free and must have when it's bought. The Captain's seat is on top of the Ship's crew capacity.
+_Avoid_: pilot, commander
+
 **Price**:
-An estimate of what a Loadout costs: the Ship plus each piece of Equipment (the engine once per engine), at Game Data's average, with Game Data's min–max as the range. A shipyard charges its own price inside that range, and the game's total also includes crew, which Price leaves out (ADR 0003).
+An estimate of what a Loadout costs: the Ship, each piece of Equipment (the engine once per engine) and each member of its Crew, at Game Data's average, with Game Data's min–max as the range. A shipyard charges its own price inside that range (ADR 0003). The Captain is free (ADR 0004).
 _Avoid_: cost, value, purchase price
 
 **Empty Loadout**:
-The loadout every ship starts with in the builder: no equipment at all, not even software.
+The loadout every ship starts with in the builder: no equipment at all, not even software, and no Crew. Like a shipyard, it starts with only the Captain.
 _Avoid_: default loadout, base loadout, template
 
 **Saved Loadout**:
