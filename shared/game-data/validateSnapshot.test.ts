@@ -36,27 +36,17 @@ describe("validateSnapshot", () => {
   it("gives the crew price, which Crew is bought at", () => {
     const result = validateSnapshot(loadFixture());
 
-    expect(result.ok && result.gameData.wares.crew).toEqual({ min: 4000, average: 6000, max: 8000 });
+    expect(result.ok && result.gameData.crewPrice).toEqual({ min: 4000, average: 6000, max: 8000 });
   });
 
   it("rejects a snapshot without the crew price", () => {
     const raw = loadFixture() as Record<string, any>;
-    delete raw.wares.crew;
+    delete raw["crew-price"];
 
     const result = validateSnapshot(raw as RawSnapshot);
 
     expect(result.ok).toBe(false);
-    expect(result.errors).toEqual([expect.stringMatching(/^wares\.crew: /)]);
-  });
-
-  it("rejects a snapshot without its wares file", () => {
-    const raw = loadFixture() as Record<string, any>;
-    delete raw.wares;
-
-    const result = validateSnapshot(raw as RawSnapshot);
-
-    expect(result.ok).toBe(false);
-    expect(result.errors).toEqual([expect.stringMatching(/^wares: /)]);
+    expect(result.errors).toEqual([expect.stringMatching(/^crew-price: /)]);
   });
 
   describe("reference integrity", () => {

@@ -6,7 +6,7 @@
  * `menu_ship_configuration.lua`; values are rounded down to the row's
  * decimals, as the screen does.
  */
-import type { CargoType, Equipment, GameData } from "../gameData.ts";
+import type { CargoType, Equipment, GameData, Price } from "../gameData.ts";
 import { shipEngines, type Loadout } from "../builder/loadout.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
@@ -29,12 +29,6 @@ export interface StatRow {
   shown: number;
   decimals: number;
   group: string;
-}
-
-export interface Price {
-  min: number;
-  average: number;
-  max: number;
 }
 
 export interface LoadoutStats {
@@ -201,7 +195,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   return {
     rows,
-    price: price(ship.price, gameData.wares.crew, loadout, engineCount, index),
+    price: price(ship.price, gameData.crewPrice, loadout, engineCount, index),
     missing: missingMandatory(gameData, ship, loadout),
   };
 }

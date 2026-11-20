@@ -288,7 +288,7 @@ export function LoadoutTable({
       {ship.capacities.crew > 0 && (
         <CrewSection
           capacity={ship.capacities.crew}
-          crewPrice={gameData.wares.crew.average}
+          crewPrice={gameData.crewPrice.average}
           loadout={loadout}
           was={was}
           onChange={change}

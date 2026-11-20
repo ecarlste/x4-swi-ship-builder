@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Equipment, Faction, FitList, Licence, Manifest, Ship, Size, WarePrice, Wares } from "../shared/game-data/schema.ts";
+import type { Equipment, Faction, FitList, Licence, Manifest, Ship, Size, Price } from "../shared/game-data/schema.ts";
 import { SNAPSHOT_FILES, validateSnapshot, type RawSnapshot } from "../shared/game-data/validateSnapshot.ts";
 import { ExtractError } from "./errors.ts";
 import { attr, child, children, numberAttr, GameFiles } from "./gameFiles.ts";
@@ -70,7 +70,7 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
   const factions = readFactions(files, text, [...fitted.ships, ...equipment]);
   const ships = disambiguateNames(fitted.ships, factions).sort(byId);
   const licences = readLicences(files, [...ships, ...equipment], warnings);
-  const wares: Wares = { crew: readWarePrice(files, "crew") };
+  const crewPrice = readWarePrice(files, "crew");
 
   const content = {
     ships,
@@ -78,7 +78,7 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
     "fit-lists": fitted.fitLists,
     factions,
     licences,
-    wares,
+    "crew-price": crewPrice,
   };
   const manifest: Manifest = {
     swi: { version: layers.swi.version, label: releaseLabel(layers.swi.label), date: layers.swi.date },
@@ -206,7 +206,7 @@ function readFactions(files: GameFiles, text: TextResolver, items: (Ship | Equip
  * which Crew is bought as (ADR 0004). It is read from the merged files, so a
  * patch to it is picked up.
  */
-function readWarePrice(files: GameFiles, id: string): WarePrice {
+function readWarePrice(files: GameFiles, id: string): Price {
   const ware = children(files.requireFile("libraries/wares.xml"), "ware").find((w) => attr(w, "id") === id);
   if (!ware) throw new ExtractError(`libraries/wares.xml has no ware "${id}"`);
   const price = child(ware, "price");

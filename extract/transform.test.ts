@@ -230,7 +230,7 @@ describe("transform: the crew price", () => {
   it("writes the crew ware's min, average and max, which Crew is bought at", () => {
     const { readJson } = run(oneShipWorld().crew({ min: 4000, average: 6000, max: 8000 }));
 
-    expect(readJson("wares.json")).toEqual({ crew: { min: 4000, average: 6000, max: 8000 } });
+    expect(readJson("crew-price.json")).toEqual({ min: 4000, average: 6000, max: 8000 });
   });
 
   it("fails when libraries/wares.xml has no crew ware", () => {
