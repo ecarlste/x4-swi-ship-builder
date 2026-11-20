@@ -52,15 +52,69 @@ describe("weapons and turrets", () => {
   });
 });
 
-test("a launcher's output is that of the missile the Loadout carries for it", () => {
-  const tube = launcher("weapon", "tube", "fl_torpedoes");
-  const torpedo = missile("torpedo", 9000, 1000, 12);
-  const data = gameData([ship()], [tube, torpedo], [{ id: "fl_torpedoes", equipment: ["torpedo"] }]);
+// The Corsair of #65's popover example: a KV22 (1,744 / 1,564) and a Krupx
+// Medium Warhead Launcher, whose fit list puts the weaker Ion Torpedo first.
+describe("a hovered launcher shows one row per missile (ADR 0002)", () => {
+  const kv22 = gun("weapon", "kv22", {
+    damage: { value: 1428, noShield: 462 },
+    fireRate: 1.2,
+    magazine: { size: 2, reloadTime: 0.5 },
+    heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
+  });
+  const krupx = launcher("weapon", "krupx", "fl_krupx_medium");
+  const ion = { ...missile("ion", 3000, 0, 18), name: "10-IMm Medium Ion Torpedo" };
+  const proton = { ...missile("proton", 12500, 12500, 18), name: "MG4-A Medium Proton Torpedo" };
+  const data = gameData([ship()], [kv22, krupx, ion, proton], [{ id: "fl_krupx_medium", equipment: ["ion", "proton"] }]);
+  /** Each row as [missile, loaded, burst, burst difference, sustained, sustained difference]. */
+  const table = (comparison: ReturnType<typeof compareEquipment>) =>
+    comparison.missiles?.map((m) => [
+      m.missile?.name ?? null,
+      m.loaded,
+      ...m.figures.flatMap((f) => [f.shown, f.difference]),
+    ]);
 
-  const loaded = compareEquipment(data, loadout("fx_ship", { consumables: { torpedo: 4 } }), tube, null);
-  expect(loaded.figures.map((f) => f.shown)).toEqual([833, 833]);
-  const unloaded = compareEquipment(data, loadout("fx_ship"), tube, null);
-  expect(unloaded.figures.map((f) => f.shown)).toEqual([0, 0]);
+  test("sorted best first, then No missile, each against the fitted gun; the loaded one is marked", () => {
+    const comparison = compareEquipment(data, loadout("fx_ship", { consumables: { ion: 5 } }), krupx, kv22);
+    expect(table(comparison)).toEqual([
+      ["MG4-A Medium Proton Torpedo", false, 1388, -356, 1388, -176],
+      ["10-IMm Medium Ion Torpedo", true, 166, -1578, 166, -1398],
+      [null, false, 0, -1744, 0, -1564],
+    ]);
+    expect(comparison.missiles?.[0]?.figures.map((f) => [f.label, f.unit, f.verdict])).toEqual([
+      ["Burst Output", "MW", "worse"],
+      ["Sustained Output", "MW", "worse"],
+    ]);
+    // The launcher's figures are all in its missile rows.
+    expect(comparison.figures).toEqual([]);
+  });
+
+  test("with no compatible missile loaded, No missile is marked loaded", () => {
+    const comparison = compareEquipment(data, loadout("fx_ship"), krupx, null);
+    expect(table(comparison)).toEqual([
+      ["MG4-A Medium Proton Torpedo", false, 1388, 1388, 1388, 1388],
+      ["10-IMm Medium Ion Torpedo", false, 166, 166, 166, 166],
+      [null, true, 0, 0, 0, 0],
+    ]);
+  });
+
+  test("against a fitted launcher, the differences are from its best loaded missile", () => {
+    const loaded = loadout("fx_ship", { consumables: { ion: 5, proton: 5 } });
+    const comparison = compareEquipment(data, loaded, krupx, krupx);
+    expect(table(comparison)).toEqual([
+      ["MG4-A Medium Proton Torpedo", true, 1388, 0, 1388, 0],
+      ["10-IMm Medium Ion Torpedo", false, 166, -1222, 166, -1222],
+      [null, false, 0, -1388, 0, -1388],
+    ]);
+  });
+
+  test("a gun hovered over a fitted launcher keeps one pair, against the launcher's loaded missile", () => {
+    const comparison = compareEquipment(data, loadout("fx_ship", { consumables: { ion: 5, proton: 5 } }), kv22, krupx);
+    expect(comparison.missiles).toBeNull();
+    expect(comparison.figures.map((f) => [f.label, f.shown, f.difference])).toEqual([
+      ["Burst Output", 1744, 356],
+      ["Sustained Output", 1564, 176],
+    ]);
+  });
 });
 
 test("shields show capacity and recharge rate", () => {

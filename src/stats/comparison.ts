@@ -1,12 +1,16 @@
 /**
  * The comparison popover's figures (#10, #23): one piece of Equipment's own
  * figures, by kind, each with its difference from the fitted item. Slot Group
- * items count as one unit.
+ * items count as one unit. A launcher's figures are one row per missile it
+ * can fire (#65, ADR 0002).
  */
 import type { Equipment, GameData } from "../gameData.ts";
-import { indexGameData } from "../gameDataIndex.ts";
+import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import type { Loadout } from "../builder/loadout.ts";
-import { gunOutput, launcherMissile } from "./firepower.ts";
+import { compatibleMissiles, gunOutput, launcherMissile } from "./firepower.ts";
+
+type Gun = Extract<Equipment, { kind: "weapon" | "turret" }>;
+type Missile = Extract<Equipment, { kind: "missile" }>;
 
 export type Verdict = "better" | "worse" | "same";
 
@@ -27,8 +31,21 @@ export interface PriceDifference {
   verdict: Verdict;
 }
 
-export interface Comparison {
+/** A hovered launcher's output with one missile it can fire, or with none. */
+export interface MissileRow {
+  /** The missile, or null for the "No missile" row. */
+  missile: Missile | null;
+  /** Whether this is the row the stats panel would use: the best loaded missile, or none. */
+  loaded: boolean;
+  /** Burst and Sustained Output, each with its difference from the fitted item. */
   figures: Figure[];
+}
+
+export interface Comparison {
+  /** The option's figures; empty for a launcher, whose figures are its missile rows. */
+  figures: Figure[];
+  /** For a launcher, its missiles best first, then "No missile"; null for anything else. */
+  missiles: MissileRow[] | null;
   price: PriceDifference;
 }
 
@@ -44,17 +61,21 @@ function floorTo(value: number, decimals: number): number {
   return Math.floor(value * scale) / scale;
 }
 
-/** An item's own figures, by kind. */
-function figures(gameData: GameData, loadout: Loadout, item: Equipment): RawFigure[] {
+/** A gun's output as figures: a launcher's with `missile`, or with none. */
+function outputFigures(gun: Gun, missile: Missile | undefined): RawFigure[] {
+  const output = gunOutput(gun, missile);
+  return [
+    { label: "Burst Output", unit: "MW", decimals: 0, value: output.burst },
+    { label: "Sustained Output", unit: "MW", decimals: 0, value: output.sustained },
+  ];
+}
+
+/** An item's own figures, by kind, as the stats panel computes them for this Loadout. */
+function figures(index: GameDataIndex, loadout: Loadout, item: Equipment): RawFigure[] {
   switch (item.kind) {
     case "weapon":
-    case "turret": {
-      const output = gunOutput(item, launcherMissile(item, loadout.consumables ?? {}, indexGameData(gameData)));
-      return [
-        { label: "Burst Output", unit: "MW", decimals: 0, value: output.burst },
-        { label: "Sustained Output", unit: "MW", decimals: 0, value: output.sustained },
-      ];
-    }
+    case "turret":
+      return outputFigures(item, launcherMissile(item, loadout.consumables ?? {}, index));
     case "shield":
       return [
         { label: "Shield Capacity", unit: "MJ", decimals: 0, value: item.capacity },
@@ -84,23 +105,45 @@ export function compareEquipment(
   option: Equipment,
   fitted: Equipment | null,
 ): Comparison {
-  const mine = figures(gameData, loadout, option);
-  const theirs = fitted ? figures(gameData, loadout, fitted) : [];
-  return {
-    figures: mine.map((f) => {
+  const index = indexGameData(gameData);
+  const theirs = fitted ? figures(index, loadout, fitted) : [];
+  const against = (mine: RawFigure[]): Figure[] =>
+    mine.map((f) => {
       const shown = floorTo(f.value, f.decimals);
       const other = theirs.find((t) => t.label === f.label);
       // Rounded to the figure's decimals, so float noise never shows as a difference.
       const scale = 10 ** f.decimals;
       const difference = Math.round((shown - (other ? floorTo(other.value, other.decimals) : 0)) * scale) / scale;
       return { label: f.label, unit: f.unit, shown, difference, verdict: verdict(difference) };
-    }),
+    });
+  const isLauncher = (option.kind === "weapon" || option.kind === "turret") && option.missiles !== null;
+  return {
+    figures: isLauncher ? [] : against(figures(index, loadout, option)),
+    missiles: isLauncher ? missileRows(index, loadout, option, against) : null,
     price: {
       shown: option.price.average,
       difference: option.price.average - (fitted?.price.average ?? 0),
       verdict: verdict((fitted?.price.average ?? 0) - option.price.average),
     },
   };
+}
+
+/** A launcher's missiles, best first (fit-list order on a tie), then "No missile". */
+function missileRows(
+  index: GameDataIndex,
+  loadout: Loadout,
+  launcher: Gun,
+  against: (mine: RawFigure[]) => Figure[],
+): MissileRow[] {
+  const loaded = launcherMissile(launcher, loadout.consumables ?? {}, index) ?? null;
+  const best = compatibleMissiles(launcher, index)
+    .map((missile) => ({ missile, burst: gunOutput(launcher, missile).burst }))
+    .sort((a, b) => b.burst - a.burst);
+  return [...best.map(({ missile }) => missile), null].map((missile) => ({
+    missile,
+    loaded: missile?.id === loaded?.id,
+    figures: against(outputFigures(launcher, missile ?? undefined)),
+  }));
 }
 
 function verdict(difference: number): Verdict {

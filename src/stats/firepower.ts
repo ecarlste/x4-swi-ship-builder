@@ -41,20 +41,29 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
   return { rateOfFire, burst, sustained: burst * heatUptime(gun, rateOfFire) };
 }
 
+/** The missiles a launcher can fire, in its fit list's order; none for a gun. */
+export function compatibleMissiles(gun: Gun, { fitLists, equipment }: GameDataIndex): Missile[] {
+  if (gun.missiles === null) return [];
+  return (fitLists.get(gun.missiles) ?? []).flatMap((id) => {
+    const item = equipment.get(id);
+    return item?.kind === "missile" ? [item] : [];
+  });
+}
+
 /**
- * The missile a launcher fires from the Loadout's consumables: the first
- * loaded missile in the launcher's fit list. unconfirmed (#63): every
- * reference launcher's fit list has one missile.
+ * The missile a launcher fires from the Loadout's consumables: its loaded
+ * compatible missile with the highest output, the first in its fit list on a
+ * tie, or none. This is the builder's rule, not the game's, which fires the
+ * last compatible missile by ware id whatever is loaded (ADR 0002).
  */
-export function launcherMissile(
-  gun: Gun,
-  consumables: Record<string, number>,
-  { fitLists, equipment }: GameDataIndex,
-): Missile | undefined {
-  if (gun.missiles === null) return undefined;
-  const id = (fitLists.get(gun.missiles) ?? []).find((m) => (consumables[m] ?? 0) > 0);
-  const item = id === undefined ? undefined : equipment.get(id);
-  return item?.kind === "missile" ? item : undefined;
+export function launcherMissile(gun: Gun, consumables: Record<string, number>, index: GameDataIndex): Missile | undefined {
+  let best: { missile: Missile; burst: number } | undefined;
+  for (const missile of compatibleMissiles(gun, index)) {
+    if ((consumables[missile.id] ?? 0) <= 0) continue;
+    const { burst } = gunOutput(gun, missile);
+    if (!best || burst > best.burst) best = { missile, burst };
+  }
+  return best?.missile;
 }
 
 /**

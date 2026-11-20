@@ -89,3 +89,37 @@ test("the popover lists each Seller with its Licence", async ({ page }) => {
     "Freight Guild: no Licence needed",
   ]);
 });
+
+test("a hovered launcher shows a row per missile, best first, then No missile, and marks the loaded one (#65)", async ({
+  page,
+}) => {
+  await openShip(page, "S", "Swiftwing Courier");
+  await fit(page, /con_weapon_01/, "Pulse Blaster");
+  await fit(page, /con_weapon_02/, "Torpedo Tube");
+  await page.getByRole("spinbutton", { name: "Ion Torpedo count" }).fill("3");
+  const popover = await hover(page, /con_weapon_01/, "Torpedo Tube");
+
+  // Each against the fitted Pulse Blaster (400 / 181); the Heavy Torpedo outfires the loaded Ion Torpedo.
+  const missiles = popover.getByRole("table", { name: "Missiles" });
+  await expect(missiles.getByRole("columnheader")).toHaveText(["Missile", "Burst", "Sustained"]);
+  await expect(missiles.getByRole("rowheader")).toHaveText(["Heavy Torpedo", "Ion Torpedo ◂ loaded", "No missile"]);
+  await expect(figure(missiles, "Heavy Torpedo").getByRole("cell")).toHaveText(["833 MW", "+433", "833 MW", "+652"]);
+  await expect(figure(missiles, "Ion Torpedo").getByRole("cell")).toHaveText(["166 MW", "−234", "166 MW", "−15"]);
+  await expect(figure(missiles, "No missile").getByRole("cell")).toHaveText(["0 MW", "−400", "0 MW", "−181"]);
+  await expect(figure(missiles, "Heavy Torpedo").getByText("+433")).toHaveCSS("color", GREEN);
+  await expect(figure(missiles, "No missile").getByText("−400")).toHaveCSS("color", RED);
+  // No one-pair Burst / Sustained rows; the price still shows.
+  await expect(figure(popover, "Burst Output")).toHaveCount(0);
+  await expect(figure(popover, "Price").getByRole("cell")).toHaveText(["24,000 Cr", "+12,000"]);
+});
+
+test("with nothing compatible loaded, No missile is the loaded row (#65)", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+  const popover = await hover(page, /con_weapon_01/, "Torpedo Tube");
+
+  await expect(popover.getByRole("table", { name: "Missiles" }).getByRole("rowheader")).toHaveText([
+    "Heavy Torpedo",
+    "Ion Torpedo",
+    "No missile ◂ loaded",
+  ]);
+});

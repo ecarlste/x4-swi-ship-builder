@@ -34,15 +34,16 @@ Code in `extract/` that reads game files names things in the game's XML terms as
 
 **Flag:** an import from `extract/` in `shared/game-data/`, or a helper the two share. Logic repeated between `extract/` and the integrity pass is this rule followed; keep it out of Duplicated Code findings.
 
-## 4. A stat formula is confirmed in game, or says it isn't
+## 4. A stat formula is confirmed in game, says it isn't, or says why it differs
 
 A diff that adds or changes how a stat row is computed (`src/stats/`), or how extraction derives an input the stats use, does one of these:
 
 - adds or updates a row in `src/stats/reference.test.ts`, with values from an in-game screen and the issue that recorded them, **or**
-- marks the formula `unconfirmed (#N)` in a comment, where `#N` is an open ticket to check it in game.
+- marks the formula `unconfirmed (#N)` in a comment, where `#N` is an open ticket to check it in game, **or**
+- differs from the game on purpose, with a comment citing the ADR in `docs/adr/` that records the game's rule, the builder's and why (such as ADR 0002, a launcher's loaded missiles). Its tests cite the ADR, not a game screen.
 
 Fixture inputs in `src/stats/testing/` that were chosen to produce an expected number, rather than copied from Game Data, are marked the same way.
 
 **Why:** a stat test can't tell a formula that's right from one written to match its own fixture. Only the game decides. #39 checked formulas that had shipped untested in game and found three wrong (launcher storage, a missile's `barrelamount`, the engine class's boost default). #53 fixed them.
 
-**Flag:** a new or changed stat formula with neither a reference row nor an `unconfirmed (#N)` marker, or a marker whose ticket is closed. Judging what counts as a stat input is up to the reviewer. No check can decide it, which is why this rule is here and not in a lint rule.
+**Flag:** a new or changed stat formula with no reference row, no `unconfirmed (#N)` marker and no ADR saying why it differs from the game, or a marker whose ticket is closed. Judging what counts as a stat input is up to the reviewer. No check can decide it, which is why this rule is here and not in a lint rule.
