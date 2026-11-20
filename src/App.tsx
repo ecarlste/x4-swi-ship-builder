@@ -4,8 +4,9 @@ import { Footer } from "./Footer.tsx";
 import { ShipBlock } from "./builder/ShipBlock.tsx";
 import { ShipPicker } from "./builder/ShipPicker.tsx";
 import { LoadoutTable } from "./builder/LoadoutTable.tsx";
+import { StatsPanel } from "./builder/StatsPanel.tsx";
 import { emptyLoadout, type Loadout } from "./builder/loadout.ts";
-import { missingMandatory } from "./builder/mandatory.ts";
+import { loadoutStats } from "./stats/stats.ts";
 
 const APP_TITLE = "X4: SWI Ship Builder";
 
@@ -14,7 +15,8 @@ export function App() {
   const [loadout, setLoadout] = useState<Loadout | null>(null);
   const ship = loadout ? (gameData.ships.find((s) => s.id === loadout.ship) ?? null) : null;
 
-  const missing = ship && loadout ? missingMandatory(gameData, ship, loadout) : [];
+  const stats = loadout && ship ? loadoutStats(gameData, loadout) : null;
+  const missing = stats?.missing ?? [];
 
   useEffect(() => {
     document.title = ship ? `${ship.name} · ${APP_TITLE}` : APP_TITLE;
@@ -39,7 +41,7 @@ export function App() {
         )}
       </div>
       <main className="app-main">
-        {ship && loadout ? (
+        {ship && loadout && stats ? (
           <div className="builder">
             <div className="loadout">
               <h2>{ship.name}</h2>
@@ -53,6 +55,7 @@ export function App() {
             </div>
             <aside className="stats" aria-label="Stats">
               <ShipBlock ship={ship} factions={gameData.factions} licences={gameData.licences} />
+              <StatsPanel stats={stats} />
             </aside>
           </div>
         ) : (

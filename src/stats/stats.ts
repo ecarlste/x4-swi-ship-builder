@@ -8,6 +8,9 @@
  */
 import type { Equipment, GameData } from "../gameData.ts";
 import type { Loadout } from "../builder/loadout.ts";
+import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
+
+export type { MissingUpgrade } from "./mandatory.ts";
 
 /** One stat row of the configuration screen. */
 export interface StatRow {
@@ -33,6 +36,8 @@ export interface LoadoutStats {
   rows: StatRow[];
   /** The Loadout's total price: the average is the headline, min–max the range. */
   price: Price;
+  /** The mandatory upgrades the Loadout lacks, in Loadout table order. */
+  missing: MissingUpgrade[];
 }
 
 /** Rounds down to `decimals` places, like the game's `Helper.floor`. */
@@ -88,7 +93,11 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   add("DeployableCapacity", "Deployables", "", 0, "crew", ship.capacities.deployables);
   add("CountermeasureCapacity", "Countermeasures", "", 0, "crew", ship.capacities.countermeasures);
 
-  return { rows, price: price(ship.price, loadout, equipment) };
+  return {
+    rows,
+    price: price(ship.price, loadout, equipment),
+    missing: missingMandatory(gameData, ship, loadout),
+  };
 }
 
 /** Ship + Equipment + consumables + software, each at its min, average and max. */

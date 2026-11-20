@@ -188,6 +188,33 @@ describe("the configuration screen's rows", () => {
   });
 });
 
+describe("mandatory upgrades", () => {
+  test("lists the engine and mandatory Slots, unfilled engine groups, the thruster and default software", () => {
+    const data = gameData(
+      [
+        ship({
+          slots: [
+            { id: "con_engine_01", kind: "engine", size: "s", mandatory: false, fitList: "fl_any" },
+            { id: "con_shield_01", kind: "shield", size: "s", mandatory: true, fitList: "fl_any" },
+            { id: "con_weapon_01", kind: "weapon", size: "s", mandatory: false, fitList: "fl_any" },
+          ],
+          slotGroups: [{ id: "back", kinds: { engine: { count: 2, fitList: "fl_any" } } }],
+          software: { fitList: "fl_any", mandatory: ["assist"] },
+        }),
+      ],
+      [priced("software", "assist", { min: 0, average: 0, max: 0 })],
+    );
+    const stats = loadoutStats(data, loadout("fx_ship"));
+    expect(stats.missing).toEqual([
+      { row: "slot:con_engine_01", label: "Engine con_engine_01" },
+      { row: "slot:con_shield_01", label: "Shield con_shield_01" },
+      { row: "group:back:engine", label: "Engines back" },
+      { row: "thruster", label: "Thruster" },
+      { row: "software:assist", label: "assist" },
+    ]);
+  });
+});
+
 describe("price", () => {
   test("totals the Ship, fitted Equipment, group counts, consumables and software, as average and min–max", () => {
     const at = (average: number) => ({ min: average - 10, average, max: average + 10 });
