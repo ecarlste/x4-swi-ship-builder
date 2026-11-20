@@ -259,11 +259,18 @@ input {
   color: #8a93a6;
 }
 
-.equipment-list {
+.equipment-popup {
   position: absolute;
   z-index: 10;
   top: calc(100% + 2px);
   left: 0;
+  min-width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.equipment-list {
   min-width: 100%;
   max-height: 50vh;
   overflow-y: auto;
@@ -458,5 +465,52 @@ input {
 
 .was {
   font-size: 12px;
+  color: #8a93a6;
+}
+
+.comparison-popover {
+  padding: 8px 10px;
+  background: #1f2632;
+  border: 1px solid #2a3040;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px #0009;
+  white-space: nowrap;
+}
+
+.comparison-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.comparison-figures {
+  border-collapse: collapse;
+  margin-bottom: 6px;
+}
+
+.comparison-figures th,
+.comparison-figures td {
+  padding: 1px 6px 1px 0;
+  font-weight: normal;
+  text-align: left;
+}
+
+.comparison-figures td.num {
+  text-align: right;
+}
+
+.comparison-sellers {
+  margin: 2px 0 0;
+  padding-left: 1.2em;
+}
+
+.difference.better {
+  color: #5fd38d;
+}
+
+.difference.worse {
+  color: #ff6b6b;
+}
+
+.difference.same {
   color: #8a93a6;
 }

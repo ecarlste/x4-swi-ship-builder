@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
+import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
 import {
   consumableOptions,
@@ -91,6 +92,10 @@ export function LoadoutTable({
   const consumables = consumableOptions(gameData, ship, loadout);
   /** Applies an edit, dropping consumables it leaves the Ship unable to carry. */
   const change = (next: Loadout) => onChange(withoutUncarriedConsumables(gameData, ship, next));
+  /** The comparison popover of a hovered option against what is fitted (one unit for Slot Groups). */
+  const compareWith = (fitted: Equipment | null) => (option: Equipment) => (
+    <ComparisonPopover gameData={gameData} loadout={loadout} option={option} fitted={fitted} />
+  );
 
   return (
     <table className="loadout-table" aria-label="Loadout">
@@ -125,6 +130,7 @@ export function LoadoutTable({
                   options={options(slot.fitList)}
                   value={fitted?.id ?? null}
                   onChange={(id) => change(setSlot(loadout, slot.id, id))}
+                  compare={compareWith(fitted)}
                 />
               }
               quantity={fitted ? "1" : ""}
@@ -156,6 +162,7 @@ export function LoadoutTable({
                     label={`${label} Equipment`}
                     options={options(part.fitList)}
                     value={fitted?.id ?? null}
+                    compare={compareWith(fitted)}
                     onChange={(id) =>
                       change(
                         setGroup(loadout, group.id, kind, id ? { equipment: id, count: count || part.count } : null),
@@ -188,6 +195,7 @@ export function LoadoutTable({
               options={options(ship.thrusters)}
               value={thruster?.id ?? null}
               onChange={(id) => change(setThruster(loadout, id))}
+              compare={compareWith(thruster)}
             />
           }
           quantity={thruster ? "1" : ""}
