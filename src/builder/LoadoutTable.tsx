@@ -67,6 +67,7 @@ export function LoadoutTable({
   ship,
   loadout,
   missing,
+  was = null,
   onChange,
 }: {
   gameData: GameData;
@@ -74,9 +75,16 @@ export function LoadoutTable({
   loadout: Loadout;
   /** Rows of mandatory upgrades the Loadout lacks, as `missingMandatory` names them. */
   missing: Set<string>;
+  /** The Loadout as it was opened or last saved, given only while the current one differs from it. */
+  was?: Loadout | null;
   onChange: (loadout: Loadout) => void;
 }) {
   const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
+  const nameOf = (id: string | undefined) => (id ? (equipment.get(id)?.name ?? id) : "empty");
+  /** The row's "was: …" text when it differs from the snapshot, else undefined. */
+  const wasText = (before: string, now: string) => (was && before !== now ? before : undefined);
+  const groupText = (entry: { equipment: string; count: number } | undefined) =>
+    entry ? `${nameOf(entry.equipment)} ×${entry.count}` : "empty";
   const fitList = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
   const options = (fitListId: string) =>
     (fitList.get(fitListId) ?? []).flatMap((id) => equipment.get(id) ?? []);
@@ -128,6 +136,7 @@ export function LoadoutTable({
               quantity={fitted ? "1" : ""}
               keyValue={fitted ? keyValue(fitted) : ""}
               price={fitted ? credits(fitted.price.average) : ""}
+              was={wasText(nameOf(was?.slots?.[slot.id]), nameOf(loadout.slots?.[slot.id]))}
             />
           );
         })}
@@ -172,6 +181,7 @@ export function LoadoutTable({
                 }
                 keyValue={fitted ? keyValue(fitted) : ""}
                 price={fitted ? credits(fitted.price.average * count) : ""}
+                was={wasText(groupText(was?.groups?.[group.id]?.[kind]), groupText(entry))}
               />
             );
           }),
@@ -191,6 +201,7 @@ export function LoadoutTable({
           quantity={thruster ? "1" : ""}
           keyValue={thruster ? keyValue(thruster) : ""}
           price={thruster ? credits(thruster.price.average) : ""}
+          was={wasText(nameOf(was?.thruster), nameOf(loadout.thruster))}
         />
         {consumables.flatMap((group) => {
           const used = group.items.reduce((sum, item) => sum + (loadout.consumables?.[item.id] ?? 0), 0);
@@ -213,6 +224,7 @@ export function LoadoutTable({
                 }
                 keyValue={count > 0 ? keyValue(item) : ""}
                 price={count > 0 ? credits(item.price.average * count) : ""}
+                was={wasText(number(was?.consumables?.[item.id] ?? 0), number(count))}
               />
             );
           });
@@ -237,6 +249,10 @@ export function LoadoutTable({
               quantity={fitted ? "1" : ""}
               keyValue=""
               price={fitted ? credits(item.price.average) : ""}
+              was={wasText(
+                was?.software?.includes(item.id) ? "fitted" : "not fitted",
+                fitted ? "fitted" : "not fitted",
+              )}
             />
           );
         })}
@@ -291,6 +307,7 @@ function Row({
   quantity,
   keyValue,
   price,
+  was,
 }: {
   label: ReactNode;
   missing?: boolean;
@@ -298,9 +315,12 @@ function Row({
   quantity: ReactNode;
   keyValue: string;
   price: string;
+  /** What the row held when the Loadout was opened or last saved, when that differs from now. */
+  was?: string;
 }) {
+  const classes = [missing && "missing", was !== undefined && "changed"].filter(Boolean).join(" ");
   return (
-    <tr className={missing ? "missing" : undefined}>
+    <tr className={classes || undefined}>
       <th scope="row">
         {label}
         {missing && (
@@ -311,8 +331,19 @@ function Row({
             </span>
           </>
         )}
+        {was !== undefined && (
+          <>
+            {" "}
+            <span className="changed-mark" title="Changed since loading">
+              ●
+            </span>
+          </>
+        )}
       </th>
-      <td>{equipment}</td>
+      <td>
+        {equipment}
+        {was !== undefined && <div className="was">was: {was}</div>}
+      </td>
       <td className="num">{quantity}</td>
       <td className="dim">{keyValue}</td>
       <td className="num">{price}</td>

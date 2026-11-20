@@ -33,7 +33,7 @@ async function hover(page: Page, label: string | RegExp, equipment: string): Pro
 /** A popover line: its figure, value and difference. */
 const figure = (popover: Locator, label: string) => popover.getByRole("row", { name: new RegExp(`^${label}`) });
 
-const GREEN = "rgb(111, 220, 140)";
+const GREEN = "rgb(95, 211, 141)";
 const RED = "rgb(255, 107, 107)";
 
 test("hovering an option on an empty Slot compares it with nothing", async ({ page }) => {

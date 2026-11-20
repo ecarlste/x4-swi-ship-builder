@@ -410,6 +410,30 @@ input {
   margin-top: 12px;
 }
 
+/* Changes since loading: the stats' change column and the Loadout table's changed rows. */
+.stats-table td.stat-change {
+  padding-left: 8px;
+  font-size: 12px;
+}
+
+.stat-change.up {
+  color: #5fd38d;
+}
+
+.stat-change.down {
+  color: #ff6b6b;
+}
+
+.changed-mark {
+  color: #e8b44a;
+  font-size: 10px;
+}
+
+.was {
+  font-size: 12px;
+  color: #8a93a6;
+}
+
 .comparison-popover {
   padding: 8px 10px;
   background: #1f2632;
@@ -446,7 +470,7 @@ input {
 }
 
 .difference.better {
-  color: #6fdc8c;
+  color: #5fd38d;
 }
 
 .difference.worse {

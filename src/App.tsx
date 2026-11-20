@@ -7,6 +7,7 @@ import { LoadoutTable } from "./builder/LoadoutTable.tsx";
 import { StatsPanel } from "./builder/StatsPanel.tsx";
 import { emptyLoadout, type Loadout } from "./builder/loadout.ts";
 import { loadoutStats } from "./stats/stats.ts";
+import { changedSince } from "./builder/changes.ts";
 import { SaveDialog, SavedLoadoutsList } from "./builder/SavedLoadouts.tsx";
 import type { SavedLoadout } from "./codec/loadout.ts";
 import { readShareLink, shareLinkUrl } from "./codec/shareLink.ts";
@@ -47,6 +48,11 @@ export function App() {
    * Link, and Save asks for a name, suggesting this one.
    */
   const [opened, setOpened] = useState<{ id?: string; name: string } | null>(null);
+  /**
+   * The Loadout as it was opened or last saved, for changes since loading.
+   * A freshly picked Ship has none.
+   */
+  const [snapshot, setSnapshot] = useState<Loadout | null>(null);
   const [savedList, setSavedList] = useState(() => readSavedLoadouts(localStorage));
   const [showSaved, setShowSaved] = useState(false);
   const [naming, setNaming] = useState(false);
@@ -56,6 +62,8 @@ export function App() {
 
   const stats = loadout && ship ? loadoutStats(gameData, loadout) : null;
   const missing = stats?.missing ?? [];
+  const was = changedSince(snapshot, loadout);
+  const wasStats = was ? loadoutStats(gameData, was) : null;
 
   const refreshSaved = () => setSavedList(readSavedLoadouts(localStorage));
 
@@ -65,6 +73,7 @@ export function App() {
     setNaming(false);
     if (result.ok) {
       setOpened({ id: result.saved.id, name: result.saved.name });
+      setSnapshot(loadout);
       setMessage({ kind: "status", text: `Saved “${result.saved.name}”.` });
     } else {
       setMessage({ kind: "error", text: result.error });
@@ -72,12 +81,24 @@ export function App() {
     refreshSaved();
   };
 
-  const open = (saved: SavedLoadout) => {
-    const { id, name, createdAt: _c, updatedAt: _u, ...opening } = saved;
+  /**
+   * Opens a Loadout and keeps it as the snapshot for changes since loading.
+   * The one entry point for opening a Saved Loadout, a Share Link or a
+   * repaired Loadout (whose snapshot is the repaired version). `named` is the
+   * name it was opened under, with the id of the Saved Loadout that Save
+   * should update, if any.
+   */
+  const openLoadout = (opening: Loadout, named: { id?: string; name: string } | null) => {
     setLoadout(opening);
-    setOpened({ id, name });
+    setSnapshot(opening);
+    setOpened(named);
     setShowSaved(false);
     setMessage(null);
+  };
+
+  const open = (saved: SavedLoadout) => {
+    const { id, name, createdAt: _c, updatedAt: _u, ...opening } = saved;
+    openLoadout(opening, { id, name });
   };
 
   const exportAll = () => {
@@ -138,10 +159,7 @@ export function App() {
         setMessage({ kind: "error", text: `This Share Link's Ship (${shared.ship}) isn't in the Game Data.` });
         return;
       }
-      setLoadout(shared);
-      setOpened(name === undefined ? null : { name });
-      setShowSaved(false);
-      setMessage(null);
+      openLoadout(shared, name === undefined ? null : { name });
     };
     void openShareLink();
     window.addEventListener("hashchange", openShareLink);
@@ -173,6 +191,7 @@ export function App() {
           value={ship}
           onPick={(picked) => {
             setLoadout(emptyLoadout(gameData, picked));
+            setSnapshot(null);
             setOpened(null);
             setMessage(null);
           }}
@@ -254,12 +273,13 @@ export function App() {
                 ship={ship}
                 loadout={loadout}
                 missing={new Set(missing.map((m) => m.row))}
+                was={was}
                 onChange={setLoadout}
               />
             </div>
             <aside className="stats" aria-label="Stats">
               <ShipBlock ship={ship} factions={gameData.factions} licences={gameData.licences} />
-              <StatsPanel stats={stats} />
+              <StatsPanel stats={stats} was={wasStats} />
             </aside>
           </div>
         ) : (
