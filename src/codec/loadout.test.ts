@@ -52,6 +52,10 @@ describe("parseLoadout", () => {
     expect(parseLoadout({ ...empty, crew: { captain: 1 } }).ok).toBe(false);
   });
 
+  test("rejects an empty Crew: with both counts at 0, crew is left out", () => {
+    expect(parseLoadout({ ...empty, crew: {} }).ok).toBe(false);
+  });
+
   test("rejects engines in a Slot Group: the engine is fitted to the whole Ship (#50)", () => {
     expect(parseLoadout({ ...full, groups: { g: { engine: { equipment: "engine_fusial", count: 2 } } } }).ok).toBe(false);
   });
