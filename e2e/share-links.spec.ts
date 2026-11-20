@@ -45,8 +45,6 @@ test("a copied link opens the same Loadout, with its name, in a new page", async
 });
 
 test("Crew comes back when a Saved Loadout is reopened and when a Share Link is opened (ADR 0004)", async ({ context, page }) => {
-  // Resolving drops the Crew until #89 carries it through resolve. Remove this once #89 is merged.
-  test.fail();
   const crewCount = (p: Page, role: string) => p.getByRole("spinbutton", { name: `${role} count` });
   const expectCrew = async (p: Page) => {
     await expect(crewCount(p, "Service crew")).toHaveValue("5");
