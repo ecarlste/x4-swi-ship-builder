@@ -69,16 +69,32 @@ export function gun(
   id: string,
   inputs: Pick<Gun, "damage" | "fireRate"> & Partial<Pick<Gun, "barrelAmount" | "magazine" | "heat">>,
 ): Gun {
-  return { kind, ...tradeable(id), size: "s", barrelAmount: 1, magazine: null, heat: null, missiles: null, ...inputs };
+  return {
+    kind,
+    ...tradeable(id),
+    size: "s",
+    barrelAmount: 1,
+    magazine: null,
+    heat: null,
+    missiles: null,
+    missileStorage: 0,
+    ...inputs,
+  };
 }
 
-/** A missile launcher that fires the missiles of the fit list `missiles`. */
-export function launcher(kind: "weapon" | "turret", id: string, missiles: string): Gun {
-  return { ...gun(kind, id, { damage: { value: 0, noShield: 0 }, fireRate: 1 }), missiles };
+/** A missile launcher that fires the missiles of the fit list `missiles`, with its own missile storage. */
+export function launcher(kind: "weapon" | "turret", id: string, missiles: string, missileStorage = 0): Gun {
+  return { ...gun(kind, id, { damage: { value: 0, noShield: 0 }, fireRate: 1 }), missiles, missileStorage };
 }
 
-export function missile(id: string, explosionDamage: number, hullDamage: number, reloadTime: number): Equipment {
-  return { kind: "missile", ...tradeable(id), explosionDamage, hullDamage, reloadTime };
+export function missile(
+  id: string,
+  explosionDamage: number,
+  hullDamage: number,
+  reloadTime: number,
+  barrelAmount = 1,
+): Equipment {
+  return { kind: "missile", ...tradeable(id), explosionDamage, hullDamage, barrelAmount, reloadTime };
 }
 
 /** A piece of Equipment of a kind with no stats of its own, at a price. */

@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FixtureWorld, smallEngine, writeCache, type EquipmentSpec } from "./testing/fixtureWorld.ts";
+import { ENGINE_DEFAULTS, FixtureWorld, smallEngine, writeCache, type EquipmentSpec } from "./testing/fixtureWorld.ts";
 import { transform } from "./transform.ts";
 
 /** Stage 2 on a fixture cache, with readers for what it wrote. */
@@ -85,6 +85,7 @@ describe("transform: Equipment", () => {
       magazine: { size: 12, reloadTime: 3 },
       heat: { perShot: 300, overheat: 11000, coolDelay: 0.63, coolRate: 3000 },
       missiles: null,
+      missileStorage: 0,
     });
   });
 
@@ -332,6 +333,48 @@ describe("transform: fit lists", () => {
     expect(report()).toContain("| fx_xenon_proton | no Seller: owned by fx_xenon, and none runs a station that equips ships |");
   });
 
+  it("reads a launcher's own missile storage, and a missile's barrelamount (#39: Light Rocket Launcher)", () => {
+    // "reocketl" is SWI's own (misspelt) ammunition tag for light rockets.
+    const { item } = run(
+      wharfWorld()
+        .equipment(
+          gun({
+            id: "fx_rocket_launcher",
+            macroClass: "missilelauncher",
+            properties: `<ammunition tags="reocketl"/><bullet class="fx_rocket_macro"/><storage capacity="6"/>`,
+            bullet: undefined,
+          }),
+        )
+        .equipment(
+          gun({
+            id: "fx_krupx",
+            macroClass: "missilelauncher",
+            properties: `<ammunition tags="reocketl"/><bullet class="fx_rocket_macro"/>`,
+            bullet: undefined,
+          }),
+        )
+        .equipment({
+          id: "fx_rocket",
+          kind: "missile",
+          properties:
+            `<missile amount="1" barrelamount="3" tags="reocketl"/>` +
+            `<explosiondamage value="1500" hull="1000"/><reload time="2"/>`,
+        })
+        .equipment({
+          id: "fx_torpedo",
+          kind: "missile",
+          properties: `<missile amount="1" tags="reocketl"/><explosiondamage value="7000" hull="7000"/><reload time="10"/>`,
+        })
+        .equipment(gun({ id: "fx_laser" })),
+    );
+
+    expect(item("fx_rocket_launcher").missileStorage).toBe(6);
+    expect(item("fx_krupx").missileStorage).toBe(0);
+    expect(item("fx_laser").missileStorage).toBe(0);
+    expect(item("fx_rocket").barrelAmount).toBe(3);
+    expect(item("fx_torpedo").barrelAmount).toBe(1);
+  });
+
   it("writes shields and engines with their raw inputs, and no size when their connection has no size tag", () => {
     const { item, slotFits } = run(
       wharfWorld()
@@ -355,6 +398,26 @@ describe("transform: fit lists", () => {
       thrust: { forward: 550, reverse: 450 },
       boost: { thrust: 2.5, acceleration: 1.25, duration: 11, recharge: 80 },
       travel: { thrust: 21.6, charge: 4, attack: 0 },
+    });
+  });
+
+  it("gives an engine without boost@acceleration 1, and without boost@recharge the engine class default (#39: Gozanti Engine)", () => {
+    const { item } = run(
+      wharfWorld().equipment({
+        id: "fx_engine_gozanti",
+        kind: "engine",
+        connection: "engine small",
+        properties:
+          `<thrust forward="1350" reverse="1350"/><travel charge="7" thrust="20.6" attack="0"/>` +
+          `<boost duration="20" thrust="2.7" attack="5" release="3"/>`,
+      }),
+    );
+
+    expect(item("fx_engine_gozanti").boost).toEqual({
+      thrust: 2.7,
+      acceleration: 1,
+      duration: 20,
+      recharge: ENGINE_DEFAULTS.boostRecharge,
     });
   });
 

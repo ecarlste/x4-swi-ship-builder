@@ -1,7 +1,7 @@
 /**
- * Weapon and turret output, from the formulas confirmed in game (#12, #8).
+ * Weapon and turret output, from the formulas confirmed in game (#12, #8, #39).
  * Damage is against hull: a bullet's `value + noshield`, a missile's
- * `explosiondamage value + hull`.
+ * `explosiondamage value + hull`, times the barrels.
  */
 import type { Equipment } from "../gameData.ts";
 import { type GameDataIndex } from "../gameDataIndex.ts";
@@ -26,8 +26,9 @@ export interface GunOutput {
 export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
   if (gun.missiles !== null) {
     if (!missile) return { rateOfFire: 0, burst: 0, sustained: 0 };
+    // Each shot fires `missile@barrelamount` missiles (#39: the Light Rocket's 3).
     const rateOfFire = 1 / missile.reloadTime;
-    const burst = (missile.explosionDamage + missile.hullDamage) * rateOfFire;
+    const burst = (missile.explosionDamage + missile.hullDamage) * missile.barrelAmount * rateOfFire;
     return { rateOfFire, burst, sustained: burst };
   }
   // With a magazine, the reload between magazines counts. A turret macro's own reload is ignored.

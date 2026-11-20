@@ -225,7 +225,7 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): { shi
 }
 
 /** Class properties from libraries/defaults.xml, by class (`ship_s`, ...). */
-function classDefaults(files: GameFiles): Map<string, JsonElement> {
+export function classDefaults(files: GameFiles): Map<string, JsonElement> {
   const defaults = new Map<string, JsonElement>();
   for (const dataset of children(files.file("libraries/defaults.xml"), "dataset")) {
     const cls = attr(dataset, "class");
