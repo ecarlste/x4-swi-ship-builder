@@ -31,4 +31,9 @@ describe("playwrightPort", () => {
   it("uses PW_PORT when it is set", () => {
     expect(playwrightPort(main, { PW_PORT: "5301" })).toBe(5301);
   });
+
+  it("rejects a PW_PORT that isn't a port number", () => {
+    expect(() => playwrightPort(main, { PW_PORT: "abc" })).toThrow(/PW_PORT/);
+    expect(() => playwrightPort(main, { PW_PORT: "70000" })).toThrow(/PW_PORT/);
+  });
 });
