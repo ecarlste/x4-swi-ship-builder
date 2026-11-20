@@ -11,7 +11,9 @@
     "test": "npm run test:unit && npm run test:ui",
     "test:unit": "vitest run",
     "test:ui": "playwright test",
-    "extract": "node --env-file-if-exists=.env extract/cli.ts"
+    "extract": "node --env-file-if-exists=.env extract/cli.ts",
+    "worktree": "bash scripts/new-worktree.sh",
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "react": "^19.3.1",

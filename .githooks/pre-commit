@@ -1,0 +1,14 @@
+#!/bin/sh
+# Refuses a commit on main: ticket work happens on its own branch, in its own
+# worktree (`npm run worktree`, see docs/agents/worktrees.md). For a deliberate
+# commit on main, run it with ALLOW_MAIN_COMMIT=1.
+# `npm ci` wires this up through the `prepare` script (core.hooksPath).
+
+branch=$(git symbolic-ref --short -q HEAD)
+
+if [ "$branch" = "main" ] && [ "$ALLOW_MAIN_COMMIT" != "1" ]; then
+  echo "pre-commit: refusing to commit on main." >&2
+  echo "  Work on a branch in its own worktree: npm run worktree -- <issue> <slug>" >&2
+  echo "  For a deliberate commit on main: ALLOW_MAIN_COMMIT=1 git commit ..." >&2
+  exit 1
+fi
