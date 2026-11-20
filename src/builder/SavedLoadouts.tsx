@@ -3,18 +3,20 @@ import type { Ship } from "../gameData.ts";
 import type { SavedLoadoutEntry, SavedLoadoutList } from "../codec/savedLoadouts.ts";
 
 /**
- * The Saved Loadouts list: each one's name and Ship name, with Open and
- * Delete. An Unreadable entry offers Delete only.
+ * The Saved Loadouts list: each one's name and Ship name, with Open, Export
+ * and Delete. An Unreadable entry offers Delete only.
  */
 export function SavedLoadoutsList({
   list,
   ships,
   onOpen,
+  onExport,
   onDelete,
 }: {
   list: SavedLoadoutList;
   ships: Ship[];
   onOpen: (entry: Extract<SavedLoadoutEntry, { status: "ok" }>) => void;
+  onExport: (entry: Extract<SavedLoadoutEntry, { status: "ok" }>) => void;
   onDelete: (entry: SavedLoadoutEntry) => void;
 }) {
   const headingId = useId();
@@ -38,6 +40,9 @@ export function SavedLoadoutsList({
               <span className="saved-loadout-actions">
                 <button type="button" onClick={() => onOpen(entry)}>
                   Open
+                </button>
+                <button type="button" onClick={() => onExport(entry)}>
+                  Export
                 </button>
                 <button type="button" onClick={() => onDelete(entry)}>
                   Delete

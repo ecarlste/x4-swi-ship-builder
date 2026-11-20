@@ -29,9 +29,11 @@ It merges the layers in load order into one file per game path, in the gitignore
 - A `subst_*.cat` file replaces the file at its path whole, and the catalog that loads last wins.
 - A library, index or text file without a `<diff>` root is merged into the earlier file. For a duplicate id (or `name`, for index entries), the later definition wins, in the earlier one's place.
 - Any other file (a macro or component) at a base-game path replaces the base file whole. A new one stays in its extension's folder (`extensions/<folder>/assets/…`), where the index points to it.
-- A file with a `<diff>` root goes to the patch step, which isn't written yet (#29), so for now extraction stops there.
+- A file with a `<diff>` root patches the merged file at its path, in load order. The patcher (`extract/patch.ts`) supports `add` (with `pos` or `type="@attr"`), `replace` and `remove` on elements and attributes, `if` conditions and `silent`, and only the XPath `sel` forms found in the files we read: absolute paths with `/` and `//`, a final `@attr`, and the predicates `[@a='v']`, `[n]`, `… or …`, `[not(child)]` and `[not(child/@a='v')]`.
+  - Any other selector is a hard failure, as is an `add` or `replace` whose `sel` matches nothing (unless it has `silent`) or a `sel` that matches more than one node.
+  - A `remove` that matches nothing leaves the file as the game has it, and a patch for a file no earlier layer has patches nothing. Both are listed in the report instead.
 
-Every duplicate id, whole-file replacement and non-diff library merge is listed in `.cache/extract/extract-report.md`. `layers.json` records the load order and versions.
+Every duplicate id, whole-file replacement, non-diff library merge, skipped patch and unmatched removal is listed in `.cache/extract/extract-report.md`. `layers.json` records the load order and versions.
 
 Each merged file is pretty-printed JSON at a lowercased path that mirrors the game's (`libraries/wares.json`). Attributes become keys, child elements become arrays grouped by tag, and text becomes `#text`. If an attribute shares its name with a child element, the attribute's key gets an `@` prefix. Only libraries, the macro and component index, ship and equipment assets, and the English and language-neutral text files are read.
 

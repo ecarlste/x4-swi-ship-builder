@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gameData } from "./gameData.ts";
 import { Footer } from "./Footer.tsx";
 import { ShipBlock } from "./builder/ShipBlock.tsx";
@@ -15,8 +15,27 @@ import {
   saveLoadout,
   type SavedLoadoutEntry,
 } from "./codec/savedLoadouts.ts";
+import {
+  MAX_LOADOUT_FILE_BYTES,
+  OVERSIZE_FILE_ERROR,
+  exportLoadoutFile,
+  importLoadoutFile,
+} from "./codec/loadoutFile.ts";
 
 const APP_TITLE = "X4: SWI Ship Builder";
+
+/** Hands the browser a Loadout File to download. */
+function download(loadouts: SavedLoadout[], fileName: string) {
+  const url = URL.createObjectURL(new Blob([exportLoadoutFile(loadouts)], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/** A file name from a Saved Loadout's name, without characters file systems refuse. */
+const fileNameFor = (name: string) => `${name.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "_").trim() || "loadout"}.json`;
 
 export function App() {
   /** The one in-app Loadout. Picking a Ship opens it as an Empty Loadout. */
@@ -26,6 +45,7 @@ export function App() {
   const [savedList, setSavedList] = useState(() => readSavedLoadouts(localStorage));
   const [showSaved, setShowSaved] = useState(false);
   const [naming, setNaming] = useState(false);
+  const importInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ kind: "status" | "error"; text: string } | null>(null);
   const ship = loadout ? (gameData.ships.find((s) => s.id === loadout.ship) ?? null) : null;
 
@@ -53,6 +73,36 @@ export function App() {
     setOpened({ id, name });
     setShowSaved(false);
     setMessage(null);
+  };
+
+  const exportAll = () => {
+    const list = readSavedLoadouts(localStorage);
+    setSavedList(list);
+    if (!list.ok) {
+      setMessage({ kind: "error", text: list.error });
+      return;
+    }
+    const loadouts = list.entries.flatMap((entry) => (entry.status === "ok" ? [entry.loadout] : []));
+    if (loadouts.length === 0) {
+      setMessage({ kind: "error", text: "There are no Saved Loadouts to export." });
+      return;
+    }
+    download(loadouts, "saved-loadouts.json");
+  };
+
+  const importFile = async (file: File) => {
+    const result =
+      file.size > MAX_LOADOUT_FILE_BYTES
+        ? ({ ok: false, error: OVERSIZE_FILE_ERROR } as const)
+        : importLoadoutFile(localStorage, await file.text());
+    if (result.ok) {
+      const count = result.added.length;
+      setMessage({ kind: "status", text: `Imported ${count} ${count === 1 ? "Loadout" : "Loadouts"}.` });
+      setShowSaved(true);
+    } else {
+      setMessage({ kind: "error", text: result.error });
+    }
+    refreshSaved();
   };
 
   const remove = (entry: SavedLoadoutEntry) => {
@@ -105,6 +155,23 @@ export function App() {
           >
             Save
           </button>
+          <button type="button" onClick={exportAll}>
+            Export
+          </button>
+          <button type="button" onClick={() => importInput.current?.click()}>
+            Import
+          </button>
+          <input
+            ref={importInput}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void importFile(file);
+            }}
+          />
         </div>
       </div>
       <div role="status" className="toolbar-message">
@@ -123,6 +190,7 @@ export function App() {
           list={savedList}
           ships={gameData.ships}
           onOpen={(entry) => open(entry.loadout)}
+          onExport={(entry) => download([entry.loadout], fileNameFor(entry.loadout.name))}
           onDelete={remove}
         />
       )}
