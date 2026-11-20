@@ -45,8 +45,12 @@ A named set of Slots on a large Ship, filled together instead of one Slot at a t
 _Avoid_: battery, cluster, group slot
 
 **Loadout**:
-A specific choice of equipment for one ship. A loadout fits one engine type to all of the ship's engine Slots, including those in Slot Groups, or no engines at all. Equipment mods, paint and crew are not part of a loadout.
+A specific choice of equipment for one ship. A loadout fits one engine type to all of the ship's engine Slots, including those in Slot Groups, or no engines at all. Equipment mods, paint and crew (service crew and marines) are not part of a loadout, so a loadout's Price leaves crew out.
 _Avoid_: build, fit, config
+
+**Price**:
+An estimate of what a Loadout costs: the Ship plus each piece of Equipment (the engine once per engine), at Game Data's average, with Game Data's min–max as the range. A shipyard charges its own price inside that range, and the game's total also includes crew, which Price leaves out (ADR 0003).
+_Avoid_: cost, value, purchase price
 
 **Empty Loadout**:
 The loadout every ship starts with in the builder: no equipment at all, not even software.
