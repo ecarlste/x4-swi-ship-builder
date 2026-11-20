@@ -284,9 +284,9 @@ function readCargo(
  * size tag takes the Ship's size, and is listed as a warning. Group names
  * equal once trimmed are one Slot Group, as in game (#52); its id is the
  * trimmed name. A connection name listed more than once in the component
- * counts once, as in game for heraklon_solid's turrets (#68), and each
- * duplicated name is a warning. unconfirmed (#77): the sith_destroyer and
- * sith_freighter engine counts this lowers. Listings of one name with
+ * counts once, as in game for heraklon_solid's turrets (#68) and the
+ * sith_destroyer and sith_freighter engines (#77), and each duplicated name
+ * is a warning. Listings of one name with
  * different tags or groups fail, since which one counts would be a guess.
  */
 function readSlots(

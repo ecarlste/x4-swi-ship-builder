@@ -43,9 +43,9 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
 
 /**
  * A bullet's damage per shot and barrel against hull: `value + noshield + hull`.
- * `hull` confirmed in game by the Mining Beam Turret (#63, #67).
- * unconfirmed (#77): a bullet with both `hull` and `noshield`, such as
- * `turret_l_mando_massdriver`. No reference gun has both.
+ * `hull` confirmed in game by the Mining Beam Turret (#63, #67), and all three
+ * together by the Thaakai Mass Driver (#77): the Encyclopedia's hull damage
+ * against an unshielded target.
  */
 export function shotDamage(gun: Gun): number {
   return gun.damage.value + gun.damage.noShield + gun.damage.hull;

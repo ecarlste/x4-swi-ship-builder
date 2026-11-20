@@ -3,7 +3,7 @@
  * the ship configuration screen of X4 8.00 + SWI 0.9.1 HF. Raw inputs are
  * copied from that install's Game Data as plain values; expected values are
  * what the screen showed. Only the rows checked for each Ship are asserted. Later
- * checks (#50, #63) add their own describe blocks, citing their issue.
+ * checks (#50, #63, #77) add their own describe blocks, citing their issue.
  *
  * The S Ships' Loadouts are the screenshots' in full. On the M, L and XL Ships
  * #39 checked only flight, radar and capacities, so their Loadouts leave out
@@ -800,5 +800,111 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
       }),
     );
     expect(stats.price.average).toBe(2029766);
+  });
+});
+
+/**
+ * In game on X4 8.00 + SWI 0.9.1 HF (#77): the extraction change of #68 and the
+ * damage formula of #67. The shields, turrets, software and consumables on
+ * screen don't touch the rows asserted, so the Loadouts leave them out, except
+ * the Praetorian's two Mass Drivers, its only turrets.
+ */
+describe("in game on X4 8.00 + SWI 0.9.1 HF (#77)", () => {
+  /**
+   * Each Dekhara's component lists `con_engine_01` and `con_engine_02` twice.
+   * Extraction counts each connection once (#68), and the screen shows
+   * "Large Engines: 2 / 2"; 4 engines would double every speed.
+   */
+  const dekhara = (
+    id: string,
+    { hull, mass, forwardDrag, turn }: { hull: number; mass: number; forwardDrag: number; turn: number },
+    { crew, drones, cargo }: { crew: number; drones: number; cargo: number },
+  ) =>
+    ship({
+      id,
+      size: "l",
+      cargoTypes: ["container"],
+      slotGroups: [engineGroup("enginegroup", 2)],
+      stats: {
+        hull,
+        mass,
+        radarRange: 40000,
+        drag: { forward: forwardDrag, reverse: 600, horizontal: 70, vertical: 70, pitch: turn, yaw: turn, roll: turn },
+        accFactors: evenAccFactors,
+        maxRotationSpeed: null,
+      },
+      capacities: { missiles: 0, drones, deployables: 40, countermeasures: 25, crew, cargo },
+    });
+
+  const praetorian = ship({
+    id: "praetorian_02",
+    size: "l",
+    cargoTypes: ["container"],
+    slotGroups: [engineGroup("enginegroup", 10), { id: "mtbs", kinds: { turret: groupKind(2), shield: groupKind(1) } }],
+    stats: {
+      hull: 379000,
+      mass: 240.933,
+      radarRange: 40000,
+      drag: { forward: 153.187, reverse: 615.747, horizontal: 95.125, vertical: 95.125, pitch: 140.187, yaw: 140.187, roll: 140.187 },
+      accFactors: { forward: 1.1, reverse: 1, horizontal: 1, vertical: 1 },
+      maxRotationSpeed: null,
+    },
+    capacities: { missiles: 0, drones: 10, deployables: 40, countermeasures: 25, crew: 65, cargo: 2340 },
+  });
+
+  const data77 = gameData(
+    [
+      dekhara("sith_destroyer", { hull: 590000, mass: 220.875, forwardDrag: 70, turn: 260 }, { crew: 87, drones: 10, cargo: 4500 }),
+      dekhara("sith_freighter", { hull: 440000, mass: 230.875, forwardDrag: 75.49, turn: 265 }, { crew: 62, drones: 25, cargo: 58000 }),
+      praetorian,
+    ],
+    [
+      ...equipment,
+      engine("engine_ml_ter80", 3000, { thrust: 3, acceleration: 1.5, duration: 100, recharge: 92 }, { thrust: 54, charge: 9, attack: 0 }),
+      // The Thaakai Mass Driver: the only bullet in Game Data with both noshield and hull.
+      gun("turret", "turret_l_mando_massdriver", {
+        damage: { value: 1000, noShield: 4000, hull: 3550 },
+        fireRate: 0.3,
+        magazine: { size: 2, reloadTime: 5 },
+      }),
+    ],
+  );
+
+  /** The Ship with `engine` and L All-round Thrusters Mk3. */
+  const fitted = (shipId: string, engine: string, parts: Parameters<typeof loadout>[1] = {}) =>
+    loadoutStats(data77, loadout(shipId, { engine, thruster: "thruster_gen_l_allround_01_mk3", ...parts }));
+
+  test("Dekhara-class Cruiser, 2× MM Essum (duplicated engine connections counted once)", () => {
+    expectScreen(fitted("sith_destroyer", "engine_l_essum"), {
+      HullValue: 590000,
+      ContainerCapacity: 4500,
+      ...flightScreen(40, [125, 39, 251, 59, 100, 1, 6788, 39, 16, 26.2, 8.3, 4.2, 3.8, 3.6], [88, 10, 0, 40, 25]),
+    });
+  });
+
+  test("Dekhara-class Freighter, 2× MM Essum (duplicated engine connections counted once)", () => {
+    expectScreen(fitted("sith_freighter", "engine_l_essum"), {
+      HullValue: 440000,
+      ContainerCapacity: 58000,
+      ...flightScreen(40, [116, 38, 233, 57, 100, 1, 6294, 38, 16, 26.2, 7.9, 4.1, 3.7, 3.5], [63, 25, 0, 40, 25]),
+    });
+  });
+
+  /**
+   * value + noshield + hull = 8,550 a shot (the Encyclopedia's "Hull Damage"
+   * against an unshielded target), at 2 / (5 + 2 / 0.3) = 0.17 shots a second:
+   * 1,465 MW a turret, as the Encyclopedia shows, and 2 × 1,465.7 / 6 = 488.
+   * Leaving out hull would show 285, noshield 260.
+   */
+  test("Praetorian-class Frigate, 2× Thaakai Mass Driver in mtbs: Avg. Turret Output 488, so noshield and hull both count", () => {
+    const stats = fitted("praetorian_02", "engine_ml_ter80", {
+      groups: { mtbs: { turret: { equipment: "turret_l_mando_massdriver", count: 2 } } },
+    });
+    expectScreen(stats, {
+      HullValue: 379000,
+      GroupedTurretSustainedDPS: 488,
+      ContainerCapacity: 2340,
+      ...flightScreen(40, [195, 136, 587, 205, 100, 1, 10575, 136, 9, 19.3, 7.6, 7.8, 7.1, 6.7], [66, 10, 0, 40, 25]),
+    });
   });
 });
