@@ -25,8 +25,6 @@ import {
   shield,
   ship,
   thruster,
-  turretSlot,
-  weaponSlot,
 } from "./testing/fixtures.ts";
 import type { Equipment, Ship, Slot } from "../gameData.ts";
 
@@ -105,43 +103,58 @@ const gozanti = ship({
   capacities: { missiles: 0, drones: 0, deployables: 15, countermeasures: 16, crew: 17, cargo: 9300 },
 });
 
-const mWeaponSlot = (id: string) => ({ ...weaponSlot(id), size: "m" as const });
-
-const mSlot = (kind: "engine" | "shield", id: string): Slot => ({ id, kind, size: "m", mandatory: false, fitList: "fl_any" });
-const sTurretSlot = (id: string) => ({ ...turretSlot(id), size: "s" as const });
+/** A Slot of any kind and size, fitting anything. */
+const slot = (kind: Slot["kind"], size: Slot["size"], id: string): Slot => ({ id, kind, size, mandatory: false, fitList: "fl_any" });
 
 const gozantiMiner = ship({
   id: "gozanti_civ_miner",
   size: "m",
   cargoTypes: ["solid"],
   slots: [
-    mSlot("engine", "con_engine_01"),
-    mSlot("engine", "con_engine_02"),
-    ...Array.from({ length: 6 }, (_, i) => mSlot("shield", `con_shield_0${i + 1}`)),
-    sTurretSlot("con_turret_01"),
-    sTurretSlot("con_turret_02"),
-    mWeaponSlot("con_weapon_01"),
-    mWeaponSlot("con_weapon_02"),
+    slot("engine", "m", "con_engine_01"),
+    slot("engine", "m", "con_engine_02"),
+    ...Array.from({ length: 6 }, (_, i) => slot("shield", "m", `con_shield_0${i + 1}`)),
+    slot("turret", "s", "con_turret_01"),
+    slot("turret", "s", "con_turret_02"),
+    slot("weapon", "m", "con_weapon_01"),
+    slot("weapon", "m", "con_weapon_02"),
   ],
   capacities: { missiles: 0, drones: 0, deployables: 15, countermeasures: 16, crew: 17, cargo: 14000 },
 });
 
-/** A Slot Group kind with `count` Slots. */
-const kind = (count: number) => ({ count, fitList: "fl_any" });
+/**
+ * The Gozanti C-ROC Corsair. Its other Equipment in game (6× M Kuat RC,
+ * 2× GNK-series droid, M Combat Thrusters Mk3, extra software, 16 flares)
+ * doesn't touch the rows asserted, so the Loadouts leave it out.
+ */
+const corsair = ship({
+  id: "gozanti_croc_raider",
+  size: "m",
+  cargoTypes: ["container", "liquid", "solid"],
+  slots: [
+    slot("weapon", "m", "con_weapon_01"),
+    slot("weapon", "m", "con_weapon_02"),
+    ...["con_turret_01", "con_turret_02", "con_m_turret_3", "con_m_turret_4"].map((id) => slot("turret", "s", id)),
+  ],
+  capacities: { missiles: 30, drones: 0, deployables: 15, countermeasures: 16, crew: 30, cargo: 10000 },
+});
+
+/** A Slot Group's entry for one kind, with `count` Slots. */
+const groupKind = (count: number) => ({ count, fitList: "fl_any" });
 
 // The Heraklon Ore Miner's Slot Groups, counted once per connection (#68).
 const heraklon = ship({
   id: "heraklon_solid",
   size: "l",
   cargoTypes: ["solid"],
-  slots: [{ id: "con_shieldgen_l_1", kind: "shield", size: "l", mandatory: false, fitList: "fl_any" }],
+  slots: [slot("shield", "l", "con_shieldgen_l_1")],
   slotGroups: [
-    { id: "group_engine", kinds: { shield: kind(1), engine: kind(8) } },
-    { id: "left-mine", kinds: { turret: kind(4), shield: kind(1) } },
-    { id: "left-pd", kinds: { turret: kind(8), shield: kind(2) } },
-    { id: "missile", kinds: { turret: kind(1) } },
-    { id: "right-mine", kinds: { turret: kind(4), shield: kind(1) } },
-    { id: "right-pd", kinds: { turret: kind(8), shield: kind(2) } },
+    { id: "group_engine", kinds: { shield: groupKind(1), engine: groupKind(8) } },
+    { id: "left-mine", kinds: { turret: groupKind(4), shield: groupKind(1) } },
+    { id: "left-pd", kinds: { turret: groupKind(8), shield: groupKind(2) } },
+    { id: "missile", kinds: { turret: groupKind(1) } },
+    { id: "right-mine", kinds: { turret: groupKind(4), shield: groupKind(1) } },
+    { id: "right-pd", kinds: { turret: groupKind(8), shield: groupKind(2) } },
   ],
   stats: {
     hull: 315000,
@@ -312,6 +325,7 @@ const equipment: Equipment[] = [
   shield("shield_m_novaldexga21_02", 29328, 108, 0),
   shield("shield_m_cec500x_02", 41897, 78, 0),
   shield("shield_ll_dz9", 355777, 330, 0),
+  shield("shield_lh_tablyvb", 592960, 350, 0),
   engine("engine_mc75", 8000, { thrust: 2, acceleration: 1.5, duration: 100, recharge: 92 }, { thrust: 76, charge: 20, attack: 0 }),
 ];
 
@@ -541,12 +555,10 @@ describe("one engine type across engine Slot Groups, in game on X4 8.00 + SWI 0.
  * don't depend on. Each launcher has its full fit list from Game Data.
  */
 describe("launchers, with the missile the game showed loaded (#63, #65)", () => {
-  const corsair = ship({ id: "gozanti_croc_raider", size: "m" });
   const xwing = sShip("t65b_xwing", {});
   const awing = sShip("rz1awing", {});
   const vulture = sShip("vulture_droid", {});
   const ywing = sShip("ywing_btla4", {});
-  const heraklon = ship({ id: "heraklon_solid", size: "l", slotGroups: [{ id: "missile", kinds: { turret: { count: 1, fitList: "fl_any" } } }] });
 
   const launchers: Equipment[] = [
     launcher("weapon", "weapon_protonlauncher", "fl_krupx_medium"),
@@ -642,6 +654,7 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
   });
 
   // H1: shields in three Slot Groups, and 8 RH2 G in left-pd and 3 in right-pd: 814 (11 × 444 / 6).
+  // The LHeavy TaB LYvB in the shield Slot stays out of the group rows.
   const h1Groups = {
     "left-pd": {
       shield: { equipment: "shield_m_novaldexga21_02", count: 2 },
@@ -654,8 +667,11 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
     group_engine: { shield: { equipment: "shield_ll_dz9", count: 1 } },
   };
 
-  test("H1. Heraklon Ore Miner, group shields, 11× RH2 Dual G in Slot Groups, 8× Daedal Engine", () => {
-    const stats = loadoutStats(data, loadout("heraklon_solid", { engine: "engine_mc75", groups: h1Groups }));
+  test("H1. Heraklon Ore Miner, group shields (LHeavy in the Slot left out), 11× RH2 Dual G in Slot Groups, 8× Daedal Engine", () => {
+    const stats = loadoutStats(
+      data,
+      loadout("heraklon_solid", { engine: "engine_mc75", slots: { con_shieldgen_l_1: "shield_lh_tablyvb" }, groups: h1Groups }),
+    );
     expectScreen(stats, {
       GroupedShieldValue: 152110,
       GroupedShieldRate: 208,
@@ -684,26 +700,9 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
     expectScreen(stats, { GroupedTurretSustainedDPS: 818 });
   });
 
-  /**
-   * The Gozanti C-ROC Corsair. Its other Equipment in game (6× M Kuat RC,
-   * 2× GNK-series droid, M Combat Thrusters Mk3, extra software, 16 flares)
-   * doesn't touch the rows asserted, so the Loadouts leave it out.
-   */
-  const corsair = ship({
-    id: "gozanti_croc_raider",
-    size: "m",
-    cargoTypes: ["container", "liquid", "solid"],
-    slots: [
-      mWeaponSlot("con_weapon_01"),
-      mWeaponSlot("con_weapon_02"),
-      ...["con_turret_01", "con_turret_02", "con_m_turret_3", "con_m_turret_4"].map(sTurretSlot),
-    ],
-    capacities: { missiles: 30, drones: 0, deployables: 15, countermeasures: 16, crew: 30, cargo: 10000 },
-  });
-
   const corsairData = gameData([corsair], corsairGuns);
 
-  test("C1. Corsair, 2× KV22 + RH3 Quad O in con_turret_02: 3,489 / 3,128, Avg. Turret Output 81, storage 10,000", () => {
+  test("C1. Corsair, 2× KV22 + QD Quad O in con_turret_02: 3,489 / 3,128, Avg. Turret Output 81, storage 10,000", () => {
     const stats = loadoutStats(
       corsairData,
       loadout("gozanti_croc_raider", {
@@ -740,8 +739,8 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
     expectScreen(stats, { TurretSustainedDPS: 330, MissileCapacity: 30 });
   });
 
-  test("C5. Corsair, 1× KV22: 1,744 / 1,564", () => {
-    const stats = loadoutStats(corsairData, loadout("gozanti_croc_raider", { slots: { con_weapon_01: "weapon_kv22_m_laser" } }));
+  test("C5. Corsair, 1× KV22 in con_weapon_02: 1,744 / 1,564", () => {
+    const stats = loadoutStats(corsairData, loadout("gozanti_croc_raider", { slots: { con_weapon_02: "weapon_kv22_m_laser" } }));
     expectScreen(stats, { BurstDPS: 1744, SustainedDPS: 1564 });
   });
 

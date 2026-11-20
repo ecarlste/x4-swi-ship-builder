@@ -36,7 +36,7 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
   const rateOfFire = gun.magazine
     ? gun.magazine.size / (gun.magazine.reloadTime + gun.magazine.size / gun.fireRate)
     : gun.fireRate;
-  // Each shot fires the bullet's `barrelamount` (#63: the RH3 Quad's 4).
+  // Each shot fires the bullet's `barrelamount` (#63: the QD Quad's 4).
   const burst = shotDamage(gun) * gun.barrelAmount * rateOfFire;
   return { rateOfFire, burst, sustained: burst * heatUptime(gun, rateOfFire) };
 }
