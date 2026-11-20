@@ -3,7 +3,7 @@
  * an untrusted place (Saved Loadouts, Share Links, Loadout Files). Spec #25,
  * decided in #9 and #24.
  *
- * A Loadout is sparse and keyed by game ids, with empty entries left out, so
+ * A Loadout is sparse and keyed by Game Data ids, with empty entries left out, so
  * an Empty Loadout is `{ format, gameData, ship }`. `format` is bumped only
  * when the serialization changes.
  */
@@ -24,17 +24,17 @@ export type SlotGroupKind = z.infer<typeof slotGroupKindSchema>;
 export const loadoutSchema = z.object({
   format: z.literal(LOADOUT_FORMAT),
   gameData: z.object({ swi: id, x4: id }),
-  /** The Ship's ware id. */
+  /** The Ship id. */
   ship: id,
-  /** Connection name → Equipment ware id. */
+  /** Slot id → Equipment id. */
   slots: z.record(id, id).optional(),
-  /** Group name → kind → the Equipment fitted and how many of the group's Slots it fills. */
+  /** Slot Group id → kind → the Equipment fitted and how many of the Slot Group's Slots it fills. */
   groups: z.record(id, z.partialRecord(slotGroupKindSchema, groupEntrySchema)).optional(),
-  /** The thruster's ware id. */
+  /** The thruster's Equipment id. */
   thruster: id.optional(),
-  /** Software ware ids. */
+  /** The software's Equipment ids. */
   software: z.array(id).optional(),
-  /** Consumable ware id → count. */
+  /** A consumable's Equipment id → count. */
   consumables: z.record(id, positiveCount).optional(),
 });
 

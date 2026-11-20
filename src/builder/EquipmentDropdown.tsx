@@ -18,7 +18,7 @@ export function EquipmentDropdown({
   /** Accessible name, e.g. "con_weapon_01 Equipment". */
   label: string;
   options: Equipment[];
-  /** The fitted item's ware id, or null when empty. */
+  /** The fitted item's Equipment id, or null when empty. */
   value: string | null;
   onChange: (equipment: string | null) => void;
   /** The comparison popover's content for a hovered option. */
