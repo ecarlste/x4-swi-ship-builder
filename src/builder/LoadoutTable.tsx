@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { shotDamage } from "../stats/firepower.ts";
@@ -8,6 +8,7 @@ import { formatCredits, formatNumber } from "./format.ts";
 import {
   consumableOptions,
   setConsumable,
+  setCrew,
   setEngine,
   setGroup,
   setSlot,
@@ -16,6 +17,7 @@ import {
   shipEngines,
   withoutUncarriedConsumables,
   type ConsumableKind,
+  type CrewRole,
   type Loadout,
   type SlotGroupKind,
 } from "./loadout.ts";
@@ -63,6 +65,7 @@ function keyValue(item: Equipment): string {
 /**
  * The editable Loadout table: one row for all the Ship's engines, which take
  * one engine type between them (ADR 0001), then one row per other Slot.
+ * After the Equipment, a Crew section for a Ship with crew capacity.
  * Columns: Slot, Equipment, quantity, key value and average price.
  */
 export function LoadoutTable({
@@ -282,7 +285,79 @@ export function LoadoutTable({
           );
         })}
       </tbody>
+      {ship.capacities.crew > 0 && (
+        <CrewSection
+          capacity={ship.capacities.crew}
+          crewPrice={gameData.wares.crew.average}
+          loadout={loadout}
+          was={was}
+          onChange={change}
+        />
+      )}
     </table>
+  );
+}
+
+const CREW_ROLES: [CrewRole, string][] = [
+  ["service", "Service crew"],
+  ["marines", "Marines"],
+];
+
+/**
+ * The Crew, after the Equipment: service crew and marines, sharing the Ship's
+ * crew capacity, each at the crew price. The Captain is free and not a count
+ * (ADR 0004).
+ */
+function CrewSection({
+  capacity,
+  crewPrice,
+  loadout,
+  was,
+  onChange,
+}: {
+  capacity: number;
+  crewPrice: number;
+  loadout: Loadout;
+  was: Loadout | null;
+  onChange: (loadout: Loadout) => void;
+}) {
+  const headingId = useId();
+  const used = (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
+  return (
+    <tbody aria-labelledby={headingId}>
+      <tr className="section">
+        <th scope="col" colSpan={5} id={headingId}>
+          Crew{" "}
+          <span className="dim">
+            {formatNumber(used)} / {formatNumber(capacity)}
+          </span>
+        </th>
+      </tr>
+      {CREW_ROLES.map(([role, label]) => {
+        const count = loadout.crew?.[role] ?? 0;
+        const before = was?.crew?.[role] ?? 0;
+        return (
+          <Row
+            key={role}
+            label={label}
+            equipment=""
+            quantity={
+              <CountInput
+                label={`${label} count`}
+                value={count}
+                max={capacity}
+                // Service crew and marines share the Ship's crew capacity.
+                limit={capacity - (used - count)}
+                onChange={(n) => onChange(setCrew(loadout, role, n))}
+              />
+            }
+            keyValue=""
+            price={count > 0 ? formatCredits(crewPrice * count) : ""}
+            was={was && before !== count ? formatNumber(before) : undefined}
+          />
+        );
+      })}
+    </tbody>
   );
 }
 

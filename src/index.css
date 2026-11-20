@@ -247,6 +247,11 @@ input {
   white-space: nowrap;
 }
 
+.loadout-table tr.section th {
+  padding-top: 12px;
+  font-weight: 600;
+}
+
 .loadout-table .num {
   text-align: right;
   white-space: nowrap;

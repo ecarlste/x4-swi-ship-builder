@@ -122,7 +122,7 @@
       "accFactors": { "forward": 1, "reverse": 1, "horizontal": 1, "vertical": 1 },
       "maxRotationSpeed": null
     },
-    "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 1, "cargo": 50 },
+    "capacities": { "missiles": 10, "drones": 0, "deployables": 0, "countermeasures": 5, "crew": 0, "cargo": 50 },
     "cargoTypes": ["container"],
     "slots": [
       { "id": "con_weapon_01", "kind": "weapon", "size": "s", "mandatory": false, "fitList": "fl_weapon_s" },
