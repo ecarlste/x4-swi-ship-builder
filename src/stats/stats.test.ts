@@ -1,6 +1,20 @@
 import { describe, expect, test } from "vitest";
-import { loadoutStats, type StatRow } from "./stats.ts";
-import { gameData, loadout, priced, shield, shieldGroup, shieldSlot, ship } from "./testing/fixtures.ts";
+import { gunOutput, loadoutStats, type StatRow } from "./stats.ts";
+import {
+  gameData,
+  gun,
+  launcher,
+  loadout,
+  missile,
+  priced,
+  shield,
+  shieldGroup,
+  shieldSlot,
+  ship,
+  turretGroup,
+  turretSlot,
+  weaponSlot,
+} from "./testing/fixtures.ts";
 
 /** The row for one of the game's `UILoadoutStatistics5` fields. */
 function row(rows: StatRow[], id: string): StatRow {
@@ -116,6 +130,130 @@ describe("survivability", () => {
   });
 });
 
+describe("firepower", () => {
+  // T-65B X-wing (#12): four KX5 lasers and two Krupx launchers with MG7-A torpedoes.
+  const xwing = ship({ slots: [1, 2, 3, 4, 5, 6].map((n) => weaponSlot(`con_weapon_0${n}`)) });
+  const kx5 = gun("weapon", "kx5", {
+    damage: { value: 193, noShield: 135 },
+    fireRate: 2.4,
+    heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
+  });
+  const krupx = launcher("weapon", "krupx", "fl_torpedoes");
+  const mg7a = missile("mg7a", 7000, 7000, 10);
+  const xwingData = gameData([xwing], [kx5, krupx, mg7a], [{ id: "fl_torpedoes", equipment: ["mg7a"] }]);
+  const xwingWith = (weapons: string[], consumables: Record<string, number> = {}) =>
+    loadout("fx_ship", {
+      slots: Object.fromEntries(weapons.map((id, i) => [`con_weapon_0${i + 1}`, id])),
+      consumables,
+    });
+
+  test("lasers: burst sums damage + noshield × rate; sustained follows the heat model (X-wing: 3,148 / 2,422)", () => {
+    const stats = loadoutStats(xwingData, xwingWith(["kx5", "kx5", "kx5", "kx5"]));
+    expect(row(stats.rows, "BurstDPS")).toMatchObject({ label: "Burst Weapon Output", unit: "MW", shown: 3148 });
+    expect(row(stats.rows, "SustainedDPS")).toMatchObject({ label: "Sustained Weapon Output", unit: "MW", shown: 2422 });
+  });
+
+  test("launchers count: (explosion + hull damage) / reload, with no heat (X-wing: 2,800 / 2,800)", () => {
+    const stats = loadoutStats(xwingData, xwingWith(["krupx", "krupx"], { mg7a: 6 }));
+    expect(row(stats.rows, "BurstDPS").shown).toBe(2800);
+    expect(row(stats.rows, "SustainedDPS").shown).toBe(2800);
+  });
+
+  test("lasers and launchers together (X-wing: 5,948 / 5,222)", () => {
+    const stats = loadoutStats(xwingData, xwingWith(["kx5", "kx5", "kx5", "kx5", "krupx", "krupx"], { mg7a: 6 }));
+    expect(row(stats.rows, "BurstDPS").shown).toBe(5948);
+    expect(row(stats.rows, "SustainedDPS").shown).toBe(5222);
+  });
+
+  // Encyclopedia turret entries (#12): rate of fire and Weapon Output.
+  const rh2 = gun("turret", "rh2", {
+    damage: { value: 255, noShield: 189 },
+    barrelAmount: 2,
+    fireRate: 2,
+    magazine: { size: 2, reloadTime: 3 },
+  });
+  const rm76 = gun("turret", "rm76", {
+    damage: { value: 110, noShield: 35 },
+    fireRate: 5,
+    magazine: { size: 20, reloadTime: 3 },
+  });
+
+  test("a magazine sets the rate of fire: mag / (reload + mag / rate) (RH2: 0.5 / 444, RM-76: 2.86 / 414)", () => {
+    expect(gunOutput(rh2).rateOfFire).toBe(0.5);
+    expect(gunOutput(rh2).burst).toBe(444);
+    expect(gunOutput(rm76).rateOfFire).toBeCloseTo(2.857, 3);
+    expect(Math.floor(gunOutput(rm76).burst)).toBe(414);
+  });
+
+  const twoTurrets = ship({ slots: [turretSlot("con_turret_01"), turretSlot("con_turret_02")] });
+  const turretsData = gameData([twoTurrets], [rh2, rm76]);
+  const turrets = (...ids: string[]) =>
+    loadout("fx_ship", { slots: Object.fromEntries(ids.map((id, i) => [`con_turret_0${i + 1}`, id])) });
+
+  test("Avg. Turret Output is the turrets' summed output / 6 (YT-1300: 2× RM-76 = 138, 1× = 69)", () => {
+    const two = loadoutStats(turretsData, turrets("rm76", "rm76"));
+    expect(row(two.rows, "TurretSustainedDPS")).toMatchObject({ label: "Avg. Turret Output", unit: "MW", shown: 138 });
+    expect(row(loadoutStats(turretsData, turrets("rm76")).rows, "TurretSustainedDPS").shown).toBe(69);
+  });
+
+  test("turrets don't feed the forward weapon rows (YT-1300: 0 / 0)", () => {
+    const stats = loadoutStats(turretsData, turrets("rm76", "rm76"));
+    expect(row(stats.rows, "BurstDPS").shown).toBe(0);
+    expect(row(stats.rows, "SustainedDPS").shown).toBe(0);
+  });
+
+  test("dual-barrel turrets count both barrels (Gozanti: 2× RH2 = 148)", () => {
+    const stats = loadoutStats(turretsData, turrets("rh2", "rh2"));
+    expect(row(stats.rows, "TurretSustainedDPS").shown).toBe(148);
+  });
+
+  // Class 546 Cruiser (#12): 18× RH3, 10× D6 and 2× XX-18, in turret Slots and Slot Groups.
+  // #12 records only each type's total (8,769.6 / 11,652 / 3,605.7), so these
+  // inputs are made up to give the same per-turret output through magazines.
+  test("L Ships count Slot Group turrets too, as the grouped row (546 Cruiser: 4,004)", () => {
+    const rh3 = gun("turret", "rh3", {
+      damage: { value: 174, noShield: 0 },
+      barrelAmount: 2,
+      fireRate: 3.5,
+      magazine: { size: 7, reloadTime: 3 },
+    }); // 348 × 1.4 = 487.2
+    const d6 = gun("turret", "d6", {
+      damage: { value: 600, noShield: 371 },
+      fireRate: 3,
+      magazine: { size: 6, reloadTime: 3 },
+    }); // 971 × 1.2 = 1,165.2
+    const xx18 = gun("turret", "xx18", {
+      damage: { value: 800, noShield: 401.9 },
+      fireRate: 3,
+      magazine: { size: 3, reloadTime: 1 },
+    }); // 1,201.9 × 1.5 = 1,802.85
+    const cruiser = ship({
+      size: "l",
+      slots: [turretSlot("con_turret_01"), turretSlot("con_turret_02")],
+      slotGroups: [turretGroup("left", 9), turretGroup("right", 9), turretGroup("top", 10)],
+    });
+    const stats = loadoutStats(
+      gameData([cruiser], [rh3, d6, xx18]),
+      loadout("fx_ship", {
+        slots: { con_turret_01: "xx18", con_turret_02: "xx18" },
+        groups: {
+          left: { turret: { equipment: "rh3", count: 9 } },
+          right: { turret: { equipment: "rh3", count: 9 } },
+          top: { turret: { equipment: "d6", count: 10 } },
+        },
+      }),
+    );
+    expect(row(stats.rows, "GroupedTurretSustainedDPS")).toMatchObject({ label: "Avg. Turret Output", shown: 4004 });
+    expect(stats.rows.some((r) => r.id === "TurretSustainedDPS")).toBe(false);
+  });
+
+  test("a launcher with none of its missiles loaded adds nothing", () => {
+    const stats = loadoutStats(xwingData, xwingWith(["krupx", "krupx"]));
+    expect(row(stats.rows, "BurstDPS").shown).toBe(0);
+    expect(row(stats.rows, "SustainedDPS").shown).toBe(0);
+  });
+});
+
 describe("capacities", () => {
   const freighter = ship({
     stats: { ...ship().stats, radarRange: 40000 },
@@ -152,6 +290,9 @@ describe("the configuration screen's rows", () => {
       ["combat", "Recharge Rate", "MW", 0],
       ["combat", "Recharge Delay", "s", 2],
       ["combat", "Radar Range", "km", 0],
+      ["combat", "Burst Weapon Output", "MW", 0],
+      ["combat", "Sustained Weapon Output", "MW", 0],
+      ["combat", "Avg. Turret Output", "MW", 0],
       ["storage", "Cargo", "m³", 0],
       ["crew", "Crew", "", 0],
       ["crew", "Units", "", 0],
@@ -177,6 +318,9 @@ describe("the configuration screen's rows", () => {
       "GroupedShieldValue",
       "GroupedShieldRate",
       "GroupedShieldDelay",
+      "BurstDPS",
+      "SustainedDPS",
+      "TurretSustainedDPS",
       "CargoCapacity",
       "MissileCapacity",
     ]) {

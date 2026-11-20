@@ -9,8 +9,11 @@
 import type { Equipment, GameData } from "../gameData.ts";
 import type { Loadout } from "../builder/loadout.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
+import { gunOutput, launcherMissile } from "./firepower.ts";
 
 export type { MissingUpgrade } from "./mandatory.ts";
+/** Per-Equipment figures for a weapon or turret, e.g. for the comparison popover. */
+export { gunOutput, type GunOutput } from "./firepower.ts";
 
 /** One stat row of the configuration screen. */
 export interface StatRow {
@@ -82,6 +85,32 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   add("GroupedShieldRate", "Recharge Rate", "MW", 0, "combat", mean(groupShields.map((g) => g.rate)));
   add("GroupedShieldDelay", "Recharge Delay", "s", 2, "combat", mean(groupShields.map((g) => g.delay)));
   add("RadarRange", "Radar Range", "km", 0, "combat", ship.stats.radarRange / 1000);
+
+  const fitLists = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
+  const output = (gun: Extract<Equipment, { kind: "weapon" | "turret" }>) =>
+    gunOutput(gun, launcherMissile(gun, loadout.consumables ?? {}, fitLists, equipment));
+  const forward = Object.values(loadout.slots ?? {}).flatMap((id) => {
+    const item = ofKind(id, "weapon");
+    return item ? [output(item)] : [];
+  });
+  add("BurstDPS", "Burst Weapon Output", "MW", 0, "combat", sum(forward.map((o) => o.burst)));
+  add("SustainedDPS", "Sustained Weapon Output", "MW", 0, "combat", sum(forward.map((o) => o.sustained)));
+
+  // Avg. Turret Output: every turret's output, Slot Group turrets included,
+  // over a flat six directions (#12). Its rate of fire already counts
+  // magazine reloads; heat isn't applied, as confirmed in game. L/XL Ships
+  // show it as the game's grouped field, with the same formula.
+  const turrets = [
+    ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
+    ...Object.values(loadout.groups ?? {}).flatMap((kinds): [string, number][] =>
+      kinds.turret ? [[kinds.turret.equipment, kinds.turret.count]] : [],
+    ),
+  ].flatMap(([id, count]) => {
+    const item = ofKind(id, "turret");
+    return item ? [output(item).burst * count] : [];
+  });
+  const turretId = ship.size === "l" || ship.size === "xl" ? "GroupedTurretSustainedDPS" : "TurretSustainedDPS";
+  add(turretId, "Avg. Turret Output", "MW", 0, "combat", sum(turrets) / 6);
 
   // The game splits storage into container, solid, liquid and condensate
   // rows; Game Data holds one cargo capacity, so it is one row here.
