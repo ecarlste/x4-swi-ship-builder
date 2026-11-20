@@ -16,7 +16,7 @@ export interface FigureComparison {
 /** Significant digits kept before rounding, to drop float noise such as 0.29 * 100 = 28.999999999999996. */
 const PRECISION = 12;
 
-/** The value rounded down to `decimals`, as the game prints its stats. */
+/** The value rounded down to `decimals`, like the game's `Helper.floor`. */
 export function shownValue(value: number, decimals: number): number {
   const scale = 10 ** decimals;
   return Math.floor(Number((value * scale).toPrecision(PRECISION))) / scale;
@@ -40,3 +40,7 @@ export function compareFigure(
   const gain = lowerIsBetter ? -difference : difference;
   return { difference, verdict: gain > 0 ? "better" : gain < 0 ? "worse" : "same" };
 }
+
+/** One average price against another, in whole credits; a lower Price is better. */
+export const comparePrice = (average: number, otherAverage: number): FigureComparison =>
+  compareFigure(shownPrice(average), shownPrice(otherAverage), { decimals: 0, lowerIsBetter: true });

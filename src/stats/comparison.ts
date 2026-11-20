@@ -8,7 +8,7 @@ import type { Equipment, GameData } from "../gameData.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import type { Loadout } from "../builder/loadout.ts";
 import { gunOutput, launcherMissile, missilesBestFirst, type Gun, type Missile } from "./firepower.ts";
-import { compareFigure, shownPrice, shownValue, type Verdict } from "./figure.ts";
+import { compareFigure, comparePrice, shownPrice, shownValue, type Verdict } from "./figure.ts";
 
 export interface Figure {
   label: string;
@@ -102,8 +102,8 @@ export function compareEquipment(
     mine.map((f) => {
       const shown = shownValue(f.value, f.decimals);
       const other = theirs.find((t) => t.label === f.label);
-      const against = other ? shownValue(other.value, other.decimals) : 0;
-      return { label: f.label, unit: f.unit, shown, ...compareFigure(shown, against, { decimals: f.decimals }) };
+      const otherShown = other ? shownValue(other.value, other.decimals) : 0;
+      return { label: f.label, unit: f.unit, shown, ...compareFigure(shown, otherShown, { decimals: f.decimals }) };
     });
   const isLauncher = (option.kind === "weapon" || option.kind === "turret") && option.missiles !== null;
   return {
@@ -129,7 +129,6 @@ function missileRows(
 }
 
 function priceDifference(option: Equipment, fitted: Equipment | null): PriceDifference {
-  const shown = shownPrice(option.price.average);
-  const against = fitted ? shownPrice(fitted.price.average) : 0;
-  return { shown, ...compareFigure(shown, against, { decimals: 0, lowerIsBetter: true }) };
+  const average = option.price.average;
+  return { shown: shownPrice(average), ...comparePrice(average, fitted?.price.average ?? 0) };
 }

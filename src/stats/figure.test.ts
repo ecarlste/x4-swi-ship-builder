@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { compareFigure, shownPrice, shownValue } from "./figure.ts";
+import { compareFigure, comparePrice, shownPrice, shownValue } from "./figure.ts";
 
 describe("a figure's shown value", () => {
   test("is rounded down to its decimals, as the game prints it", () => {
@@ -49,5 +49,13 @@ describe("a figure's difference and verdict", () => {
       verdict: "better",
     });
     expect(compareFigure(12000, 12000, { decimals: 0, lowerIsBetter: true }).verdict).toBe("same");
+  });
+});
+
+describe("a Price's difference and verdict", () => {
+  test("is in whole credits, and a lower Price is better", () => {
+    expect(comparePrice(1234.4, 1000.6)).toEqual({ difference: 233, verdict: "worse" });
+    expect(comparePrice(1000, 1234)).toEqual({ difference: -234, verdict: "better" });
+    expect(comparePrice(999.6, 1000.4)).toEqual({ difference: 0, verdict: "same" });
   });
 });
