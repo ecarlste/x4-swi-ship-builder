@@ -71,6 +71,14 @@ export function checkIntegrity(data: SnapshotData): string[] {
     for (const dup of duplicates(ship.slotGroups.map((g) => g.id))) {
       errors.push(`${source} has duplicate Slot Group id "${dup}"`);
     }
+    // The game merges Slot Groups whose names differ only by spaces, so extraction must have too (#52).
+    for (const trimmed of duplicates(ship.slotGroups.map((g) => g.id.trim()))) {
+      const ids = [...new Set(ship.slotGroups.map((g) => g.id).filter((id) => id.trim() === trimmed))].sort();
+      if (ids.length > 1) {
+        const list = ids.map((id) => `"${id}"`).join(", ");
+        errors.push(`${source} has Slot Group ids ${list} that are one Slot Group in game, as they differ only by spaces`);
+      }
+    }
 
     for (const slot of ship.slots) checkFitList(source, `slot ${slot.id}`, slot.fitList, slot.kind);
     for (const group of ship.slotGroups) {

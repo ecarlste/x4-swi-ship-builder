@@ -232,6 +232,26 @@ describe("transform: fit lists", () => {
     expect(report()).toContain(`fx_frigate: the shield connections of Slot Group "group_back" don't all take the same Equipment`);
   });
 
+  it("fails when Slot Groups merged by name take the same kind on different fit lists", () => {
+    const world = wharfWorld()
+      .station({ faction: "fx_guild", builds: ["ship_l"] })
+      .ship({
+        id: "fx_frigate",
+        size: "l",
+        owners: ["fx_guild"],
+        slots: [
+          { name: "con_shield_01", tags: "shield medium standard", group: "group_front" },
+          { name: "con_shield_02", tags: "shield medium", group: "group_front " },
+        ],
+      })
+      .equipment(shield("fx_shield_plain", "component shield medium"))
+      .equipment(shield("fx_shield_standard", "component shield medium standard"));
+
+    expect(() => run(world)).toThrow(
+      /fx_frigate: Slot Groups "group_front", "group_front " are one Slot Group "group_front" in game, but their shields take different Equipment/,
+    );
+  });
+
   it("gives the thruster the thrusters whose connection tags, but for component and thruster, the macro's <thruster tags> has", () => {
     const thruster = (id: string, connection: string): EquipmentSpec => ({
       id,

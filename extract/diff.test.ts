@@ -38,7 +38,7 @@ describe("diffSnapshots", () => {
       added: [{ id: "fx_bramble", name: "Bramble Fighter" }],
       removed: [],
       changed: [
-        { id: "fx_courier", name: "Swiftwing Courier", fields: ["price.average", "slots"] },
+        { id: "fx_courier", name: "Swiftwing Courier", fields: ["price.average", "slots[con_a]", "slots[con_b]"] },
         { id: "fx_hauler", name: "Ironback Hauler Mk2", fields: ["name", "stats.drag.yaw"] },
       ],
     });
@@ -47,6 +47,26 @@ describe("diffSnapshots", () => {
       removed: [{ id: "fx_pulse_s", name: "Pulse Blaster" }],
       changed: [{ id: "fx_shield_s", name: "Bubble Shield S", fields: ["capacity"] }],
     });
+  });
+
+  it("goes into lists of items with ids by id, so it names the Slot Groups that changed (#52)", () => {
+    const ship = (slotGroups: unknown[]) => ({
+      ...previous,
+      ships: [{ id: "fx_miner", name: "Gas Miner", slotGroups, slots: [{ id: "con_a" }] }],
+    });
+    const before = ship([
+      { id: "enginegroup", kinds: { shield: { count: 2 }, engine: { count: 1 } } },
+      { id: "enginegroup  ", kinds: { engine: { count: 2 } } },
+      { id: "group_top", kinds: { turret: { count: 1 } } },
+    ]);
+    const after = ship([
+      { id: "enginegroup", kinds: { shield: { count: 2 }, engine: { count: 3 } } },
+      { id: "group_top", kinds: { turret: { count: 1 } } },
+    ]);
+
+    expect(diffSnapshots(before, after).ships.changed).toEqual([
+      { id: "fx_miner", name: "Gas Miner", fields: ["slotGroups[enginegroup].kinds.engine.count", 'slotGroups["enginegroup  "]'] },
+    ]);
   });
 
   it("finds nothing between a snapshot and itself", () => {

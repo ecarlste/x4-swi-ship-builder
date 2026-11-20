@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Equipment, EquipmentKind, FitList, Ship, Size, SlotGroupKind } from "../shared/game-data/schema.ts";
 import { ExtractError } from "./errors.ts";
 import { attr, child, children, list, numberAttr, type GameFiles } from "./gameFiles.ts";
-import { classDefaults, EMPTY_FIT_LIST, type LeftOut, type ShipFittings } from "./ships.ts";
+import { classDefaults, EMPTY_FIT_LIST, type GroupConnection, type LeftOut, type ShipFittings } from "./ships.ts";
 import type { StationClasses } from "./stations.ts";
 import type { TextResolver } from "./text.ts";
 import type { JsonElement } from "./xml.ts";
@@ -105,6 +105,9 @@ function readCandidates(files: GameFiles): Candidate[] {
 /** Every tag of `needed` is in `offered`. */
 const allIn = (needed: string[], offered: string[]) => needed.every((t) => offered.includes(t));
 
+/** The Equipment in every one of the given lists. */
+const fitsAll = (lists: string[][]) => lists.reduce((a, b) => a.filter((id) => b.includes(id)));
+
 /**
  * Reads every Equipment ware, computes what fits each Ship's Slots, Slot
  * Groups, thruster, software, drones, deployables and countermeasures and
@@ -161,9 +164,21 @@ export function readEquipment(
     const groups = new Map<string, Partial<Record<SlotGroupKind, string[]>>>();
     for (const [groupId, kinds] of fitting.groups) {
       const fitsOfGroup: Partial<Record<SlotGroupKind, string[]>> = {};
-      for (const [kind, connections] of Object.entries(kinds) as [SlotGroupKind, string[][]][]) {
-        const perConnection = connections.map((tags) => slotFit(kind, tags));
-        const common = perConnection.reduce((a, b) => a.filter((id) => b.includes(id)));
+      for (const [kind, connections] of Object.entries(kinds) as [SlotGroupKind, GroupConnection[]][]) {
+        const perConnection = connections.map((c) => slotFit(kind, c.tags));
+        const common = fitsAll(perConnection);
+        // Groups merged by name (#52) must agree on what fits them, or the merge is a guess.
+        const byWrittenName = new Map<string, string[][]>();
+        for (const c of connections) {
+          byWrittenName.set(c.writtenAs, [...(byWrittenName.get(c.writtenAs) ?? []), slotFit(kind, c.tags)]);
+        }
+        if (new Set([...byWrittenName.values()].map((fits) => fitsAll(fits).join(" "))).size > 1) {
+          const names = [...byWrittenName.keys()].sort().map((n) => `"${n}"`).join(", ");
+          throw new ExtractError(
+            `ware ${ship.id}: Slot Groups ${names} are one Slot Group "${groupId}" in game, ` +
+              `but their ${kind}s take different Equipment`,
+          );
+        }
         if (perConnection.some((fits) => fits.length !== common.length)) {
           warnings.push(
             `${ship.id}: the ${kind} connections of Slot Group "${groupId}" don't all take the same Equipment; ` +
