@@ -12,7 +12,7 @@
  */
 import { describe, expect, test } from "vitest";
 import { loadoutStats, type LoadoutStats } from "./stats.ts";
-import { engine, gameData, gun, launcher, loadout, missile, shield, ship, thruster } from "./testing/fixtures.ts";
+import { engine, engineSlot, gameData, gun, launcher, loadout, missile, shield, ship, thruster } from "./testing/fixtures.ts";
 import type { Equipment, Ship } from "../gameData.ts";
 
 /** The shown value of each named row. */
@@ -33,9 +33,16 @@ function expectScreen(stats: LoadoutStats, screen: Record<string, number>) {
 
 // ---------------------------------------------------------------- Game Data
 
+/** `n` engine Slots, `con_engine_01` onwards. */
+const engineSlots = (n: number) => Array.from({ length: n }, (_, i) => engineSlot(`con_engine_0${i + 1}`));
+
+/** A Slot Group with `count` engine Slots. */
+const engineGroup = (id: string, count: number) => ({ id, kinds: { engine: { count, fitList: "fl_any" } } });
+
 const sShip = (id: string, overrides: Partial<Ship>) => ship({ id, size: "s", cargoTypes: ["container"], ...overrides });
 
 const tieFighter = sShip("tie_fighter", {
+  slots: engineSlots(2),
   stats: {
     hull: 3500,
     mass: 5,
@@ -55,11 +62,13 @@ const n1Stats = (forwardDrag: number) => ({
 });
 
 const n1 = sShip("n1", {
+  slots: engineSlots(2),
   stats: { hull: 4500, radarRange: 35000, ...n1Stats(2.609) },
   capacities: { missiles: 4, drones: 0, deployables: 6, countermeasures: 8, crew: 1, cargo: 300 },
 });
 
 const n1Modified = sShip("ship_mando_s_n1", {
+  slots: engineSlots(1),
   stats: { hull: 4650, radarRange: 45000, ...n1Stats(1.3) },
   capacities: { missiles: 6, drones: 0, deployables: 6, countermeasures: 8, crew: 2, cargo: 300 },
 });
@@ -69,6 +78,7 @@ const evenAccFactors = { forward: 1, reverse: 1, horizontal: 1, vertical: 1 };
 const gozanti = ship({
   id: "gozanti_civ_01",
   size: "m",
+  slots: engineSlots(2),
   stats: {
     hull: 105000,
     mass: 45.394,
@@ -83,6 +93,7 @@ const gozanti = ship({
 const cruiser546 = ship({
   id: "imp_cruiser_546",
   size: "l",
+  slotGroups: [engineGroup("engine", 3)],
   stats: {
     hull: 517000,
     mass: 265,
@@ -97,6 +108,7 @@ const cruiser546 = ship({
 const settie = ship({
   id: "cis_repair",
   size: "m",
+  slots: engineSlots(2),
   stats: {
     hull: 94000,
     mass: 102.438,
@@ -111,6 +123,7 @@ const settie = ship({
 const venator = ship({
   id: "venator_01",
   size: "xl",
+  slotGroups: [engineGroup("enginegroup", 4)],
   stats: {
     hull: 1540000,
     mass: 750.043,
@@ -130,6 +143,35 @@ const venator = ship({
   capacities: { missiles: 76, drones: 30, deployables: 60, countermeasures: 30, crew: 268, cargo: 34000 },
 });
 
+// Engines split across two Slot Groups in Game Data, which the game shows as one, "L1" (#50).
+const aa9 = ship({
+  id: "aa9_liquid",
+  size: "l",
+  slotGroups: [engineGroup("enginegroup", 1), engineGroup("enginegroup  ", 2)],
+  stats: {
+    hull: 290000,
+    mass: 205.27,
+    radarRange: 40000,
+    drag: { forward: 75.738, reverse: 302.216, horizontal: 126.666, vertical: 126.666, pitch: 140.897, yaw: 140.897, roll: 140.897 },
+    accFactors: evenAccFactors,
+    maxRotationSpeed: null,
+  },
+});
+
+const providence = ship({
+  id: "ship_providence_carrier_01",
+  size: "xl",
+  slotGroups: [engineGroup("enginegroup", 1), engineGroup("enginegroup ", 2)],
+  stats: {
+    hull: 1705000,
+    mass: 549.202,
+    radarRange: 50000,
+    drag: { forward: 110.84, reverse: 440.362, horizontal: 259.503, vertical: 259.503, pitch: 1100.84, yaw: 1100.84, roll: 1100.84 },
+    accFactors: evenAccFactors,
+    maxRotationSpeed: null,
+  },
+});
+
 const equipment: Equipment[] = [
   // Engines: id, forward thrust, boost, travel.
   engine("engine_tie", 400, { thrust: 2.2, acceleration: 1.25, duration: 12, recharge: 80 }, { thrust: 8, charge: 1, attack: 10 }),
@@ -139,6 +181,7 @@ const equipment: Equipment[] = [
   engine("engine_gozanti_01", 1350, { thrust: 2.7, acceleration: 1, duration: 20, recharge: 30 }, { thrust: 20.6, charge: 7, attack: 0 }),
   engine("engine_546", 5000, { thrust: 3, acceleration: 1.5, duration: 60, recharge: 60 }, { thrust: 66, charge: 19, attack: 0 }),
   engine("engine_m_boav", 1450, { thrust: 3, acceleration: 1.2, duration: 20, recharge: 50 }, { thrust: 17.5, charge: 10, attack: 0 }),
+  engine("engine_l_essum", 4400, { thrust: 2, acceleration: 1.5, duration: 100, recharge: 92 }, { thrust: 54, charge: 16, attack: 0 }),
   engine("engine_venator_xl", 10000, { thrust: 3, acceleration: 1.62, duration: 30, recharge: 100 }, { thrust: 78, charge: 35, attack: 0 }),
   thruster("thruster_gen_s_allround_01_mk3", { strafe: 540, pitch: 200, yaw: 200, roll: 250 }),
   thruster("thruster_gen_m_combat_01_mk3", { strafe: 1200, pitch: 384.2, yaw: 384.2, roll: 608.3 }),
@@ -164,7 +207,7 @@ const equipment: Equipment[] = [
   missile("missile_proton_heavy", 24000, 24000, 23),
 ];
 
-const data = gameData([tieFighter, n1, n1Modified, gozanti, cruiser546, settie, venator], equipment, [
+const data = gameData([tieFighter, n1, n1Modified, gozanti, cruiser546, settie, venator, aa9, providence], equipment, [
   { id: "fl_rockets", equipment: ["missile_rocket_light"] },
   { id: "fl_torpedoes", equipment: ["missile_proton_heavy"] },
 ]);
@@ -219,8 +262,8 @@ const slots = (kind: string, ids: string[]) => Object.fromEntries(ids.map((id, i
 describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
   const tie = (flares: number) =>
     loadout("tie_fighter", {
+      engine: "engine_tie",
       slots: {
-        ...slots("engine", ["engine_tie", "engine_tie"]),
         con_shield_01: "shield_s_auxtie",
         ...slots("weapon", ["weapon_ls7_s_laser", "weapon_ls7_s_laser"]),
       },
@@ -246,8 +289,8 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
     const stats = loadoutStats(
       data,
       loadout("n1", {
+        engine: "engine_n1",
         slots: {
-          ...slots("engine", ["engine_n1", "engine_n1"]),
           ...slots("shield", ["shield_s_r2astrohead", "shield_s_tabsx"]),
           ...slots("weapon", ["weapon_kx10_s_laser", "weapon_kx10_s_laser", "weapon_light_rocket_launcher"]),
         },
@@ -268,8 +311,8 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
 
   const n1ModifiedLoadout = (rockets: number) =>
     loadout("ship_mando_s_n1", {
+      engine: "engine_mando_s_n1",
       slots: {
-        con_engine_01: "engine_mando_s_n1",
         con_shield_01: "shield_s_tabsx",
         ...slots("weapon", ["weapon_kx10_s_laser", "weapon_kx10_s_laser", "weapon_light_rocket_launcher"]),
       },
@@ -295,7 +338,7 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
     const stats = loadoutStats(
       data,
       loadout("gozanti_civ_01", {
-        slots: slots("engine", ["engine_gozanti_01", "engine_gozanti_01"]),
+        engine: "engine_gozanti_01",
         thruster: "thruster_gen_m_combat_01_mk3",
         consumables: { countermeasure_flares_01: 16 },
       }),
@@ -310,7 +353,7 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
     const stats = loadoutStats(
       data,
       loadout("imp_cruiser_546", {
-        groups: { engine: { engine: { equipment: "engine_546", count: 3 } } },
+        engine: "engine_546",
         thruster: "thruster_gen_l_allround_01_mk3",
         consumables: { ship_gen_xs_repairdrone_01_a: 2, countermeasure_flares_01: 25 },
       }),
@@ -325,7 +368,7 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
     const stats = loadoutStats(
       data,
       loadout("cis_repair", {
-        slots: slots("engine", ["engine_m_boav", "engine_m_boav"]),
+        engine: "engine_m_boav",
         thruster: "thruster_gen_m_combat_01_mk3",
         consumables: { countermeasure_flares_01: 16 },
       }),
@@ -340,8 +383,8 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
     const stats = loadoutStats(
       data,
       loadout("venator_01", {
+        engine: "engine_venator_xl",
         groups: {
-          enginegroup: { engine: { equipment: "engine_venator_xl", count: 4 } },
           torpedo: { turret: { equipment: "turret_m_torptube", count: 2 } },
         },
         thruster: "thruster_gen_xl_allround_01_mk3",
@@ -352,5 +395,30 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#39)", () => {
       stats,
       flightScreen(50, [134, 53, 404, 86, 30, 1, 10511, 53, 35, 10.4, 4.3, 1.9, 1.9, 1.4], [269, 30, 76, 60, 30]),
     );
+  });
+});
+
+describe("one engine type across engine Slot Groups, in game on X4 8.00 + SWI 0.9.1 HF (#50)", () => {
+  /** The engine rows, without strafe and turning, which need a thruster. */
+  const engineRows = [
+    "ForwardSpeed",
+    "ForwardAcceleration",
+    "BoostSpeed",
+    "BoostAcceleration",
+    "BoostMaxDuration",
+    "BoostRechargeRate",
+    "TravelSpeed",
+    "TravelAcceleration",
+    "TravelChargeTime",
+  ];
+
+  test("AA-9 Gas Miner, 3× MM Essum across two Slot Groups (1 + 2)", () => {
+    const stats = loadoutStats(data, loadout("aa9_liquid", { engine: "engine_l_essum" }));
+    expectScreen(stats, rows(engineRows, [174, 64, 348, 96, 100, 1, 9411, 64, 16]));
+  });
+
+  test("Providence-class carrier/destroyer, 3× MM Essum across two Slot Groups (1 + 2)", () => {
+    const stats = loadoutStats(data, loadout("ship_providence_carrier_01", { engine: "engine_l_essum" }));
+    expectScreen(stats, rows(engineRows, [119, 24, 238, 36, 100, 1, 6430, 24, 16]));
   });
 });

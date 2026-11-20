@@ -119,6 +119,16 @@ describe("validateSnapshot", () => {
       ]);
     });
 
+    it("reports a Ship whose engines don't share one fit list, since they take one engine type (#50)", () => {
+      const errors = errorsAfter((raw) => {
+        raw.ships[1].slotGroups.push({ id: "enginegroup_aft", kinds: { engine: { count: 1, fitList: "fl_engine_s" } } });
+      });
+
+      expect(errors).toEqual([
+        'ships: fx_hauler engines are on more than one fit list ("fl_engine_l", "fl_engine_s"), but take one engine type',
+      ]);
+    });
+
     it("reports Equipment of the wrong kind in a fit list", () => {
       const errors = errorsAfter((raw) => {
         raw.ships[0].slots[2].fitList = "fl_weapon_s"; // a shield Slot

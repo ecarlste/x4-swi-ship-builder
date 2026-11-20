@@ -67,6 +67,15 @@ test("Slot Group comparisons show one unit", async ({ page }) => {
   await expect(figure(popover, "Price").getByRole("cell")).toHaveText(["35,000 Cr", "±0"]);
 });
 
+test("the Engines row compares one engine, though it fits all of the Ship's engines (#50)", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+  const popover = await hover(page, /^Engines/, "Haul Engine L");
+
+  await expect(figure(popover, "Thrust").getByRole("cell")).toHaveText(["30,000 N", "+30,000"]);
+  await expect(figure(popover, "Travel Thrust").getByRole("cell")).toHaveText(["240,000 N", "+240,000"]);
+  await expect(figure(popover, "Price").getByRole("cell")).toHaveText(["220,000 Cr", "+220,000"]);
+});
+
 test("the popover lists each Seller with its Licence", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 

@@ -93,7 +93,7 @@ test("the flight rows follow the engine and thruster", async ({ page }) => {
   await expect(stat(page, "Yaw (°/s)")).toHaveText("0.0");
 
   // Mass 10, drag 5 forward / 4 sideways; 1,500 thrust, boost ×4, travel ×10.
-  await fit(page, /con_engine_01/, "Sprint Engine S");
+  await fit(page, /^Engines/, "Sprint Engine S");
   await expect(stat(page, "Speed (m/s)")).toHaveText("300");
   await expect(stat(page, "Acceleration (m/s²)")).toHaveText("150");
   await expect(stat(page, "Boost Speed (m/s)")).toHaveText("1,200");

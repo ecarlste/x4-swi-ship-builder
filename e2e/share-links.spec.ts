@@ -22,6 +22,7 @@ test("Copy link is disabled until a Ship is picked", async ({ page }) => {
 test("a copied link opens the same Loadout, with its name, in a new page", async ({ context, page }) => {
   await pickShip(page, "L", "Ironback Hauler");
   await fit(page, /con_shield_01/, "Bubble Shield M");
+  await fit(page, /^Engines/, "Haul Engine L");
   await saveButton(page).click();
   await saveDialog(page).getByRole("textbox", { name: "Name" }).fill("Heavy Freighter");
   await saveDialog(page).getByRole("button", { name: "Save" }).click();
@@ -35,6 +36,7 @@ test("a copied link opens the same Loadout, with its name, in a new page", async
   await other.goto(link);
   await expect(other.getByRole("combobox", { name: "Ship" })).toHaveValue("Ironback Hauler");
   await expect(row(other, /con_shield_01/).getByRole("combobox")).toHaveText(/Bubble Shield M/);
+  await expect(row(other, /^Engines/).getByRole("combobox")).toHaveText(/Haul Engine L/);
   await expect(other.getByRole("toolbar")).toContainText("Heavy Freighter");
 
   // A shared Loadout isn't one of this browser's Saved Loadouts: saving asks for a name, suggesting the shared one.

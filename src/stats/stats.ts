@@ -7,7 +7,7 @@
  * decimals, as the screen does.
  */
 import type { CargoType, Equipment, GameData } from "../gameData.ts";
-import type { Loadout } from "../builder/loadout.ts";
+import { shipEngines, type Loadout } from "../builder/loadout.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
@@ -132,29 +132,20 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     if (ship.cargoTypes.includes(type)) add(id, label, "m³", 0, "storage", ship.capacities.cargo);
   }
 
-  // Flight (#12, #39). Engines in Slots count once, engines in Slot Groups once per count.
-  const engines = [
-    ...Object.values(loadout.slots ?? {}).flatMap((id) => {
-      const item = ofKind(id, "engine");
-      return item ? [{ item, count: 1 }] : [];
-    }),
-    ...Object.values(loadout.groups ?? {}).flatMap((kinds) => {
-      const item = kinds.engine && ofKind(kinds.engine.equipment, "engine");
-      return item && kinds.engine ? [{ item, count: kinds.engine.count }] : [];
-    }),
-  ];
+  // Flight (#12, #39). One engine type fills all of the Ship's engines (#50, ADR 0001).
+  const fittedEngine = loadout.engine ? ofKind(loadout.engine, "engine") : undefined;
+  const engineCount = fittedEngine ? (shipEngines(ship)?.count ?? 0) : 0;
   const { drag, mass, accFactors, maxRotationSpeed } = ship.stats;
   type Engine = Extract<Equipment, { kind: "engine" }>;
-  /** Σ engine forward thrust, each engine's thrust scaled by `factor`. */
+  /** Σ engine forward thrust: the engine's thrust, scaled by `factor`, times the engine count. */
   const thrust = (factor: (e: Engine) => number = () => 1) =>
-    sum(engines.map(({ item, count }) => item.thrust.forward * factor(item) * count));
-  /** An engine property averaged over the fitted engines (they are normally all alike), or 0 with none. */
-  const perEngine = (pick: (e: Engine) => number) =>
-    mean(engines.flatMap(({ item, count }) => Array<number>(count).fill(pick(item))));
+    fittedEngine ? fittedEngine.thrust.forward * factor(fittedEngine) * engineCount : 0;
+  /** A property of the fitted engine, or 0 with none. */
+  const ofEngine = (pick: (e: Engine) => number) => (fittedEngine && engineCount > 0 ? pick(fittedEngine) : 0);
   const acceleration = (thrust() / mass) * accFactors.forward;
   const travelSpeed = thrust((e) => e.travel.thrust) / drag.forward;
-  const travelAttack = perEngine((e) => e.travel.attack);
-  const boostRecharge = perEngine((e) => e.boost.recharge);
+  const travelAttack = ofEngine((e) => e.travel.attack);
+  const boostRecharge = ofEngine((e) => e.boost.recharge);
   add("ForwardSpeed", "Speed", "m/s", 0, "flight", thrust() / drag.forward);
   add("ForwardAcceleration", "Acceleration", "m/s²", 0, "flight", acceleration);
   add("BoostSpeed", "Boost Speed", "m/s", 0, "flight", thrust((e) => e.boost.thrust) / drag.forward);
@@ -166,7 +157,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     "flight",
     (thrust((e) => e.boost.acceleration) / mass) * accFactors.forward,
   );
-  add("BoostMaxDuration", "Boost Capacity", "s", 1, "flight", perEngine((e) => e.boost.duration));
+  add("BoostMaxDuration", "Boost Capacity", "s", 1, "flight", ofEngine((e) => e.boost.duration));
   // `boost@recharge` is the seconds for a full recharge.
   add("BoostRechargeRate", "Boost Recharge Rate", "%/s", 1, "flight", boostRecharge > 0 ? 100 / boostRecharge : 0);
   add("TravelSpeed", "Travel Speed", "m/s", 0, "flight", travelSpeed);
@@ -180,7 +171,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     "flight",
     travelAttack > 0 ? travelSpeed / travelAttack : acceleration,
   );
-  add("TravelChargeTime", "Travel Charge Time", "s", 1, "flight", perEngine((e) => e.travel.charge));
+  add("TravelChargeTime", "Travel Charge Time", "s", 1, "flight", ofEngine((e) => e.travel.charge));
 
   const thrusterItem = loadout.thruster ? ofKind(loadout.thruster, "thruster") : undefined;
   const strafe = thrusterItem?.thrust.strafe ?? 0;
@@ -205,7 +196,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   return {
     rows,
-    price: price(ship.price, loadout, index),
+    price: price(ship.price, loadout, engineCount, index),
     missing: missingMandatory(gameData, ship, loadout),
   };
 }
@@ -219,13 +210,14 @@ function turningInDegrees(degreesPerSecond: number): number {
   return (Math.fround((degreesPerSecond * Math.PI) / 180) * 180) / Math.PI;
 }
 
-/** Ship + Equipment + consumables + software, each at its min, average and max. */
-function price(shipPrice: Price, loadout: Loadout, { equipment }: GameDataIndex): Price {
+/** Ship + Equipment (the engine once per engine) + consumables + software, each at its min, average and max. */
+function price(shipPrice: Price, loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): Price {
   const bought: [string, number][] = [
     ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
     ...Object.values(loadout.groups ?? {}).flatMap((kinds) =>
       Object.values(kinds).map((e): [string, number] => [e.equipment, e.count]),
     ),
+    ...(loadout.engine ? [[loadout.engine, engineCount] as [string, number]] : []),
     ...(loadout.thruster ? [[loadout.thruster, 1] as [string, number]] : []),
     ...(loadout.software ?? []).map((id): [string, number] => [id, 1]),
     ...Object.entries(loadout.consumables ?? {}),

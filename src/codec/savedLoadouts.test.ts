@@ -24,6 +24,7 @@ const loadout = { format: 1 as const, gameData: { swi: "091", x4: "8.00" }, ship
 const stored = {
   ...loadout,
   slots: { con_weapon_01: "weapon_laser" },
+  engine: "engine_fusial",
   id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
   name: "Escort",
   createdAt: "2026-11-01T10:00:00.000Z",

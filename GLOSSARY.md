@@ -41,11 +41,11 @@ One place on a Ship where one piece of Equipment is fitted.
 _Avoid_: hardpoint, connection, mount
 
 **Slot Group**:
-A named set of Slots on a large Ship, filled together instead of one Slot at a time: for each kind of Equipment it takes (such as turrets or shields), the user picks one type and a count.
+A named set of Slots on a large Ship, filled together instead of one Slot at a time: for each kind of Equipment it takes (such as turrets or shields), the user picks one type and a count. Engines are the exception: they are never picked per Slot Group.
 _Avoid_: battery, cluster, group slot
 
 **Loadout**:
-A specific choice of equipment for one ship. Equipment mods, paint and crew are not part of a loadout.
+A specific choice of equipment for one ship. A loadout fits one engine type to all of the ship's engine Slots, including those in Slot Groups, or no engines at all. Equipment mods, paint and crew are not part of a loadout.
 _Avoid_: build, fit, config
 
 **Empty Loadout**:

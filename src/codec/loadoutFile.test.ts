@@ -20,6 +20,7 @@ const escort = {
   ship: "ship_xwing",
   slots: { con_weapon_01: "weapon_laser" },
   groups: { group_turrets: { turret: { equipment: "turret_quad", count: 3 } } },
+  engine: "engine_fusial",
   thruster: "thruster_s",
   software: ["software_dock"],
   consumables: { missile_proton: 20 },

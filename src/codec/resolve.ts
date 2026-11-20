@@ -13,10 +13,12 @@ import { indexGameData } from "../gameDataIndex.ts";
 import {
   consumableOptions,
   setConsumable,
+  setEngine,
   setGroup,
   setSlot,
   setSoftware,
   setThruster,
+  shipEngines,
 } from "../builder/loadout.ts";
 import type { Loadout, SlotGroupKind } from "./loadout.ts";
 
@@ -27,6 +29,7 @@ export type GameDataVersions = Loadout["gameData"];
 export type ChangePlace =
   | { kind: "slot"; slot: string }
   | { kind: "group"; group: string; groupKind: SlotGroupKind }
+  | { kind: "engine" }
   | { kind: "thruster" }
   | { kind: "software" }
   | { kind: "consumable" };
@@ -56,6 +59,8 @@ function placeText(place: ChangePlace): string {
       return `in ${place.slot}`;
     case "group":
       return `in ${place.group} ${place.groupKind}s`;
+    case "engine":
+      return "as engine";
     case "thruster":
       return "as thruster";
     case "software":
@@ -103,7 +108,8 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
   let repaired: Loadout = { format: loadout.format, gameData: to, ship: loadout.ship };
 
   for (const [slotId, id] of Object.entries(loadout.slots ?? {})) {
-    const slot = ship.slots.find((s) => s.id === slotId);
+    // Engine Slots aren't filled one at a time: the engine is fitted to the whole Ship (ADR 0001).
+    const slot = ship.slots.find((s) => s.id === slotId && s.kind !== "engine");
     if (keep({ kind: "slot", slot: slotId }, id, slot?.fitList, "unknown-slot")) repaired = setSlot(repaired, slotId, id);
   }
 
@@ -119,6 +125,10 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
       }
       repaired = setGroup(repaired, groupId, kind, { equipment: entry.equipment, count });
     }
+  }
+  // The engine count comes from the Ship, so only whether the engine still fits matters.
+  if (loadout.engine && keep({ kind: "engine" }, loadout.engine, shipEngines(ship)?.fitList, "no-longer-fits")) {
+    repaired = setEngine(repaired, loadout.engine);
   }
   if (loadout.thruster && keep({ kind: "thruster" }, loadout.thruster, ship.thrusters, "no-longer-fits")) {
     repaired = setThruster(repaired, loadout.thruster);

@@ -7,6 +7,7 @@ const full = {
   ...empty,
   slots: { con_weapon_01: "weapon_laser" },
   groups: { group_front: { turret: { equipment: "turret_quad", count: 3 } } },
+  engine: "engine_fusial",
   thruster: "thruster_s",
   software: ["software_dock"],
   consumables: { missile_proton: 20 },
@@ -36,6 +37,10 @@ describe("parseLoadout", () => {
     expect(parseLoadout({ ...full, groups: { g: { weapon: { equipment: "t", count: 1 } } } }).ok).toBe(false);
     expect(parseLoadout("nope").ok).toBe(false);
     expect(parseLoadout({ ...empty, gameData: undefined }).ok).toBe(false);
+  });
+
+  test("rejects engines in a Slot Group: the engine is fitted to the whole Ship (#50)", () => {
+    expect(parseLoadout({ ...full, groups: { g: { engine: { equipment: "engine_fusial", count: 2 } } } }).ok).toBe(false);
   });
 
   test("rejects a newer format as made by a newer version of the builder", () => {

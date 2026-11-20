@@ -376,7 +376,7 @@ describe("the configuration screen's rows", () => {
 });
 
 describe("mandatory upgrades", () => {
-  test("lists the engine and mandatory Slots, unfilled engine groups, the thruster and default software", () => {
+  test("lists one engine row for all the Ship's engines, then mandatory Slots, the thruster and default software", () => {
     const data = gameData(
       [
         ship({
@@ -393,9 +393,8 @@ describe("mandatory upgrades", () => {
     );
     const stats = loadoutStats(data, loadout("fx_ship"));
     expect(stats.missing).toEqual([
-      { row: "slot:con_engine_01", label: "Engine con_engine_01" },
+      { row: "engine", label: "Engines" },
       { row: "slot:con_shield_01", label: "Shield con_shield_01" },
-      { row: "group:back:engine", label: "Engines back" },
       { row: "thruster", label: "Thruster" },
       { row: "software:assist", label: "assist" },
     ]);
@@ -403,11 +402,11 @@ describe("mandatory upgrades", () => {
 });
 
 describe("price", () => {
-  test("totals the Ship, fitted Equipment, group counts, consumables and software, as average and min–max", () => {
+  test("totals the Ship, fitted Equipment, group counts, the engine per engine, consumables and software, as average and min–max", () => {
     const at = (average: number) => ({ min: average - 10, average, max: average + 10 });
     const cruiser = ship({
       price: at(1_000_000),
-      slots: [shieldSlot("con_shield_01")],
+      slots: [shieldSlot("con_shield_01"), engineSlot("con_engine_01"), engineSlot("con_engine_02")],
       slotGroups: [shieldGroup("front", 3)],
     });
     const data = gameData(
@@ -415,6 +414,7 @@ describe("price", () => {
       [
         { ...shield("big", 1, 1, 0), price: at(5000) },
         { ...shield("small", 1, 1, 0), price: at(700) },
+        { ...engine("drive", 1, { thrust: 1, acceleration: 1, duration: 1, recharge: 1 }, { thrust: 1, charge: 1, attack: 0 }), price: at(2000) },
         priced("software", "scanner", at(300)),
         priced("countermeasure", "flare", at(20)),
       ],
@@ -424,12 +424,13 @@ describe("price", () => {
       loadout("fx_ship", {
         slots: { con_shield_01: "big" },
         groups: { front: { shield: { equipment: "small", count: 3 } } },
+        engine: "drive",
         software: ["scanner"],
         consumables: { flare: 8 },
       }),
     );
-    // 1,000,000 + 5,000 + 3 × 700 + 300 + 8 × 20; each of the 14 items is ±10.
-    expect(stats.price).toEqual({ min: 1_007_420, average: 1_007_560, max: 1_007_700 });
+    // 1,000,000 + 5,000 + 3 × 700 + 2 × 2,000 + 300 + 8 × 20; each of the 16 items is ±10.
+    expect(stats.price).toEqual({ min: 1_011_400, average: 1_011_560, max: 1_011_720 });
   });
 });
 
@@ -454,10 +455,9 @@ describe("flight", () => {
     ),
     thruster("allround", { strafe: 400, pitch: 160, yaw: 160, roll: 160 }),
   ];
-  const fourEngines = Object.fromEntries([1, 2, 3, 4].map((n) => [`con_engine_0${n}`, "fusial"]));
   const xwingStats = loadoutStats(
     gameData([xwing], xwingEquipment),
-    loadout("fx_ship", { slots: fourEngines, thruster: "allround" }),
+    loadout("fx_ship", { engine: "fusial", thruster: "allround" }),
   );
 
   test("the X-wing's speeds: 330, boost 827, travel 7,145", () => {
@@ -499,7 +499,7 @@ describe("flight", () => {
       [gozanti],
       [engine("gg0", 500, { thrust: 1.7544, acceleration: 1, duration: 10, recharge: 50 }, { thrust: 10, charge: 5, attack: 0 })],
     );
-    const stats = loadoutStats(data, loadout("fx_ship", { groups: { back: { engine: { equipment: "gg0", count: 2 } } } }));
+    const stats = loadoutStats(data, loadout("fx_ship", { engine: "gg0" }));
     expect(row(stats.rows, "ForwardSpeed").shown).toBe(250);
     expect(row(stats.rows, "BoostSpeed")).toMatchObject({ shown: 438 });
     expect(row(stats.rows, "BoostSpeed").value).toBeCloseTo(438.6, 6);
