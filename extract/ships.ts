@@ -151,8 +151,8 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): { shi
 
   const cargo = readCargo(files, macro, where);
   // The builder shows each cargo type's storage row with the total, which is
-  // right only when every storage takes the same types. unconfirmed (#63):
-  // storages of mixed types.
+  // right only when every storage takes the same types. unconfirmed (#71): no
+  // Ship in Game Data has storages of mixed types.
   if (cargo.typeSets.length > 1) {
     warnings.push(
       `${id}: its storages take different cargo types (${cargo.typeSets.join("; ")}), ` +
@@ -264,7 +264,7 @@ function readCargo(
       const connected = files.extractedMacro(name, `${where} macro`)?.element;
       if (attr(connected, "class") !== "storage") continue;
       const cargo = child(child(connected, "properties"), "cargo");
-      // unconfirmed (#63): the sum over several storages. Every reference Ship has one.
+      // unconfirmed (#71): the sum over several storages. No Ship in Game Data has more than one.
       capacity += numberAttr(cargo, "max", `storage macro ${name} <cargo>`) ?? 0;
       const own = list(attr(cargo, "tags")).map((tag) => {
         const type = cargoTypeSchema.safeParse(tag);
@@ -285,7 +285,7 @@ function readCargo(
  * equal once trimmed are one Slot Group, as in game (#52); its id is the
  * trimmed name. A connection name listed more than once in the component
  * counts once, as in game for heraklon_solid's turrets (#68), and each
- * duplicated name is a warning. unconfirmed (#63): the sith_destroyer and
+ * duplicated name is a warning. unconfirmed (#77): the sith_destroyer and
  * sith_freighter engine counts this lowers. Listings of one name with
  * different tags or groups fail, since which one counts would be a guess.
  */

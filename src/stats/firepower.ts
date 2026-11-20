@@ -31,12 +31,12 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
     const burst = (missile.explosionDamage + missile.hullDamage) * missile.barrelAmount * rateOfFire;
     return { rateOfFire, burst, sustained: burst };
   }
-  // With a magazine, the reload between magazines counts. A turret macro's own reload is ignored.
-  // unconfirmed (#63): #12 saw it in the encyclopedia, but no reference Loadout has a magazine.
+  // With a magazine, the reload between magazines counts (#63: the KV22's 1,744).
+  // A turret macro's own reload is ignored.
   const rateOfFire = gun.magazine
     ? gun.magazine.size / (gun.magazine.reloadTime + gun.magazine.size / gun.fireRate)
     : gun.fireRate;
-  // unconfirmed (#63): the bullet's `barrelamount`. Every reference gun has 1.
+  // Each shot fires the bullet's `barrelamount` (#63: the RH3 Quad's 4).
   const burst = shotDamage(gun) * gun.barrelAmount * rateOfFire;
   return { rateOfFire, burst, sustained: burst * heatUptime(gun, rateOfFire) };
 }
@@ -44,7 +44,7 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
 /**
  * A bullet's damage per shot and barrel against hull: `value + noshield + hull`.
  * `hull` confirmed in game by the Mining Beam Turret (#63, #67).
- * unconfirmed (#63): a bullet with both `hull` and `noshield`, such as
+ * unconfirmed (#77): a bullet with both `hull` and `noshield`, such as
  * `turret_l_mando_massdriver`. No reference gun has both.
  */
 export function shotDamage(gun: Gun): number {

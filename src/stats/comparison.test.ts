@@ -131,9 +131,30 @@ test("engines show forward thrust and travel thrust", () => {
   const sprint = engine("sprint", 1500, { thrust: 4, acceleration: 2, duration: 10, recharge: 20 }, { thrust: 10, charge: 5, attack: 0 });
   const comparison = compareEquipment(gameData([ship()], [sprint]), loadout("fx_ship"), sprint, null);
   expect(comparison.figures).toEqual([
-    { label: "Thrust", unit: "N", shown: 1500, difference: 1500, verdict: "better" },
-    { label: "Travel Thrust", unit: "N", shown: 15000, difference: 15000, verdict: "better" },
+    { label: "Thrust", unit: "kN", shown: 1500, difference: 1500, verdict: "better" },
+    { label: "Travel Thrust", unit: "kN", shown: 15000, difference: 15000, verdict: "better" },
   ]);
+});
+
+/**
+ * Max Travel Thrust as the Encyclopedia shows it, in game on X4 8.00 + SWI
+ * 0.9.1 HF (#63). Thrust and travel@thrust are copied from the 091_x4-800
+ * Game Data; the boost inputs don't touch these figures.
+ */
+describe("engines' Travel Thrust matches the Encyclopedia (#63)", () => {
+  const boost = { thrust: 1, acceleration: 1, duration: 1, recharge: 1 };
+  test.each([
+    ["C-ROC Engine", "engine_croc", 800, 20.75, 16600],
+    ["Gozanti Engine", "engine_gozanti_01", 1350, 20.6, 27810],
+    ["Daedal Engine", "engine_mc75", 8000, 76, 608000],
+  ])("%s (%s): Thrust %d kN × travel@thrust %s = Max Travel Thrust %d kN", (_name, id, forward, travel, encyclopedia) => {
+    const item = engine(id, forward, boost, { thrust: travel, charge: 1, attack: 0 });
+    const comparison = compareEquipment(gameData([ship()], [item]), loadout("fx_ship"), item, null);
+    expect(comparison.figures.map((f) => [f.label, f.unit, f.shown])).toEqual([
+      ["Thrust", "kN", forward],
+      ["Travel Thrust", "kN", encyclopedia],
+    ]);
+  });
 });
 
 test("thrusters show their yaw, pitch and roll torque", () => {

@@ -84,8 +84,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   add("ShieldDelay", "Recharge Delay", "s", 2, "combat", mean(shields.map((s) => s.rechargeDelay)));
 
   // Each Slot Group with a shield fitted counts once: the sum of its own
-  // generators. Empty groups are left out of the average (#22).
-  // unconfirmed (#63): #22 saw these rows in game, but no reference Loadout records them.
+  // generators. Empty groups are left out of the average (#22, #63).
   const groupShields = Object.values(loadout.groups ?? {}).flatMap((kinds) => {
     const entry = kinds.shield;
     const item = entry && ofKind(entry.equipment, "shield");
@@ -121,17 +120,16 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   // Avg. Turret Output: every turret's output, Slot Group turrets included,
   // over a flat six directions (#12). Its rate of fire already counts
   // magazine reloads; heat isn't applied, as confirmed in game. L/XL Ships
-  // show it as the game's grouped field, with the same formula.
-  // The grouped row's sum / 6 is confirmed in game: the Heraklon's H1 and H2 (#63, #67).
-  // unconfirmed (#63): the S/M row. No reference Loadout checks it with a turret fitted.
+  // show it as the game's grouped field, with the same formula. Both rows are
+  // confirmed in game: the Corsair's C1 and C2, the Heraklon's H1 and H2 (#63, #67).
   const turrets = fittedGuns.flatMap(({ item, count }) => (item.kind === "turret" ? [output(item).burst * count] : []));
   const turretId = capShip ? "GroupedTurretSustainedDPS" : "TurretSustainedDPS";
   add(turretId, "Avg. Turret Output", "MW", 0, "combat", sum(turrets) / 6);
 
   // The game's storage rows, for the cargo types the Ship takes. Game Data
   // holds the Ship's total capacity; each type's row shows it, which is right
-  // when every storage takes the same types (extraction warns otherwise).
-  // unconfirmed (#63): every row but Container Storage, and storages of mixed types.
+  // when every storage takes the same types, as #63 saw; extraction warns otherwise.
+  // unconfirmed (#71): no Ship in Game Data has storages of mixed types or takes condensate.
   for (const [type, id, label] of STORAGE_ROWS) {
     if (ship.cargoTypes.includes(type)) add(id, label, "m³", 0, "storage", ship.capacities.cargo);
   }
@@ -186,7 +184,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     ["PitchSpeed", "Pitch", "pitch"],
     ["RollSpeed", "Roll", "roll"],
   ] as const) {
-    // unconfirmed (#63): the `rotationspeed@max` cap. No reference Ship has one.
+    // unconfirmed (#71): no Ship in Game Data sets the `rotationspeed@max` cap.
     const speed = Math.min((thrusterItem?.thrust[axis] ?? 0) / drag[axis], maxRotationSpeed ?? Infinity);
     add(id, label, "°/s", 1, "flight", turningInDegrees(speed));
   }
@@ -194,7 +192,8 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   add("CrewCapacity", "Crew", "", 0, "crew", ship.capacities.crew + 1);
   add("UnitCapacity", "Units", "", 0, "crew", ship.capacities.drones);
   // A launcher's own storage adds to the Ship's (#39: the Light Rocket Launcher's 6).
-  // unconfirmed (#63): times the count for a Slot Group launcher.
+  // unconfirmed (#71): times the count for a Slot Group launcher. No launcher with
+  // storage fits a Slot Group in Game Data.
   const launcherStorage = sum(fittedGuns.map(({ item, count }) => item.missileStorage * count));
   add("MissileCapacity", "Missiles", "", 0, "crew", ship.capacities.missiles + launcherStorage);
   add("DeployableCapacity", "Deployables", "", 0, "crew", ship.capacities.deployables);
@@ -218,7 +217,8 @@ function turningInDegrees(degreesPerSecond: number): number {
 
 /**
  * Ship + Equipment (the engine once per engine) + consumables + software, each at its min, average and max.
- * unconfirmed (#63): no reference Loadout records a price.
+ * The game's total is the sum of the same lines (#63). The game's per-item
+ * prices (the station's, not Game Data's) and its crew cost are #70's.
  */
 function price(shipPrice: Price, loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): Price {
   const bought: [string, number][] = [

@@ -80,9 +80,9 @@ function figures(index: GameDataIndex, loadout: Loadout, item: Equipment): RawFi
       ];
     case "engine":
       return [
-        { label: "Thrust", unit: "N", decimals: 0, value: item.thrust.forward },
-        // unconfirmed (#63): no in-game screen has been checked for this figure.
-        { label: "Travel Thrust", unit: "N", decimals: 0, value: item.thrust.forward * item.travel.thrust },
+        // In kN, as the Encyclopedia shows them; Travel Thrust is its Max Travel Thrust (#63).
+        { label: "Thrust", unit: "kN", decimals: 0, value: item.thrust.forward },
+        { label: "Travel Thrust", unit: "kN", decimals: 0, value: item.thrust.forward * item.travel.thrust },
       ];
     case "thruster":
       return [
