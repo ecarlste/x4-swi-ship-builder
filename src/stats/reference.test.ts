@@ -13,8 +13,22 @@
  */
 import { describe, expect, test } from "vitest";
 import { loadoutStats, type LoadoutStats } from "./stats.ts";
-import { engine, engineSlot, gameData, gun, launcher, loadout, missile, shield, ship, thruster, weaponSlot } from "./testing/fixtures.ts";
-import type { Equipment, Ship } from "../gameData.ts";
+import {
+  engine,
+  engineSlot,
+  gameData,
+  gun,
+  launcher,
+  loadout,
+  missile,
+  priced,
+  shield,
+  ship,
+  thruster,
+  turretSlot,
+  weaponSlot,
+} from "./testing/fixtures.ts";
+import type { Equipment, Ship, Slot } from "../gameData.ts";
 
 /** The shown value of each named row. */
 function shown(stats: LoadoutStats, ids: string[]): Record<string, number> {
@@ -93,18 +107,51 @@ const gozanti = ship({
 
 const mWeaponSlot = (id: string) => ({ ...weaponSlot(id), size: "m" as const });
 
-// Only the two weapon Slots #63 fitted.
-const gozantiMiner = ship({ id: "gozanti_civ_miner", size: "m", slots: [mWeaponSlot("con_weapon_01"), mWeaponSlot("con_weapon_02")] });
+const mSlot = (kind: "engine" | "shield", id: string): Slot => ({ id, kind, size: "m", mandatory: false, fitList: "fl_any" });
+const sTurretSlot = (id: string) => ({ ...turretSlot(id), size: "s" as const });
 
-/** A Slot Group with `count` turrets. */
-const turretGroup = (id: string, count: number) => ({ id, kinds: { turret: { count, fitList: "fl_any" } } });
+const gozantiMiner = ship({
+  id: "gozanti_civ_miner",
+  size: "m",
+  cargoTypes: ["solid"],
+  slots: [
+    mSlot("engine", "con_engine_01"),
+    mSlot("engine", "con_engine_02"),
+    ...Array.from({ length: 6 }, (_, i) => mSlot("shield", `con_shield_0${i + 1}`)),
+    sTurretSlot("con_turret_01"),
+    sTurretSlot("con_turret_02"),
+    mWeaponSlot("con_weapon_01"),
+    mWeaponSlot("con_weapon_02"),
+  ],
+  capacities: { missiles: 0, drones: 0, deployables: 15, countermeasures: 16, crew: 17, cargo: 14000 },
+});
 
-// The Heraklon Ore Miner's turret Slot Groups, counted once per connection (#68). Its shield
-// and engine kinds are left out: the turret row doesn't depend on them.
+/** A Slot Group kind with `count` Slots. */
+const kind = (count: number) => ({ count, fitList: "fl_any" });
+
+// The Heraklon Ore Miner's Slot Groups, counted once per connection (#68).
 const heraklon = ship({
   id: "heraklon_solid",
   size: "l",
-  slotGroups: [turretGroup("left-pd", 8), turretGroup("right-pd", 8), turretGroup("left-mine", 4), turretGroup("right-mine", 4)],
+  cargoTypes: ["solid"],
+  slots: [{ id: "con_shieldgen_l_1", kind: "shield", size: "l", mandatory: false, fitList: "fl_any" }],
+  slotGroups: [
+    { id: "group_engine", kinds: { shield: kind(1), engine: kind(8) } },
+    { id: "left-mine", kinds: { turret: kind(4), shield: kind(1) } },
+    { id: "left-pd", kinds: { turret: kind(8), shield: kind(2) } },
+    { id: "missile", kinds: { turret: kind(1) } },
+    { id: "right-mine", kinds: { turret: kind(4), shield: kind(1) } },
+    { id: "right-pd", kinds: { turret: kind(8), shield: kind(2) } },
+  ],
+  stats: {
+    hull: 315000,
+    mass: 320,
+    radarRange: 40000,
+    drag: { forward: 450.7, reverse: 1800, horizontal: 112, vertical: 112, pitch: 240, yaw: 240, roll: 240 },
+    accFactors: { forward: 1, reverse: 1, horizontal: 1, vertical: 1 },
+    maxRotationSpeed: null,
+  },
+  capacities: { missiles: 60, drones: 23, deployables: 40, countermeasures: 25, crew: 47, cargo: 47000 },
 });
 
 const cruiser546 = ship({
@@ -189,6 +236,39 @@ const providence = ship({
   },
 });
 
+// Guns and turrets of #63's Loadouts. Recoloured variants (orange, red, green, `_02`) share their inputs.
+const ag2g = {
+  damage: { value: 102, noShield: 34, hull: 0 },
+  fireRate: 5,
+  barrelAmount: 2,
+  magazine: { size: 20, reloadTime: 3 },
+};
+const dualLaser = {
+  damage: { value: 255, noShield: 189, hull: 0 },
+  fireRate: 2,
+  barrelAmount: 2,
+  magazine: { size: 2, reloadTime: 3 },
+};
+const quadLaser = { damage: { value: 94, noShield: 80, hull: 0 }, fireRate: 0.7, barrelAmount: 4 };
+
+/** The Gozanti C-ROC Corsair's guns and turrets. */
+const corsairGuns: Equipment[] = [
+  gun("weapon", "weapon_kv22_m_laser", {
+    damage: { value: 1428, noShield: 462, hull: 0 },
+    fireRate: 1.2,
+    magazine: { size: 2, reloadTime: 0.5 },
+    heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
+  }),
+  gun("turret", "turret_m_ag2g", ag2g),
+  gun("turret", "turret_m_duallaser_orange", dualLaser),
+  gun("turret", "turret_m_llaser_red", {
+    damage: { value: 255, noShield: 126, hull: 0 },
+    fireRate: 3,
+    magazine: { size: 3, reloadTime: 2 },
+  }),
+  gun("turret", "turret_m_quadlaser_orange", quadLaser),
+];
+
 const equipment: Equipment[] = [
   // Engines: id, forward thrust, boost, travel.
   engine("engine_tie", 400, { thrust: 2.2, acceleration: 1.25, duration: 12, recharge: 80 }, { thrust: 8, charge: 1, attack: 10 }),
@@ -220,12 +300,7 @@ const equipment: Equipment[] = [
   // The Seismic Mining Drill's bullet has <reload time="4"/> and no reload@rate: extraction gives 1 shot a second (#66).
   gun("weapon", "weapon_mining_drill", { damage: { value: 6, noShield: 0, hull: 0 }, fireRate: 1 }),
   // The RH2 Dual Laser Cannon Turret G and the Mining Beam Turret, as in 091_x4-800.
-  gun("turret", "turret_m_duallaser_green", {
-    damage: { value: 255, noShield: 189, hull: 0 },
-    fireRate: 2,
-    barrelAmount: 2,
-    magazine: { size: 2, reloadTime: 3 },
-  }),
+  gun("turret", "turret_m_duallaser_green_02", dualLaser),
   // The Mining Beam Turret's bullet: <damage value="2" hull="1"/>, no reload@rate (#66).
   gun("turret", "turret_m_sw_mining_02", { damage: { value: 2, noShield: 0, hull: 1 }, fireRate: 1 }),
   // The Light Rocket Launcher has <storage capacity="6"/>; the Heavy Proton Torpedo Launcher has none.
@@ -233,6 +308,11 @@ const equipment: Equipment[] = [
   missile("missile_rocket_light", 1500, 1000, 2, 3),
   launcher("turret", "turret_m_torptube", "fl_torpedoes"),
   missile("missile_proton_heavy", 24000, 24000, 23),
+  // H1's shields and engines.
+  shield("shield_m_novaldexga21_02", 29328, 108, 0),
+  shield("shield_m_cec500x_02", 41897, 78, 0),
+  shield("shield_ll_dz9", 355777, 330, 0),
+  engine("engine_mc75", 8000, { thrust: 2, acceleration: 1.5, duration: 100, recharge: 92 }, { thrust: 76, charge: 20, attack: 0 }),
 ];
 
 const data = gameData([tieFighter, n1, n1Modified, gozanti, gozantiMiner, heraklon, cruiser546, settie, venator, aa9, providence], equipment, [
@@ -484,30 +564,7 @@ describe("launchers, with the missile the game showed loaded (#63, #65)", () => 
     missile("missile_ion_medium", 3000, 0, 18),
     missile("missile_proton_light", 7000, 7000, 10),
     missile("missile_proton_medium", 12500, 12500, 18),
-    // The Corsair's guns and turrets.
-    gun("weapon", "weapon_kv22_m_laser", {
-      damage: { value: 1428, noShield: 462, hull: 0 },
-      fireRate: 1.2,
-      magazine: { size: 2, reloadTime: 0.5 },
-      heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
-    }),
-    gun("turret", "turret_m_ag2g", {
-      damage: { value: 102, noShield: 34, hull: 0 },
-      fireRate: 5,
-      barrelAmount: 2,
-      magazine: { size: 20, reloadTime: 3 },
-    }),
-    gun("turret", "turret_m_duallaser_orange", {
-      damage: { value: 255, noShield: 189, hull: 0 },
-      fireRate: 2,
-      barrelAmount: 2,
-      magazine: { size: 2, reloadTime: 3 },
-    }),
-    gun("turret", "turret_m_llaser_red", {
-      damage: { value: 255, noShield: 126, hull: 0 },
-      fireRate: 3,
-      magazine: { size: 3, reloadTime: 2 },
-    }),
+    ...corsairGuns,
   ];
   const launcherData = gameData([corsair, xwing, awing, vulture, ywing, heraklon], launchers, [
     { id: "fl_krupx_medium", equipment: ["missile_ion_medium", "missile_proton_medium"] },
@@ -584,15 +641,33 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
     expectScreen(stats, { BurstDPS: 12, SustainedDPS: 12 });
   });
 
-  // H1's turrets: 8 RH2 G in left-pd and 3 in right-pd showed 814 (11 × 444 / 6).
+  // H1: shields in three Slot Groups, and 8 RH2 G in left-pd and 3 in right-pd: 814 (11 × 444 / 6).
   const h1Groups = {
-    "left-pd": { turret: { equipment: "turret_m_duallaser_green", count: 8 } },
-    "right-pd": { turret: { equipment: "turret_m_duallaser_green", count: 3 } },
+    "left-pd": {
+      shield: { equipment: "shield_m_novaldexga21_02", count: 2 },
+      turret: { equipment: "turret_m_duallaser_green_02", count: 8 },
+    },
+    "right-pd": {
+      shield: { equipment: "shield_m_cec500x_02", count: 1 },
+      turret: { equipment: "turret_m_duallaser_green_02", count: 3 },
+    },
+    group_engine: { shield: { equipment: "shield_ll_dz9", count: 1 } },
   };
 
-  test("H1. Heraklon Ore Miner, 11× RH2 Dual G in Slot Groups: Avg. Turret Output 814", () => {
-    const stats = loadoutStats(data, loadout("heraklon_solid", { groups: h1Groups }));
-    expectScreen(stats, { GroupedTurretSustainedDPS: 814 });
+  test("H1. Heraklon Ore Miner, group shields, 11× RH2 Dual G in Slot Groups, 8× Daedal Engine", () => {
+    const stats = loadoutStats(data, loadout("heraklon_solid", { engine: "engine_mc75", groups: h1Groups }));
+    expectScreen(stats, {
+      GroupedShieldValue: 152110,
+      GroupedShieldRate: 208,
+      GroupedShieldDelay: 0,
+      GroupedTurretSustainedDPS: 814,
+      SolidCapacity: 47000,
+      MissileCapacity: 60,
+      UnitCapacity: 23,
+      ForwardSpeed: 142,
+      BoostSpeed: 284,
+      TravelSpeed: 10792,
+    });
   });
 
   test("H2. H1 + 8× Mining Beam Turret (damage value 2, hull 1): Avg. Turret Output 818, so damage@hull counts", () => {
@@ -607,5 +682,124 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
       }),
     );
     expectScreen(stats, { GroupedTurretSustainedDPS: 818 });
+  });
+
+  /**
+   * The Gozanti C-ROC Corsair. Its other Equipment in game (6× M Kuat RC,
+   * 2× GNK-series droid, M Combat Thrusters Mk3, extra software, 16 flares)
+   * doesn't touch the rows asserted, so the Loadouts leave it out.
+   */
+  const corsair = ship({
+    id: "gozanti_croc_raider",
+    size: "m",
+    cargoTypes: ["container", "liquid", "solid"],
+    slots: [
+      mWeaponSlot("con_weapon_01"),
+      mWeaponSlot("con_weapon_02"),
+      ...["con_turret_01", "con_turret_02", "con_m_turret_3", "con_m_turret_4"].map(sTurretSlot),
+    ],
+    capacities: { missiles: 30, drones: 0, deployables: 15, countermeasures: 16, crew: 30, cargo: 10000 },
+  });
+
+  const corsairData = gameData([corsair], corsairGuns);
+
+  test("C1. Corsair, 2× KV22 + RH3 Quad O in con_turret_02: 3,489 / 3,128, Avg. Turret Output 81, storage 10,000", () => {
+    const stats = loadoutStats(
+      corsairData,
+      loadout("gozanti_croc_raider", {
+        slots: {
+          con_weapon_01: "weapon_kv22_m_laser",
+          con_weapon_02: "weapon_kv22_m_laser",
+          con_turret_02: "turret_m_quadlaser_orange",
+        },
+      }),
+    );
+    expectScreen(stats, {
+      BurstDPS: 3489,
+      SustainedDPS: 3128,
+      TurretSustainedDPS: 81,
+      ContainerCapacity: 10000,
+      SolidCapacity: 10000,
+      LiquidCapacity: 10000,
+      MissileCapacity: 30,
+    });
+  });
+
+  test("C2. Corsair, AG-2G R + OPD Dual O + 2× SL-1 R: Avg. Turret Output 330", () => {
+    const stats = loadoutStats(
+      corsairData,
+      loadout("gozanti_croc_raider", {
+        slots: {
+          con_turret_01: "turret_m_ag2g",
+          con_turret_02: "turret_m_duallaser_orange",
+          con_m_turret_3: "turret_m_llaser_red",
+          con_m_turret_4: "turret_m_llaser_red",
+        },
+      }),
+    );
+    expectScreen(stats, { TurretSustainedDPS: 330, MissileCapacity: 30 });
+  });
+
+  test("C5. Corsair, 1× KV22: 1,744 / 1,564", () => {
+    const stats = loadoutStats(corsairData, loadout("gozanti_croc_raider", { slots: { con_weapon_01: "weapon_kv22_m_laser" } }));
+    expectScreen(stats, { BurstDPS: 1744, SustainedDPS: 1564 });
+  });
+
+  test("G1. Gozanti-class Miner: Solid Storage 14,000", () => {
+    expectScreen(loadoutStats(data, loadout("gozanti_civ_miner")), { SolidCapacity: 14000 });
+  });
+
+  /**
+   * The game's total is the sum of its lines, each engine, consumable and
+   * piece of software charged separately. Its per-item prices are the
+   * station's, not Game Data's, so each ware here is priced at what the game
+   * charged and the test checks the sum, not the prices. The game's own
+   * total, 2,119,752, adds 89,984 of crew (#70) and 2 credits of rounding.
+   */
+  test("Gozanti-class Miner, at the prices the game charged: average Price 2,029,766", () => {
+    const flat = (average: number) => ({ min: average, average, max: average });
+    const charged = <T extends Ship | Equipment>(item: T, average: number): T => ({ ...item, price: flat(average) });
+    const software = (id: string, average: number) => priced("software", id, flat(average));
+    const listed = (id: string) => equipment.find((e) => e.id === id)!;
+    const shopData = gameData(
+      [charged(gozantiMiner, 725958)],
+      [
+        charged(listed("engine_gozanti_01"), 117218),
+        charged(listed("thruster_gen_m_combat_01_mk3"), 380813),
+        charged(shield("shield_m_cec500x_01", 41897, 78, 0), 68941),
+        charged(listed("weapon_mining_drill"), 5055),
+        charged(gun("turret", "turret_m_quadlaser_red", quadLaser), 37102),
+        charged(gun("turret", "turret_m_ag2g_green", ag2g), 42348),
+        software("software_dockmk2", 29491),
+        software("software_flightassistmk1", 8190),
+        software("software_scannerlongrangemk2", 58546),
+        software("software_scannerobjectmk2", 36733),
+        software("software_targetmk1", 7372),
+        software("software_trademk1", 10125),
+        priced("countermeasure", "countermeasure_flares_01", flat(2181)),
+      ],
+    );
+    const stats = loadoutStats(
+      shopData,
+      loadout("gozanti_civ_miner", {
+        engine: "engine_gozanti_01",
+        thruster: "thruster_gen_m_combat_01_mk3",
+        slots: {
+          ...slots("shield", Array(6).fill("shield_m_cec500x_01")),
+          ...slots("weapon", ["weapon_mining_drill", "weapon_mining_drill"]),
+          ...slots("turret", ["turret_m_quadlaser_red", "turret_m_ag2g_green"]),
+        },
+        software: [
+          "software_dockmk2",
+          "software_flightassistmk1",
+          "software_scannerlongrangemk2",
+          "software_scannerobjectmk2",
+          "software_targetmk1",
+          "software_trademk1",
+        ],
+        consumables: { countermeasure_flares_01: 16 },
+      }),
+    );
+    expect(stats.price.average).toBe(2029766);
   });
 });

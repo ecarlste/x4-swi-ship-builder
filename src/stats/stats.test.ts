@@ -219,26 +219,26 @@ describe("firepower", () => {
     expect(row(stats.rows, "TurretSustainedDPS").shown).toBe(148);
   });
 
-  // Class 546 Cruiser (#12): 18× RH3, 10× D6 and 2× XX-18, in turret Slots and Slot Groups.
-  // #12 records only each type's total (8,769.6 / 11,652 / 3,605.7), so these
-  // inputs are made up to give the same per-turret output through magazines: unconfirmed (#63).
+  // Class 546 Cruiser (#12): 18× RH3, 10× D6 and 2× XX-18, in turret Slots and
+  // Slot Groups; #12 records each type's total (8,769.6 / 11,652 / 3,605.7).
+  // Inputs copied from the 091_x4-800 Game Data.
   test("L Ships count Slot Group turrets too, as the grouped row (546 Cruiser: 4,004)", () => {
     const rh3 = gun("turret", "rh3", {
-      damage: { value: 174, noShield: 0, hull: 0 },
-      barrelAmount: 2,
-      fireRate: 3.5,
-      magazine: { size: 7, reloadTime: 3 },
-    }); // 348 × 1.4 = 487.2
+      damage: { value: 94, noShield: 80, hull: 0 },
+      barrelAmount: 4,
+      fireRate: 0.7,
+    }); // 696 × 0.7 = 487.2
     const d6 = gun("turret", "d6", {
-      damage: { value: 600, noShield: 371, hull: 0 },
-      fireRate: 3,
-      magazine: { size: 6, reloadTime: 3 },
-    }); // 971 × 1.2 = 1,165.2
+      damage: { value: 3324, noShield: 560, hull: 0 },
+      barrelAmount: 2,
+      fireRate: 0.3,
+      magazine: { size: 3, reloadTime: 10 },
+    }); // 7,768 × 3 / 20 = 1,165.2
     const xx18 = gun("turret", "xx18", {
-      damage: { value: 800, noShield: 401.9, hull: 0 },
-      fireRate: 3,
-      magazine: { size: 3, reloadTime: 1 },
-    }); // 1,201.9 × 1.5 = 1,802.85
+      damage: { value: 9032, noShield: 1785, hull: 0 },
+      fireRate: 1,
+      magazine: { size: 2, reloadTime: 10 },
+    }); // 10,817 × 2 / 12 = 1,802.83
     const cruiser = ship({
       size: "l",
       slots: [turretSlot("con_turret_01"), turretSlot("con_turret_02")],

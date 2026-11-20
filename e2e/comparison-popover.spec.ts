@@ -71,8 +71,8 @@ test("the Engines row compares one engine, though it fits all of the Ship's engi
   await openShip(page, "L", "Ironback Hauler");
   const popover = await hover(page, /^Engines/, "Haul Engine L");
 
-  await expect(figure(popover, "Thrust").getByRole("cell")).toHaveText(["30,000 N", "+30,000"]);
-  await expect(figure(popover, "Travel Thrust").getByRole("cell")).toHaveText(["240,000 N", "+240,000"]);
+  await expect(figure(popover, "Thrust").getByRole("cell")).toHaveText(["30,000 kN", "+30,000"]);
+  await expect(figure(popover, "Travel Thrust").getByRole("cell")).toHaveText(["240,000 kN", "+240,000"]);
   await expect(figure(popover, "Price").getByRole("cell")).toHaveText(["220,000 Cr", "+220,000"]);
 });
 
