@@ -161,6 +161,36 @@ test("a freshly picked Ship has no snapshot and shows no changes", async ({ page
   await expect(statCells(page, "Hull (MJ)")).toHaveCount(1);
 });
 
+/** A Share Link fragment carrying this value, built in the page the way the app builds one. */
+async function fragmentFor(page: Page, value: unknown) {
+  return page.evaluate(async (json) => {
+    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    const base64url = btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+    return `#l=${base64url}`;
+  }, JSON.stringify(value));
+}
+
+test("a Loadout opened from a Share Link is the snapshot changes are measured from", async ({ page }) => {
+  const fragment = await fragmentFor(page, {
+    format: 1,
+    gameData: { swi: "999", x4: "9.99" },
+    ship: "fx_courier",
+    slots: { con_shield_01: "fx_shield_s" },
+    name: "Shared Courier",
+  });
+  await page.goto(`/${fragment}`);
+  await expect(row(page, /con_shield_01/).getByRole("combobox")).toHaveText(/Bubble Shield S/);
+  await expect(changedMarks(page)).toHaveCount(0);
+
+  await fit(page, /con_shield_01/, "— empty —");
+  await expect(row(page, /con_shield_01/)).toContainText("was: Bubble Shield S");
+  await expect(statCells(page, "Shield (MJ)")).toHaveText(["0", "−1,000"]);
+
+  await fit(page, /con_shield_01/, "Bubble Shield S");
+  await expect(changedMarks(page)).toHaveCount(0);
+});
+
 test("a Slot Group row shows what it held, with its count", async ({ page }) => {
   await openShip(page, "L", "Ironback Hauler");
   await fit(page, /Shields group_front/, "Bubble Shield M");
