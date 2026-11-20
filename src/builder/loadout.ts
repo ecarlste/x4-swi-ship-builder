@@ -54,6 +54,12 @@ export function setConsumable(loadout: Loadout, equipment: string, count: number
 /** One of the Crew's two counts. */
 export type CrewRole = keyof NonNullable<Loadout["crew"]>;
 
+/** The Crew's roles, in the order they're shown and cut, with their names. */
+export const CREW_ROLES: [CrewRole, string][] = [
+  ["service", "Service crew"],
+  ["marines", "Marines"],
+];
+
 /**
  * Sets one Crew count; 0 removes it, and with both at 0 the Loadout has no
  * Crew (ADR 0004). It doesn't check the Ship's crew capacity: the UI offers

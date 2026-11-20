@@ -291,6 +291,43 @@ describe("resolveLoadout: consumables", () => {
   });
 });
 
+describe("resolveLoadout: Crew", () => {
+  test("Crew within the Ship's crew capacity is untouched", () => {
+    const crewed = loadout({ ship: "fx_hauler", crew: { service: 12, marines: 8 } });
+    const { loadout: repaired, changes } = resolved(crewed);
+    expect(repaired).toEqual(crewed);
+    expect(changes).toEqual([]);
+  });
+
+  test("over capacity, service crew is cut first so the marines are kept", () => {
+    // The Ironback Hauler holds 20.
+    const { loadout: repaired, changes } = resolved(loadout({ ship: "fx_hauler", crew: { service: 15, marines: 10 } }));
+    expect(repaired.crew).toEqual({ service: 10, marines: 10 });
+    expect(changes).toEqual([
+      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Service crew", from: 15, to: 10 },
+    ]);
+  });
+
+  test("when cutting all the service crew isn't enough, the marines are cut too", () => {
+    // The Swiftwing Courier holds 1.
+    const { loadout: repaired, changes } = resolved(loadout({ crew: { service: 2, marines: 3 } }));
+    expect(repaired.crew).toEqual({ marines: 1 });
+    expect(changes).toEqual([
+      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Service crew", from: 2, to: 0 },
+      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Marines", from: 3, to: 1 },
+    ]);
+  });
+
+  test("a Ship with no crew capacity loses all its Crew, each role cut to 0", () => {
+    const { loadout: repaired, changes } = resolved(loadout({ ship: "fx_needle", crew: { service: 1, marines: 2 } }));
+    expect(repaired).not.toHaveProperty("crew");
+    expect(changes).toEqual([
+      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Service crew", from: 1, to: 0 },
+      { type: "clamped", place: { kind: "crew" }, equipment: "crew", name: "Marines", from: 2, to: 0 },
+    ]);
+  });
+});
+
 describe("describeChange", () => {
   test("names the Equipment, where it was and what happened to it", () => {
     const { changes } = resolved(
@@ -306,6 +343,14 @@ describe("describeChange", () => {
       "Flak Turret in group_front turrets: count cut from 6 to 4",
       "fx_gone in group_back shields: dropped, the Ship no longer has this Slot Group",
       "Nimble Thruster S as thruster: dropped, it no longer fits",
+    ]);
+  });
+
+  test("names the Crew role and how far it was cut", () => {
+    const { changes } = resolved(loadout({ crew: { service: 2, marines: 4 } }));
+    expect(changes.map(describeChange)).toEqual([
+      "Service crew in crew: count cut from 2 to 0",
+      "Marines in crew: count cut from 4 to 1",
     ]);
   });
 });
