@@ -1,5 +1,5 @@
 import { execFileSync, type ExecFileSyncOptions } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -34,4 +34,14 @@ export function run(command: string, args: string[], options: ExecFileSyncOption
 export function tempDir(): { dir: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), "x4-swi-scripts-"));
   return { dir, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+}
+
+/**
+ * Installs the tracked hooks in a throwaway repo, as `npm ci` does here: the
+ * `.githooks/` folder, the script the commit-msg hook runs, and core.hooksPath.
+ */
+export function installHooks(repo: string): void {
+  cpSync(join(repoRoot, ".githooks"), join(repo, ".githooks"), { recursive: true });
+  cpSync(join(repoRoot, "scripts/aiAttribution.ts"), join(repo, "scripts/aiAttribution.ts"));
+  run("git", ["config", "core.hooksPath", ".githooks"], { cwd: repo });
 }

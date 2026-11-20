@@ -25,6 +25,7 @@ If the main checkout has no extraction, the worktree has no snapshot: the Game D
 
 - **Don't work in the main checkout.** If a session starts there on a ticket, make the worktree and continue in it.
 - **No commits on `main`.** The tracked `.githooks/pre-commit` refuses them; `npm ci` wires it up through the `prepare` script (`core.hooksPath`), and it covers every worktree. For a deliberate commit on `main`, run it with `ALLOW_MAIN_COMMIT=1`.
+- **No AI attribution.** `.claude/settings.json` turns off Claude's commit and PR attribution, the `commit-msg` hook strips AI `Co-authored-by` trailers, and the `attribution` CI job (`.github/workflows/attribution.yml`, which re-runs when the PR description is edited) fails a PR whose commits or description still credit an AI tool. The pattern is in `scripts/aiAttribution.ts`.
 - **Clean up** a merged ticket's worktree with `git worktree remove ../x4-swi-ship-builder-<issue>`.
 
 Worktrees Claude Code makes itself (Agent isolation, under `.claude/worktrees/`, which is gitignored) aren't prepared by this script.
