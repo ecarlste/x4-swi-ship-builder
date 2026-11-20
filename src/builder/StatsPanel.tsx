@@ -25,6 +25,8 @@ const SUB_ROWS = new Set([
 /** The game's mouse-over texts. */
 const TOOLTIPS: Record<string, string> = {
   GroupedShieldValue: "The average shield of the engine and turret groups.",
+  TurretSustainedDPS: "all turrets' damage averaged over six directions",
+  GroupedTurretSustainedDPS: "all turrets' damage averaged over six directions",
 };
 
 /**
