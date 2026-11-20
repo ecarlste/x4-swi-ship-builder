@@ -491,8 +491,12 @@ describe("price", () => {
     expect(stats.price).toEqual({ min: 1_011_400, average: 1_011_560, max: 1_011_720 });
   });
 
+  /** A Ship with room for 10 Crew. */
+  const crewed = (overrides: Parameters<typeof ship>[0] = {}) =>
+    ship({ ...overrides, capacities: { ...ship().capacities, crew: 10 } });
+
   test("adds each member of the Crew at the crew price's min, average and max (ADR 0004)", () => {
-    const freighter = ship({ price: { min: 90_000, average: 100_000, max: 110_000 }, capacities: { ...ship().capacities, crew: 10 } });
+    const freighter = crewed({ price: { min: 90_000, average: 100_000, max: 110_000 } });
     const data = gameData([freighter]);
     // The fixture's crew price is 5,000 / 7,500 / 10,000; 4 + 2 Crew.
     const stats = loadoutStats(data, loadout("fx_ship", { crew: { service: 4, marines: 2 } }));
@@ -500,12 +504,12 @@ describe("price", () => {
   });
 
   test("leaves the Captain out: a Loadout without Crew is the Ship alone", () => {
-    const freighter = ship({ price: { min: 90_000, average: 100_000, max: 110_000 }, capacities: { ...ship().capacities, crew: 10 } });
+    const freighter = crewed({ price: { min: 90_000, average: 100_000, max: 110_000 } });
     expect(loadoutStats(gameData([freighter]), loadout("fx_ship")).price).toEqual({ min: 90_000, average: 100_000, max: 110_000 });
   });
 
   test("two fits that differ only in Crew differ in Price by the Crew alone, and in no other stat", () => {
-    const freighter = ship({ capacities: { ...ship().capacities, crew: 10 } });
+    const freighter = crewed();
     const data = gameData([freighter], [priced("software", "scanner", { min: 250, average: 300, max: 350 })]);
     const without = loadoutStats(data, loadout("fx_ship", { software: ["scanner"] }));
     const withMarines = loadoutStats(data, loadout("fx_ship", { software: ["scanner"], crew: { marines: 3 } }));

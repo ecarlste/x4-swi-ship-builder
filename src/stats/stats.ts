@@ -195,7 +195,11 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   return {
     rows,
-    price: price(ship.price, gameData.crewPrice, loadout, engineCount, index),
+    price: totalPrice([
+      [ship.price, 1],
+      ...equipmentBought(loadout, engineCount, index),
+      [gameData.crewPrice, crewCount(loadout)],
+    ]),
     missing: missingMandatory(gameData, ship, loadout),
   };
 }
@@ -212,17 +216,25 @@ function turningInDegrees(degreesPerSecond: number): number {
 /**
  * Ship + Equipment (the engine once per engine) + consumables + software + Crew, each at its min, average and max.
  * The game's total is the sum of the same lines, confirmed in game by the #63 reference row.
- * Each member of the Crew is bought as the `crew` ware; the Captain is free (ADR 0004).
+ * Each member of the Crew is bought at the crew price; the Captain is free (ADR 0004).
  * Differs from the game on purpose (ADR 0003): each line is at Game Data's average with
  * min–max as the range, not the station's price.
  */
-function price(
-  shipPrice: Price,
-  crewPrice: Price,
-  loadout: Loadout,
-  engineCount: number,
-  { equipment }: GameDataIndex,
-): Price {
+function totalPrice(lines: [Price, number][]): Price {
+  return lines.reduce(addTimes, { min: 0, average: 0, max: 0 });
+}
+
+/** A running total plus a price bought `count` times. */
+function addTimes(total: Price, [price, count]: [Price, number]): Price {
+  return {
+    min: total.min + price.min * count,
+    average: total.average + price.average * count,
+    max: total.max + price.max * count,
+  };
+}
+
+/** The Loadout's Equipment as price lines, the engine once per engine; Equipment not in Game Data costs nothing. */
+function equipmentBought(loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): [Price, number][] {
   const bought: [string, number][] = [
     ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
     ...Object.values(loadout.groups ?? {}).flatMap((kinds) =>
@@ -233,17 +245,8 @@ function price(
     ...(loadout.software ?? []).map((id): [string, number] => [id, 1]),
     ...Object.entries(loadout.consumables ?? {}),
   ];
-  const total = { ...shipPrice };
-  for (const [id, count] of bought) {
+  return bought.flatMap(([id, count]): [Price, number][] => {
     const item = equipment.get(id);
-    if (!item) continue;
-    total.min += item.price.min * count;
-    total.average += item.price.average * count;
-    total.max += item.price.max * count;
-  }
-  const crew = crewCount(loadout);
-  total.min += crewPrice.min * crew;
-  total.average += crewPrice.average * crew;
-  total.max += crewPrice.max * crew;
-  return total;
+    return item ? [[item.price, count]] : [];
+  });
 }
