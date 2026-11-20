@@ -1,30 +1,12 @@
 /**
- * The Loadout being built, in the sparse shape the Loadout codec will
- * serialize (spec #25, decided in #9): keyed by game ids, with empty entries
+ * Edits to the Loadout being built, in the sparse shape the Loadout codec
+ * serializes (spec #25, decided in #9): keyed by game ids, with empty entries
  * left out, so an Empty Loadout is `{ format, gameData, ship }`.
  */
 import type { Equipment, GameData, Ship } from "../gameData.ts";
+import { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
 
-export const LOADOUT_FORMAT = 1;
-
-export type SlotGroupKind = "turret" | "shield" | "engine";
-
-export interface Loadout {
-  format: typeof LOADOUT_FORMAT;
-  gameData: { swi: string; x4: string };
-  /** The Ship's ware id. */
-  ship: string;
-  /** Connection name → Equipment ware id. */
-  slots?: Record<string, string>;
-  /** Group name → kind → the Equipment fitted and how many of the group's Slots it fills. */
-  groups?: Record<string, Partial<Record<SlotGroupKind, { equipment: string; count: number }>>>;
-  /** The thruster's ware id. */
-  thruster?: string;
-  /** Software ware ids. */
-  software?: string[];
-  /** Consumable ware id → count. */
-  consumables?: Record<string, number>;
-}
+export { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
 
 /** A freshly picked Ship, with nothing fitted. */
 export function emptyLoadout(gameData: GameData, ship: Ship): Loadout {
