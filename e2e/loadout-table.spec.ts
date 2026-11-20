@@ -266,6 +266,8 @@ test("service crew and marines share the Ship's crew capacity, and Price adds ea
   await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*0 \/ 20$/);
   await expect(countOf(page, "Service crew")).toHaveValue("0");
   await expect(countOf(page, "Marines")).toHaveValue("0");
+  // The header carries the shared capacity; a count beside it would read as that much more free.
+  await expect(rowOf(page, "Service crew").getByRole("cell").nth(1)).not.toContainText("/");
   await expect(loadoutTable(page)).not.toContainText(/captain/i);
   await expect(price).toContainText("2,500,000 Cr");
 

@@ -205,6 +205,7 @@ export function LoadoutTable({
                     label={`${label} count`}
                     value={count}
                     max={part.count}
+                    limit={part.count}
                     disabled={!fitted}
                     onChange={(n) => fitted && change(setGroup(loadout, group.id, kind, { equipment: fitted.id, count: n }))}
                   />
@@ -343,8 +344,7 @@ function CrewSection({
               <CountInput
                 label={`${label} count`}
                 value={count}
-                max={capacity}
-                // Service crew and marines share the Ship's crew capacity.
+                // Service crew and marines share the Ship's crew capacity, which the header shows.
                 limit={capacity - (used - count)}
                 onChange={(n) => onChange(setCrew(loadout, role, n))}
               />
@@ -360,21 +360,21 @@ function CrewSection({
 }
 
 /**
- * A count shown as "count / max". Typed values are clamped to 0..limit, where
- * limit defaults to max (it is lower when other items share the capacity).
+ * A count, shown as "count / max" when given a max. Typed values are clamped
+ * to 0..limit; limit is lower than max when other items share the capacity.
  */
 function CountInput({
   label,
   value,
   max,
-  limit = max,
+  limit,
   disabled,
   onChange,
 }: {
   label: string;
   value: number;
-  max: number;
-  limit?: number;
+  max?: number;
+  limit: number;
   disabled?: boolean;
   onChange: (count: number) => void;
 }) {
@@ -392,8 +392,8 @@ function CountInput({
           const n = Math.floor(Number(e.target.value));
           onChange(Number.isFinite(n) ? Math.max(0, Math.min(limit, n)) : 0);
         }}
-      />{" "}
-      / {formatNumber(max)}
+      />
+      {max !== undefined && <> / {formatNumber(max)}</>}
     </span>
   );
 }
