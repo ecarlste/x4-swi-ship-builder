@@ -423,6 +423,49 @@ describe("transform: Ships", () => {
     expect(report()).toContain(`fx_gunboat: Slot Group "group_right " has spaces around its name; it's merged into "group_right"`);
   });
 
+  it("counts a connection listed twice in a component once, as the game does, and lists it as a warning (#68)", () => {
+    const { ship, report } = run(
+      oneShipWorld().ship({
+        id: "fx_miner",
+        owners: ["fx_guild"],
+        slots: [
+          { name: "con_weapon_01", tags: "weapon small" },
+          { name: "con_weapon_01", tags: "weapon small" },
+          { name: "con_turret_01", tags: "turret small", group: "left-mine" },
+          { name: "con_turret_02", tags: "turret small", group: "left-mine" },
+          { name: "con_turret_02", tags: "turret small", group: "left-mine" },
+          { name: "con_turret_02", tags: "turret small", group: "left-mine" },
+        ],
+      }),
+    );
+
+    expect(ship("fx_miner").slots).toEqual([
+      { id: "con_weapon_01", kind: "weapon", size: "s", mandatory: false, fitList: expect.any(String) },
+    ]);
+    expect(ship("fx_miner").slotGroups).toEqual([
+      { id: "left-mine", kinds: { turret: { count: 2, fitList: expect.any(String) } } },
+    ]);
+    expect(report()).toContain("fx_miner: connection con_weapon_01 is listed 2 times in its component; it counts once");
+    expect(report()).toContain("fx_miner: connection con_turret_02 is listed 3 times in its component; it counts once");
+  });
+
+  it("fails on a connection listed twice with different tags or groups, since which one counts would be a guess", () => {
+    const world = (second: { tags: string; group?: string }) =>
+      oneShipWorld().ship({
+        id: "fx_odd",
+        owners: ["fx_guild"],
+        slots: [
+          { name: "con_turret_01", tags: "turret small", group: "g1" },
+          { name: "con_turret_01", ...second },
+        ],
+      });
+
+    expect(() => run(world({ tags: "turret medium", group: "g1" }))).toThrow(
+      /fx_odd: connection con_turret_01 is listed more than once in its component, with different tags or groups/,
+    );
+    expect(() => run(world({ tags: "turret small", group: "g2" }))).toThrow(/with different tags or groups/);
+  });
+
   it("fails on a weapon connection in a Slot Group", () => {
     const world = oneShipWorld().ship({
       id: "fx_odd",
