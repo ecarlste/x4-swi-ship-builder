@@ -9,6 +9,7 @@
  * change.
  */
 import type { GameData } from "../../shared/game-data/validateSnapshot.ts";
+import { indexGameData } from "../gameDataIndex.ts";
 import {
   consumableOptions,
   setConsumable,
@@ -81,13 +82,11 @@ export function describeChange(change: LoadoutChange): string {
 
 /** Checks a Loadout against the Game Data, returning the repaired Loadout and every change. */
 export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution {
-  const ship = gameData.ships.find((s) => s.id === loadout.ship);
+  const { ships, equipment, fits } = indexGameData(gameData);
+  const ship = ships.get(loadout.ship);
   if (!ship) return { status: "unavailable", ship: loadout.ship };
 
   const to = { swi: gameData.manifest.swi.version, x4: gameData.manifest.x4.version };
-  const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
-  const fitList = new Map(gameData.fitLists.map((f) => [f.id, new Set(f.equipment)]));
-  const fits = (fitListId: string, id: string) => fitList.get(fitListId)?.has(id) ?? false;
   const nameOf = (id: string) => equipment.get(id)?.name ?? id;
   const changes: LoadoutChange[] = [];
   const drop = (place: ChangePlace, id: string, reason: DropReason) =>

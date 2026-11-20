@@ -8,6 +8,7 @@
  */
 import type { CargoType, Equipment, GameData } from "../gameData.ts";
 import type { Loadout } from "../builder/loadout.ts";
+import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
 
@@ -62,9 +63,10 @@ const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 const mean = (values: number[]) => (values.length === 0 ? 0 : sum(values) / values.length);
 
 export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats {
-  const ship = gameData.ships.find((s) => s.id === loadout.ship);
+  const index = indexGameData(gameData);
+  const ship = index.ships.get(loadout.ship);
   if (!ship) throw new Error(`Unknown Ship ${loadout.ship}`);
-  const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
+  const { equipment } = index;
   const ofKind = <K extends Equipment["kind"]>(id: string, kind: K) => {
     const item = equipment.get(id);
     return item?.kind === kind ? (item as Extract<Equipment, { kind: K }>) : undefined;
@@ -99,9 +101,8 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   }
   add("RadarRange", "Radar Range", "km", 0, "combat", ship.stats.radarRange / 1000);
 
-  const fitLists = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
   const output = (gun: Extract<Equipment, { kind: "weapon" | "turret" }>) =>
-    gunOutput(gun, launcherMissile(gun, loadout.consumables ?? {}, fitLists, equipment));
+    gunOutput(gun, launcherMissile(gun, loadout.consumables ?? {}, index));
   const forward = Object.values(loadout.slots ?? {}).flatMap((id) => {
     const item = ofKind(id, "weapon");
     return item ? [output(item)] : [];
@@ -203,7 +204,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   return {
     rows,
-    price: price(ship.price, loadout, equipment),
+    price: price(ship.price, loadout, index),
     missing: missingMandatory(gameData, ship, loadout),
   };
 }
@@ -218,7 +219,7 @@ function turningInDegrees(degreesPerSecond: number): number {
 }
 
 /** Ship + Equipment + consumables + software, each at its min, average and max. */
-function price(shipPrice: Price, loadout: Loadout, equipment: Map<string, Equipment>): Price {
+function price(shipPrice: Price, loadout: Loadout, { equipment }: GameDataIndex): Price {
   const bought: [string, number][] = [
     ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
     ...Object.values(loadout.groups ?? {}).flatMap((kinds) =>

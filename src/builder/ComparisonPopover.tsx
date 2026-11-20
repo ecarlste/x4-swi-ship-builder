@@ -1,4 +1,5 @@
 import type { Equipment, GameData } from "../gameData.ts";
+import { indexGameData } from "../gameDataIndex.ts";
 import type { Loadout } from "./loadout.ts";
 import { compareEquipment } from "../stats/stats.ts";
 import { licenceText } from "./licence.ts";
@@ -32,7 +33,8 @@ export function ComparisonPopover({
   fitted: Equipment | null;
 }) {
   const comparison = compareEquipment(gameData, loadout, option, fitted);
-  const licence = licenceText(gameData.licences.find((l) => l.id === option.licence));
+  const { factions, licences } = indexGameData(gameData);
+  const licence = licenceText(option.licence === null ? undefined : licences.get(option.licence));
   const lines = [
     ...comparison.figures.map((f) => {
       const decimals = Math.max(decimalsOf(f.shown), decimalsOf(f.difference));
@@ -71,7 +73,7 @@ export function ComparisonPopover({
       <ul className="comparison-sellers">
         {option.sellers.map((id) => (
           <li key={id}>
-            {gameData.factions.find((f) => f.id === id)?.name ?? id}: {licence}
+            {factions.get(id)?.name ?? id}: {licence}
           </li>
         ))}
       </ul>

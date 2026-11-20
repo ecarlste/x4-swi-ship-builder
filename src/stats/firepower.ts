@@ -4,6 +4,7 @@
  * `explosiondamage value + hull`.
  */
 import type { Equipment } from "../gameData.ts";
+import { type GameDataIndex } from "../gameDataIndex.ts";
 
 type Gun = Extract<Equipment, { kind: "weapon" | "turret" }>;
 type Missile = Extract<Equipment, { kind: "missile" }>;
@@ -44,8 +45,7 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
 export function launcherMissile(
   gun: Gun,
   consumables: Record<string, number>,
-  fitLists: Map<string, string[]>,
-  equipment: Map<string, Equipment>,
+  { fitLists, equipment }: GameDataIndex,
 ): Missile | undefined {
   if (gun.missiles === null) return undefined;
   const id = (fitLists.get(gun.missiles) ?? []).find((m) => (consumables[m] ?? 0) > 0);

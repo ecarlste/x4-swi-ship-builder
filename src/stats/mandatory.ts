@@ -1,4 +1,5 @@
 import type { GameData, Ship } from "../gameData.ts";
+import { indexGameData } from "../gameDataIndex.ts";
 import type { Loadout } from "../builder/loadout.ts";
 
 /** A mandatory upgrade the Loadout lacks: which row it is, and how to name it. */
@@ -17,7 +18,7 @@ const SLOT_KIND_LABEL = { weapon: "Weapon", turret: "Turret", shield: "Shield", 
  * blocked by these; the builder only points them out.
  */
 export function missingMandatory(gameData: GameData, ship: Ship, loadout: Loadout): MissingUpgrade[] {
-  const softwareName = (id: string) => gameData.equipment.find((e) => e.id === id)?.name ?? id;
+  const softwareName = (id: string) => indexGameData(gameData).equipment.get(id)?.name ?? id;
   const missing: MissingUpgrade[] = [];
   for (const slot of ship.slots) {
     if ((slot.mandatory || slot.kind === "engine") && !loadout.slots?.[slot.id]) {

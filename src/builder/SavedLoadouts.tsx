@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { GameData } from "../gameData.ts";
+import { indexGameData } from "../gameDataIndex.ts";
 import type { SavedLoadoutEntry, SavedLoadoutList } from "../codec/savedLoadouts.ts";
 import { describeChange, resolveLoadout } from "../codec/resolve.ts";
 
@@ -24,7 +25,7 @@ export function SavedLoadoutsList({
   onDelete: (entry: SavedLoadoutEntry) => void;
 }) {
   const headingId = useId();
-  const shipName = (id: string) => gameData.ships.find((s) => s.id === id)?.name ?? id;
+  const shipName = (id: string) => indexGameData(gameData).ships.get(id)?.name ?? id;
 
   return (
     <section className="saved-loadouts" aria-labelledby={headingId}>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { gameData } from "./gameData.ts";
+import { indexGameData } from "./gameDataIndex.ts";
 import { Footer } from "./Footer.tsx";
 import { ShipBlock } from "./builder/ShipBlock.tsx";
 import { ShipPicker } from "./builder/ShipPicker.tsx";
@@ -64,7 +65,7 @@ export function App() {
   const [notice, setNotice] = useState<Pick<Extract<Resolution, { status: "ok" }>, "changes" | "versions"> | null>(
     null,
   );
-  const ship = loadout ? (gameData.ships.find((s) => s.id === loadout.ship) ?? null) : null;
+  const ship = loadout ? (indexGameData(gameData).ships.get(loadout.ship) ?? null) : null;
 
   const stats = loadout && ship ? loadoutStats(gameData, loadout) : null;
   const missing = stats?.missing ?? [];
@@ -299,7 +300,7 @@ export function App() {
               />
             </div>
             <aside className="stats" aria-label="Stats">
-              <ShipBlock ship={ship} factions={gameData.factions} licences={gameData.licences} />
+              <ShipBlock gameData={gameData} ship={ship} />
               <StatsPanel stats={stats} was={wasStats} />
             </aside>
           </div>

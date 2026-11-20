@@ -4,6 +4,7 @@
  * left out, so an Empty Loadout is `{ format, gameData, ship }`.
  */
 import type { Equipment, GameData, Ship } from "../gameData.ts";
+import { indexGameData } from "../gameDataIndex.ts";
 import { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
 
 export { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
@@ -64,10 +65,9 @@ export interface ConsumableOptions {
  * the Ship's fit lists. Kinds the Ship has no capacity for are left out.
  */
 export function consumableOptions(gameData: GameData, ship: Ship, loadout: Loadout): ConsumableOptions[] {
-  const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
-  const fitList = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
+  const { equipment, fitLists } = indexGameData(gameData);
   const items = (fitListIds: Iterable<string>) =>
-    [...new Set([...fitListIds].flatMap((id) => fitList.get(id) ?? []))]
+    [...new Set([...fitListIds].flatMap((id) => fitLists.get(id) ?? []))]
       .flatMap((id) => equipment.get(id) ?? [])
       .sort((a, b) => a.name.localeCompare(b.name));
 

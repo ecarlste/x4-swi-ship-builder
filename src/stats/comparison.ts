@@ -4,6 +4,7 @@
  * items count as one unit.
  */
 import type { Equipment, GameData } from "../gameData.ts";
+import { indexGameData } from "../gameDataIndex.ts";
 import type { Loadout } from "../builder/loadout.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
 
@@ -48,9 +49,7 @@ function figures(gameData: GameData, loadout: Loadout, item: Equipment): RawFigu
   switch (item.kind) {
     case "weapon":
     case "turret": {
-      const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
-      const fitLists = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
-      const output = gunOutput(item, launcherMissile(item, loadout.consumables ?? {}, fitLists, equipment));
+      const output = gunOutput(item, launcherMissile(item, loadout.consumables ?? {}, indexGameData(gameData)));
       return [
         { label: "Burst Output", unit: "MW", decimals: 0, value: output.burst },
         { label: "Sustained Output", unit: "MW", decimals: 0, value: output.sustained },

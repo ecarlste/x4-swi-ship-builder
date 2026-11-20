@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
+import { indexGameData } from "../gameDataIndex.ts";
 import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
 import {
@@ -79,15 +80,12 @@ export function LoadoutTable({
   was?: Loadout | null;
   onChange: (loadout: Loadout) => void;
 }) {
-  const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
+  const { equipment, fitListEquipment: options } = indexGameData(gameData);
   const nameOf = (id: string | undefined) => (id ? (equipment.get(id)?.name ?? id) : "empty");
   /** The row's "was: …" text when it differs from the snapshot, else undefined. */
   const wasText = (before: string, now: string) => (was && before !== now ? before : undefined);
   const groupText = (entry: { equipment: string; count: number } | undefined) =>
     entry ? `${nameOf(entry.equipment)} ×${entry.count}` : "empty";
-  const fitList = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
-  const options = (fitListId: string) =>
-    (fitList.get(fitListId) ?? []).flatMap((id) => equipment.get(id) ?? []);
   const thruster = equipment.get(loadout.thruster ?? "") ?? null;
   const consumables = consumableOptions(gameData, ship, loadout);
   /** Applies an edit, dropping consumables it leaves the Ship unable to carry. */
