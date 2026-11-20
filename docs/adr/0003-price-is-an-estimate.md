@@ -21,6 +21,6 @@ The station's price depends on the station, so no reference Loadout can assert a
 
 ## Consequences
 
-- `price` in `src/stats/stats.ts` cites this ADR instead of `unconfirmed (#63)`. Its tests cite this ADR, not a game screen.
+- `price` in `src/stats/stats.ts` cites this ADR instead of `unconfirmed (#70)`. Its tests cite this ADR, not a game screen.
 - The Loadout table's "Price (avg)" column and the comparison popover's Price row keep using the average.
 - For the #63 fit, the game charged 2,029,768 without crew, inside the builder's 1,807,158–2,745,202 range and 11% under its 2,276,186 average.

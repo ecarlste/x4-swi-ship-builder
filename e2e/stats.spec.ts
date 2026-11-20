@@ -25,6 +25,7 @@ test("an Empty Loadout shows the Ship's own stats and zeros for what isn't fitte
   const price = stats(page).getByRole("region", { name: "Price" });
   await expect(price).toContainText("100,000 Cr");
   await expect(price).toContainText("80,000 – 120,000 Cr");
+  await expect(price).toContainText("Estimate · excludes crew");
 });
 
 test("the Stats panel has a visible Stats heading", async ({ page }) => {

@@ -206,6 +206,12 @@ input {
   color: #8a93a6;
 }
 
+.stats-price-note {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8a93a6;
+}
+
 @media (max-width: 720px) {
   .builder {
     grid-template-columns: 1fr;

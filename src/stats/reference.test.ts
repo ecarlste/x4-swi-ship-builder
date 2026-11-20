@@ -753,7 +753,7 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
    * piece of software charged separately. Its per-item prices are the
    * station's, not Game Data's, so each ware here is priced at what the game
    * charged and the test checks the sum, not the prices. The game's own
-   * total, 2,119,752, adds 89,984 of crew (#70) and 2 credits of rounding.
+   * total, 2,119,752, adds 89,984 of crew (ADR 0003) and 2 credits of rounding.
    */
   test("Gozanti-class Miner, at the prices the game charged: average Price 2,029,766", () => {
     const flat = (average: number) => ({ min: average, average, max: average });
