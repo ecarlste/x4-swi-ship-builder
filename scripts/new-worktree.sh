@@ -7,6 +7,7 @@
 # so a ticket that changes the schema re-extracts only its own snapshot. The
 # merged game files in .cache/extract/files are only ever read, so they're
 # linked; the rest of .cache/extract (report, diff) is the worktree's own.
+# The main checkout's .env, if any, is copied, so extraction finds X4_INSTALL_DIR.
 set -euo pipefail
 
 usage() {
@@ -43,6 +44,9 @@ if [ -d "$main/.cache/extract/files" ]; then
     if [ -f "$main/.cache/extract/$file" ]; then cp "$main/.cache/extract/$file" "$worktree/.cache/extract/"; fi
   done
 fi
+
+# A copy, not a link: editing one checkout's .env doesn't change the other's.
+if [ -f "$main/.env" ]; then cp "$main/.env" "$worktree/.env"; fi
 
 (cd "$worktree" && npm ci)
 

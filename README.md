@@ -16,7 +16,7 @@ GAME_DATA_DIR=fixtures/game-data/tiny npm run dev
 
 ## Extraction
 
-`npm run extract` reads Game Data from a local X4 8.00 + SWI install. Give it the install folder with `--x4`, or set `X4_INSTALL_DIR` in a gitignored `.env`:
+`npm run extract` reads Game Data from a local X4 8.00 + SWI install. Give it the install folder with `--x4`, or copy `.env.example` to `.env` (gitignored) and fill in `X4_INSTALL_DIR`; `--x4` wins over it:
 
 ```bash
 npm run extract -- --x4 "/path/to/X4 Foundations"
@@ -88,7 +88,7 @@ Each ticket gets its own worktree, so sessions don't share a working tree, a sna
 npm run worktree -- 76 ticket-worktrees
 ```
 
-This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main`, copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
+This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main`, copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, copies the main checkout's `.env` if it has one, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
 
 A tracked pre-commit hook (`.githooks/`, wired up by `npm ci` through the `prepare` script) refuses commits on `main` in every worktree. For a deliberate one, set `ALLOW_MAIN_COMMIT=1`.
 

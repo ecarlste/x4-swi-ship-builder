@@ -106,6 +106,23 @@ describe("new-worktree.sh", () => {
     expect(existsSync(join(cache, "extract-report.md"))).toBe(false);
   });
 
+  it("gives the worktree its own copy of the main checkout's .env", () => {
+    writeFileSync(join(main, ".env"), "X4_INSTALL_DIR=/games/x4\n");
+
+    newWorktree("76", "ticket-worktrees");
+
+    const dotEnv = join(worktree(), ".env");
+    expect(lstatSync(dotEnv).isFile()).toBe(true);
+    expect(readFileSync(dotEnv, "utf8")).toBe("X4_INSTALL_DIR=/games/x4\n");
+  });
+
+  it("still makes the worktree, with no .env, when the main checkout has none", () => {
+    newWorktree("76", "ticket-worktrees");
+
+    expect(git(worktree(), "branch", "--show-current")).toBe("76-ticket-worktrees");
+    expect(existsSync(join(worktree(), ".env"))).toBe(false);
+  });
+
   it("prints the path to open the session in", () => {
     expect(newWorktree("76", "ticket-worktrees")).toContain(realpathSync(worktree()));
   });
