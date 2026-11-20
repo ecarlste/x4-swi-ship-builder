@@ -89,18 +89,21 @@ describe("transform: Equipment", () => {
     });
   });
 
-  it("reads a bullet's reload time as a fire rate, and a gun without heat or magazine as such", () => {
+  it("gives a bullet with no reload@rate one shot a second, whatever its reload@time, and a gun without heat or magazine as such", () => {
     const { item } = run(
-      wharfWorld().equipment(gun({ id: "fx_slow", bullet: `<damage value="50"/><reload time="0.5"/>` })),
+      wharfWorld()
+        .equipment(gun({ id: "fx_drill", bullet: `<damage value="6"/><reload time="4"/>` }))
+        .equipment(gun({ id: "fx_tractor", bullet: `<damage value="0"/>` })),
     );
 
-    expect(item("fx_slow")).toMatchObject({
-      damage: { value: 50, noShield: 0 },
+    expect(item("fx_drill")).toMatchObject({
+      damage: { value: 6, noShield: 0 },
       barrelAmount: 1,
-      fireRate: 2,
+      fireRate: 1,
       magazine: null,
       heat: null,
     });
+    expect(item("fx_tractor")).toMatchObject({ fireRate: 1 });
   });
 
   it("lists in each Slot the Equipment whose type connection tags, but for `component`, the Slot has", () => {
@@ -451,14 +454,6 @@ describe("transform: fit lists", () => {
     expect(ship("fx_twin").slots[0].fitList).toBe(ship("fx_fighter").slots.find((s: { id: string }) => s.id === "con_weapon_02").fitList);
     const lists = readJson("fit-lists.json").map((f: { equipment: string[] }) => f.equipment.join(","));
     expect(new Set(lists).size).toBe(lists.length);
-  });
-
-  it("leaves out and warns about a gun whose bullet has no fire rate", () => {
-    const { item, report } = run(wharfWorld().equipment(gun({ id: "fx_tractor", bullet: `<damage value="0"/>` })));
-
-    expect(item("fx_tractor")).toBeUndefined();
-    expect(report()).toContain("| fx_tractor | its bullet has no reload@rate or reload@time |");
-    expect(report()).toContain("- fx_tractor: its bullet has no reload@rate or reload@time");
   });
 
   it("keeps an Equipment price outside min..max as written, and lists it as a warning", () => {

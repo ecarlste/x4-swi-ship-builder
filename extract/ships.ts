@@ -283,7 +283,11 @@ function readCargo(
  * engine; those with a `group` make up Slot Groups instead. A slot with no
  * size tag takes the Ship's size, and is listed as a warning. Group names
  * equal once trimmed are one Slot Group, as in game (#52); its id is the
- * trimmed name.
+ * trimmed name. A connection name listed more than once in the component
+ * counts once, as in game for heraklon_solid's turrets (#68), and each
+ * duplicated name is a warning. unconfirmed (#63): the sith_destroyer and
+ * sith_freighter engine counts this lowers. Listings of one name with
+ * different tags or groups fail, since which one counts would be a guess.
  */
 function readSlots(
   component: JsonElement,
@@ -301,11 +305,24 @@ function readSlots(
   const groupConnections: ShipFittings["groups"] = new Map();
   const groups = new Map<string, SlotGroup["kinds"]>();
   const spacedNames = new Set<string>();
+  /** Connection name → how many times the component lists it, and its first listing's tags and group. */
+  const listings = new Map<string, { timesListed: number; tags: string; group: string | undefined }>();
   for (const connection of children(child(component, "connections"), "connection")) {
     const tags = list(attr(connection, "tags"));
     const kinds = SLOT_KINDS.filter((k) => tags.includes(k));
     if (kinds.length === 0) continue;
     const name = attr(connection, "name")!;
+    const earlier = listings.get(name);
+    if (earlier) {
+      if (earlier.tags !== attr(connection, "tags") || earlier.group !== attr(connection, "group")) {
+        throw new ExtractError(
+          `ware ${shipId}: connection ${name} is listed more than once in its component, with different tags or groups`,
+        );
+      }
+      earlier.timesListed++;
+      continue;
+    }
+    listings.set(name, { timesListed: 1, tags: attr(connection, "tags") ?? "", group: attr(connection, "group") });
     if (kinds.length > 1) {
       throw new ExtractError(`ware ${shipId}: connection ${name} is tagged as more than one kind (${kinds.join(", ")})`);
     }
@@ -338,6 +355,11 @@ function readSlots(
     const connectionsOfGroup = groupConnections.get(id) ?? {};
     connectionsOfGroup[kind] = [...(connectionsOfGroup[kind] ?? []), { writtenAs: group, tags }];
     groupConnections.set(id, connectionsOfGroup);
+  }
+  for (const [name, { timesListed }] of listings) {
+    if (timesListed > 1) {
+      warnings.push(`${shipId}: connection ${name} is listed ${timesListed} times in its component; it counts once`);
+    }
   }
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const slotGroups = [...groups].map(([id, kinds]) => ({
