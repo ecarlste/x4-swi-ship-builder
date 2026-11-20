@@ -39,6 +39,11 @@ export const loadoutSchema = z.object({
   software: z.array(id).optional(),
   /** A consumable's Equipment id → count. */
   consumables: z.record(id, positiveCount).optional(),
+  /**
+   * The Crew: service crew and marines, sharing the Ship's crew capacity, which
+   * resolving checks. No Captain: every Ship gets one free (ADR 0004).
+   */
+  crew: z.strictObject({ service: positiveCount.optional(), marines: positiveCount.optional() }).optional(),
 });
 
 export type Loadout = z.infer<typeof loadoutSchema>;
