@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Faction, Licence, Manifest, Ship, Size } from "../shared/game-data/schema.ts";
+import type { Equipment, Faction, Licence, Manifest, Ship, Size } from "../shared/game-data/schema.ts";
 import { SNAPSHOT_FILES, validateSnapshot, type RawSnapshot } from "../shared/game-data/validateSnapshot.ts";
 import { ExtractError } from "./errors.ts";
 import { attr, child, children, numberAttr, GameFiles } from "./gameFiles.ts";
 import type { MergeLog } from "./merge.ts";
 import { renderReport, table } from "./report.ts";
-import { shipBuilders } from "./shipBuilders.ts";
-import { EMPTY_FIT_LIST, readShips, type LeftOut } from "./ships.ts";
+import { readEquipment } from "./equipment.ts";
+import { readShips, type LeftOut } from "./ships.ts";
+import { stationClasses } from "./stations.ts";
 import { TextResolver } from "./text.ts";
 
 export interface TransformOptions {
@@ -25,6 +26,8 @@ export interface TransformOptions {
 export interface TransformResult {
   snapshotDir: string;
   ships: Record<Size, number>;
+  /** Equipment in the snapshot, and how many Equipment wares have a Seller before the "fits a buildable Ship" filter. */
+  equipment: { included: number; withSeller: number };
   reportPath: string;
 }
 
@@ -47,18 +50,26 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
   const files = new GameFiles(cacheDir);
   const text = new TextResolver(files);
 
-  const builders = shipBuilders(files);
-  const { ships: unnamed, leftOut, warnings } = readShips(files, text, builders);
-  if (unnamed.length === 0) throw new ExtractError("No buildable Ships found: no ware tagged ship has a Seller and no exclusion tag");
+  const stations = stationClasses(files);
+  const builders = new Map([...stations].map(([faction, classes]) => [faction, classes.build]));
+  const { ships: shipsRead, fittings, leftOut, warnings } = readShips(files, text, builders);
+  if (shipsRead.length === 0) throw new ExtractError("No buildable Ships found: no ware tagged ship has a Seller and no exclusion tag");
 
-  const factions = readFactions(files, text, unnamed);
-  const ships = disambiguateNames(unnamed, factions).sort(byId);
-  const licences = readLicences(files, ships, warnings);
+  const fitted = readEquipment(files, text, shipsRead, fittings, stations);
+  if (fitted.equipment.length === 0) {
+    throw new ExtractError("No Equipment found: no Equipment ware has a Seller and fits a buildable Ship");
+  }
+  warnings.push(...fitted.warnings);
+  const { equipment } = fitted;
+
+  const factions = readFactions(files, text, [...fitted.ships, ...equipment]);
+  const ships = disambiguateNames(fitted.ships, factions).sort(byId);
+  const licences = readLicences(files, [...ships, ...equipment], warnings);
 
   const content = {
     ships,
-    equipment: [],
-    "fit-lists": [{ id: EMPTY_FIT_LIST, equipment: [] }],
+    equipment,
+    "fit-lists": fitted.fitLists,
     factions,
     licences,
   };
@@ -94,11 +105,16 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
   const mergeLog = existsSync(join(cacheDir, "merge-log.json"))
     ? readJson<MergeLog>(join(cacheDir, "merge-log.json"), "")
     : undefined;
-  writeFileSync(reportPath, renderReport(mergeLog, transformReport(leftOut, warnings)));
+  writeFileSync(reportPath, renderReport(mergeLog, transformReport(leftOut, fitted.leftOut, warnings)));
 
   const counts: Record<Size, number> = { s: 0, m: 0, l: 0, xl: 0 };
   for (const ship of ships) counts[ship.size]++;
-  return { snapshotDir, ships: counts, reportPath };
+  return {
+    snapshotDir,
+    ships: counts,
+    equipment: { included: equipment.length, withSeller: fitted.withSeller },
+    reportPath,
+  };
 }
 
 /** "Star Wars 0.9.1 HF" → "0.9.1 HF": the release label from the first version number on. */
@@ -111,17 +127,17 @@ function contentHash(content: object): string {
   return `sha256:${createHash("sha256").update(JSON.stringify(content)).digest("hex")}`;
 }
 
-/** The Factions that sell at least one Ship, with their English names. */
-function readFactions(files: GameFiles, text: TextResolver, ships: Ship[]): Faction[] {
+/** The Factions that sell at least one Ship or piece of Equipment, with their English names. */
+function readFactions(files: GameFiles, text: TextResolver, items: (Ship | Equipment)[]): Faction[] {
   const definitions = new Map(
     children(files.requireFile("libraries/factions.xml"), "faction").map((f) => [attr(f, "id"), f]),
   );
-  const ids = [...new Set(ships.flatMap((s) => s.sellers))].sort();
+  const ids = [...new Set(items.flatMap((s) => s.sellers))].sort();
   return ids.map((id) => {
     const definition = definitions.get(id);
     const nameId = attr(definition, "name");
     if (!definition || nameId === undefined) {
-      throw new ExtractError(`Faction "${id}" sells Ships but libraries/factions.xml doesn't define it with a name`);
+      throw new ExtractError(`Faction "${id}" sells Ships or Equipment but libraries/factions.xml doesn't define it with a name`);
     }
     return { id, name: text.resolve(nameId, `faction ${id}`) };
   });
@@ -138,12 +154,12 @@ const LICENCE_NAMES: Record<string, string> = {
 };
 
 /**
- * The Licences Ships need. Each Faction defines its own copy of a licence
+ * The Licences Ships and Equipment need. Each Faction defines its own copy of a licence
  * type, with its own name and `minrelation`, in libraries/factions.xml. The
  * reputation is given only when every Seller that defines the licence asks
  * for the same one; otherwise it is null, and listed as a warning.
  */
-function readLicences(files: GameFiles, ships: Ship[], warnings: string[]): Licence[] {
+function readLicences(files: GameFiles, ships: (Ship | Equipment)[], warnings: string[]): Licence[] {
   const factions = new Map(
     children(files.requireFile("libraries/factions.xml"), "faction").map((f) => [attr(f, "id"), f]),
   );
@@ -207,14 +223,19 @@ function disambiguateNames(ships: Ship[], factions: Faction[]): Ship[] {
   return named;
 }
 
-function transformReport(leftOut: LeftOut[], warnings: string[]): string[] {
+function transformReport(shipsLeftOut: LeftOut[], equipmentLeftOut: LeftOut[], warnings: string[]): string[] {
+  const leftOutTable = (leftOut: LeftOut[]) =>
+    table(
+      ["Ware", "Reason"],
+      [...leftOut].sort((a, b) => (a.ware < b.ware ? -1 : 1)).map((l) => [l.ware, l.reason]),
+    );
   return [
     "## Ships left out",
     "",
-    ...table(
-      ["Ware", "Reason"],
-      [...leftOut].sort((a, b) => (a.ware < b.ware ? -1 : 1)).map((l) => [l.ware, l.reason]),
-    ),
+    ...leftOutTable(shipsLeftOut),
+    "## Equipment left out",
+    "",
+    ...leftOutTable(equipmentLeftOut),
     "## Warnings",
     "",
     ...(warnings.length === 0 ? ["None.", ""] : [...warnings.map((w) => `- ${w}`), ""]),

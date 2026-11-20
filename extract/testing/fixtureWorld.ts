@@ -14,6 +14,7 @@ export class FixtureWorld {
   private factions: FactionSpec[] = [];
   private stations: StationSpec[] = [];
   private ships: ShipSpec[] = [];
+  private equipmentSpecs: EquipmentSpec[] = [];
   private extraText: { page: string; id: string; text: string }[] = [];
   /** Game path → extra XML files, written as given. */
   readonly extraFiles: Record<string, string> = {};
@@ -31,6 +32,11 @@ export class FixtureWorld {
 
   ship(spec: ShipSpec): this {
     this.ships.push(spec);
+    return this;
+  }
+
+  equipment(spec: EquipmentSpec): this {
+    this.equipmentSpecs.push(spec);
     return this;
   }
 
@@ -74,11 +80,16 @@ export class FixtureWorld {
       god.push(`<station id="god_${i}" owner="${s.faction}" race="argon"><station><select faction="${s.faction}" tags="[${tag}]"/></station></station>`);
       stationDefs.push(`<station id="def_${i}" group="group_${i}"><category tags="${tag}" faction="[${s.faction}]"/></station>`);
       groups.push(`<group name="group_${i}"><select constructionplan="plan_${i}"/></group>`);
-      const entries = s.builds.map((classes, j) => {
+      // A ship build module equips what it builds; an equipment-dock module only equips.
+      const modules = [
+        ...s.builds.map((classes) => `<builder classes="${classes}"/><equip classes="${classes}"/>`),
+        ...(s.equips ?? []).map((classes) => `<builder/><equip classes="${classes}"/>`),
+      ];
+      const entries = modules.map((properties, j) => {
         const name = `fx_buildmodule_${i}_${j}_macro`;
         const path = `assets/structures/buildmodule/macros/${name}`;
         macroIndex.push([name, path]);
-        files[`${path}.xml`] = `<macros><macro name="${name}" class="buildmodule"><properties><builder classes="${classes}"/></properties></macro></macros>`;
+        files[`${path}.xml`] = `<macros><macro name="${name}" class="buildmodule"><properties>${properties}</properties></macro></macros>`;
         return `<entry index="${j + 1}" macro="${name}"/>`;
       });
       const habitat = "fx_habitat_macro";
@@ -141,7 +152,12 @@ export class FixtureWorld {
           `</physics>` +
           (p.radar === undefined ? "" : `<radar range="${p.radar}"/>`) +
           (p.rotationspeed === undefined ? "" : `<rotationspeed max="${p.rotationspeed}"/>`) +
-          `<thruster tags="small"/>` +
+          (s.thruster === null ? "" : `<thruster tags="${s.thruster ?? "small"}"/>`) +
+          (s.software
+            ? `<software>${s.software
+                .map((w) => `<software ware="${w.ware}" ${w.default ? `default="1"` : `compatible="1"`}/>`)
+                .join("")}</software>`
+            : "") +
           `<ship type="${p.type ?? "fighter"}"/>` +
           `</properties><connections>${storageConnections.join("")}</connections></macro></macros>`;
         const componentPath = `assets/units/size_${size}/${componentName}`;
@@ -155,6 +171,43 @@ export class FixtureWorld {
           `</connections></component></components>`;
       }
     }
+    // Equipment: ware → macro → component (its type connection), and bullet macros.
+    for (const e of this.equipmentSpecs) {
+      const nameRef = newText(e.name ?? e.id);
+      const price = e.price ?? { min: 80, average: 100, max: 120 };
+      const isSoftware = e.kind === "software";
+      const macroName = `${e.id}_macro`;
+      wares.push(
+        `<ware id="${e.id}" name="${nameRef}" transport="${isSoftware ? "software" : "equipment"}"` +
+          `${isSoftware ? ` group="software"` : ""} tags="${e.tags ?? EQUIPMENT_TAGS[e.kind]}">` +
+          `<price min="${price.min}" average="${price.average}" max="${price.max}"/>` +
+          (isSoftware ? "" : `<component ref="${macroName}" amount="1"/>`) +
+          (e.licence ? `<restriction licence="${e.licence}"/>` : "") +
+          (e.owners ?? []).map((o) => `<owner faction="${o}"/>`).join("") +
+          `</ware>`,
+      );
+      if (isSoftware) continue;
+      const componentName = `${e.id}_component`;
+      const macroPath = `assets/props/fx/macros/${macroName}`;
+      macroIndex.push([macroName, macroPath]);
+      files[`${macroPath}.xml`] =
+        `<macros><macro name="${macroName}" class="${e.macroClass ?? MACRO_CLASSES[e.kind]}">` +
+        `<component ref="${componentName}"/><properties>${e.properties ?? ""}</properties></macro></macros>`;
+      const componentPath = `assets/props/fx/${componentName}`;
+      componentIndex.push([componentName, componentPath]);
+      files[`${componentPath}.xml`] =
+        `<components><component name="${componentName}"><connections>` +
+        `<connection name="container" tags="contents"/>` +
+        (e.connection === undefined ? "" : `<connection name="TypeConnection" tags="${e.connection}"/>`) +
+        `</connections></component></components>`;
+      if (e.bullet !== undefined) {
+        const bulletName = `${e.id}_bullet_macro`;
+        const bulletPath = `assets/fx/weaponfx/macros/${bulletName}`;
+        macroIndex.push([bulletName, bulletPath]);
+        files[`${bulletPath}.xml`] = `<macros><macro name="${bulletName}" class="bullet"><properties>${e.bullet}</properties></macro></macros>`;
+      }
+    }
+
     files["libraries/wares.xml"] = xml("wares", wares);
     files["index/macros.xml"] = xml("index", macroIndex.map(([n, v]) => `<entry name="${n}" value="${v}"/>`));
     files["index/components.xml"] = xml("index", componentIndex.map(([n, v]) => `<entry name="${n}" value="${v}"/>`));
@@ -178,6 +231,8 @@ export interface StationSpec {
   faction: string;
   /** One build module per entry, each with its `<builder classes>`, e.g. "ship_s ship_m". */
   builds: string[];
+  /** One equip-only module (an equipment dock's) per entry, each with its `<equip classes>`. */
+  equips?: string[];
   /** The station's tag in god.xml and stations.xml; made up if not given. */
   tags?: string;
 }
@@ -210,6 +265,81 @@ export interface ShipSpec {
   };
   storage?: { capacity: number; tags: string }[];
   slots?: { name: string; tags: string; group?: string }[];
+  /** The macro's `<thruster tags>`; "small" if not given, and no `<thruster>` if null. */
+  thruster?: string | null;
+  /** The macro's `<software>` list. */
+  software?: { ware: string; default?: boolean }[];
+}
+
+export type FixtureEquipmentKind =
+  | "weapon"
+  | "turret"
+  | "shield"
+  | "engine"
+  | "thruster"
+  | "missile"
+  | "drone"
+  | "deployable"
+  | "countermeasure"
+  | "software";
+
+export interface EquipmentSpec {
+  id: string;
+  kind: FixtureEquipmentKind;
+  name?: string;
+  owners?: string[];
+  licence?: string;
+  price?: { min: number; average: number; max: number };
+  /** The ware's tags; a usual set for the kind if not given. */
+  tags?: string;
+  /** The macro's class; the usual one for the kind if not given. */
+  macroClass?: string;
+  /** XML inside the macro's `<properties>`. A gun's bullet macro is `<id>_bullet_macro`. */
+  properties?: string;
+  /** XML inside the bullet macro's `<properties>`; no bullet macro is written if not given. */
+  bullet?: string;
+  /** Tags of the component's type connection, e.g. "component weapon small"; none if not given. */
+  connection?: string;
+}
+
+const EQUIPMENT_TAGS: Record<FixtureEquipmentKind, string> = {
+  weapon: "equipment weapon",
+  turret: "equipment turret",
+  shield: "equipment shield",
+  engine: "engine equipment",
+  thruster: "equipment thruster",
+  missile: "equipment missile",
+  drone: "drone equipment",
+  deployable: "equipment satellite",
+  countermeasure: "countermeasure equipment",
+  software: "equipment software",
+};
+
+const MACRO_CLASSES: Record<FixtureEquipmentKind, string> = {
+  weapon: "weapon",
+  turret: "turret",
+  shield: "shieldgenerator",
+  engine: "engine",
+  thruster: "engine",
+  missile: "missile",
+  drone: "ship_xs",
+  deployable: "satellite",
+  countermeasure: "countermeasure",
+  software: "",
+};
+
+/** An S engine that fits the fixture Ships' default engine Slot, sold by whoever owns it. */
+export function smallEngine(owners: string[] = []): EquipmentSpec {
+  return {
+    id: "fx_engine_s",
+    kind: "engine",
+    name: "Fixture Engine S",
+    owners,
+    connection: "engine small",
+    properties:
+      `<thrust forward="500" reverse="400"/><boost thrust="2" acceleration="1.5" duration="10" recharge="20"/>` +
+      `<travel thrust="10" charge="5" attack="0"/>`,
+  };
 }
 
 /** Class defaults the fixture's `libraries/defaults.xml` sets. */
@@ -256,7 +386,8 @@ export function oneShipWorld(): FixtureWorld {
   return new FixtureWorld()
     .faction({ id: "fx_guild", name: "Freight Guild", licences: [{ type: "generaluseship", name: "Guild Ship Licence", minrelation: "-0.01" }] })
     .station({ faction: "fx_guild", builds: ["ship_s ship_m"] })
-    .ship({ id: "fx_fighter", name: "Fixture Fighter", owners: ["fx_guild"], licence: "generaluseship" });
+    .ship({ id: "fx_fighter", name: "Fixture Fighter", owners: ["fx_guild"], licence: "generaluseship" })
+    .equipment(smallEngine());
 }
 
 function xml(root: string, children: string[]): string {

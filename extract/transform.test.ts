@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { validateSnapshot } from "../shared/game-data/validateSnapshot.ts";
-import { FixtureWorld, oneShipWorld, writeCache } from "./testing/fixtureWorld.ts";
+import { FixtureWorld, oneShipWorld, smallEngine, writeCache } from "./testing/fixtureWorld.ts";
 import { transform } from "./transform.ts";
 
 const NOW = new Date("2026-03-04T05:06:07Z");
@@ -38,7 +38,8 @@ describe("transform: the buildable-Ship rule", () => {
       .ship({ id: "fx_unowned", size: "s" })
       .ship({ id: "fx_flagship", size: "xl", owners: ["fx_navy"], tags: "ship limited missiononly" })
       .ship({ id: "fx_dummy", owners: ["fx_guild"], tags: "ship noplayerbuild" })
-      .ship({ id: "fx_blueprint", owners: ["fx_guild"], tags: "ship blueprintsaleonly" });
+      .ship({ id: "fx_blueprint", owners: ["fx_guild"], tags: "ship blueprintsaleonly" })
+      .equipment(smallEngine());
 
   it("keeps Ships with a Seller: an owner running a station whose build modules cover the Ship's size", () => {
     const { readJson } = run(world());
@@ -191,7 +192,8 @@ describe("transform: Factions and Licences", () => {
       .ship({ id: "fx_shuttle", owners: ["fx_guild"], licence: "generaluseship" })
       .ship({ id: "fx_fighter", owners: ["fx_guild", "fx_navy"], licence: "militaryship" })
       .ship({ id: "fx_cruiser", size: "l", owners: ["fx_guild", "fx_navy"], licence: "capitalship" })
-      .ship({ id: "fx_free", owners: ["fx_navy"] });
+      .ship({ id: "fx_free", owners: ["fx_navy"] })
+      .equipment(smallEngine(["fx_guild"]));
 
   it("lists the Factions that sell Ships, with their English names", () => {
     const { readJson } = run(world());
@@ -217,9 +219,10 @@ describe("transform: Factions and Licences", () => {
   it("fails when a Seller isn't defined in libraries/factions.xml", () => {
     const world = new FixtureWorld()
       .station({ faction: "fx_ghost", builds: ["ship_s"] })
-      .ship({ id: "fx_fighter", owners: ["fx_ghost"] });
+      .ship({ id: "fx_fighter", owners: ["fx_ghost"] })
+      .equipment(smallEngine());
 
-    expect(() => run(world)).toThrow(/Faction "fx_ghost" sells Ships but libraries\/factions\.xml doesn't define it/);
+    expect(() => run(world)).toThrow(/Faction "fx_ghost" sells Ships or Equipment but libraries\/factions\.xml doesn't define it/);
   });
 });
 
@@ -292,7 +295,8 @@ describe("transform: Ships", () => {
             accfactors: `forward="0.8" horizontal="3"`,
           },
           storage: [{ capacity: 250, tags: "container" }],
-        }),
+        })
+        .equipment(smallEngine()),
     );
 
     expect(ship("fx_fighter")).toEqual({

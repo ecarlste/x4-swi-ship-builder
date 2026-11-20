@@ -10,9 +10,26 @@ export const EXCLUSION_TAGS = ["noplayerbuild", "missiononly", "blueprintsaleonl
 
 /**
  * The fit list every Slot, Slot Group kind and option list points at until
- * compatibility is computed (#31). It is empty.
+ * compatibility is computed, and the id of the empty fit list.
  */
 export const EMPTY_FIT_LIST = "empty";
+
+/**
+ * What a Ship's equipment must match, kept beside the Ship so compatibility
+ * can be computed once all Equipment is read.
+ */
+export interface ShipFittings {
+  /** The macro's class: `ship_s`, `ship_m`, ... */
+  shipClass: string;
+  /** Slot id → the connection's tags. */
+  slots: Map<string, string[]>;
+  /** Slot Group id → kind → the tags of each of its connections of that kind. */
+  groups: Map<string, Partial<Record<SlotGroupKind, string[][]>>>;
+  /** The tags of each of the macro's `<thruster>` elements. */
+  thrusters: string[][];
+  /** The macro's `<software>` list; `default="1"` software is mandatory. */
+  software: { ware: string; mandatory: boolean }[];
+}
 
 export interface LeftOut {
   ware: string;
@@ -20,8 +37,10 @@ export interface LeftOut {
 }
 
 export interface ShipsResult {
-  /** Buildable Ships, with names not yet made unique. */
+  /** Buildable Ships, with names not yet made unique, and every fit list {@link EMPTY_FIT_LIST}. */
   ships: Ship[];
+  /** By Ship id. */
+  fittings: Map<string, ShipFittings>;
   leftOut: LeftOut[];
   /** Things worth a look in the report that don't stop the extraction. */
   warnings: string[];
@@ -40,6 +59,7 @@ const GROUP_KINDS: SlotGroupKind[] = ["turret", "shield", "engine"];
  */
 export function readShips(files: GameFiles, text: TextResolver, builders: Map<string, Set<string>>): ShipsResult {
   const ships: Ship[] = [];
+  const fittings = new Map<string, ShipFittings>();
   const leftOut: LeftOut[] = [];
   const warnings: string[] = [];
   const defaults = classDefaults(files);
@@ -74,9 +94,11 @@ export function readShips(files: GameFiles, text: TextResolver, builders: Map<st
       continue;
     }
 
-    ships.push(readShip(files, text, { ware, macro, size, shipClass, sellers, defaults, warnings }));
+    const read = readShip(files, text, { ware, macro, size, shipClass, sellers, defaults, warnings });
+    ships.push(read.ship);
+    fittings.set(id, read.fittings);
   }
-  return { ships, leftOut, warnings };
+  return { ships, fittings, leftOut, warnings };
 }
 
 interface ShipContext {
@@ -89,7 +111,7 @@ interface ShipContext {
   warnings: string[];
 }
 
-function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): Ship {
+function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): { ship: Ship; fittings: ShipFittings } {
   const { ware, macro, size, shipClass, sellers, defaults, warnings } = ctx;
   const id = attr(ware, "id")!;
   const where = `ware ${id}`;
@@ -122,7 +144,7 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): Ship 
   const componentRef = attr(child(macro, "component"), "ref");
   if (componentRef === undefined) throw new ExtractError(`${where}: its macro has no <component ref>`);
   const component = files.component(componentRef, `${where} macro`).element;
-  const { slots, slotGroups } = readSlots(component, size, id, warnings);
+  const { slots, slotGroups, slotTags, groupTags } = readSlots(component, size, id, warnings);
   const prices = {
     min: numberAttr(price, "min", `${where} <price>`) ?? 0,
     average: numberAttr(price, "average", `${where} <price>`) ?? 0,
@@ -132,7 +154,18 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): Ship 
     warnings.push(`${id}: price isn't min <= average <= max (${prices.min}, ${prices.average}, ${prices.max})`);
   }
 
-  return {
+  const fittings: ShipFittings = {
+    shipClass,
+    slots: slotTags,
+    groups: groupTags,
+    thrusters: children(props, "thruster").map((t) => list(attr(t, "tags"))),
+    software: children(child(props, "software"), "software").flatMap((s) => {
+      const softwareWare = attr(s, "ware");
+      return softwareWare === undefined ? [] : [{ ware: softwareWare, mandatory: attr(s, "default") === "1" }];
+    }),
+  };
+
+  const ship: Ship = {
     id,
     name: text.resolve(nameId, where),
     nameId,
@@ -180,6 +213,7 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): Ship 
     deployables: EMPTY_FIT_LIST,
     countermeasures: EMPTY_FIT_LIST,
   };
+  return { ship, fittings };
 }
 
 /** Class properties from libraries/defaults.xml, by class (`ship_s`, ...). */
@@ -225,8 +259,15 @@ function readSlots(
   shipSize: Size,
   shipId: string,
   warnings: string[],
-): { slots: Slot[]; slotGroups: SlotGroup[] } {
+): {
+  slots: Slot[];
+  slotGroups: SlotGroup[];
+  slotTags: ShipFittings["slots"];
+  groupTags: ShipFittings["groups"];
+} {
   const slots: Slot[] = [];
+  const slotTags: ShipFittings["slots"] = new Map();
+  const groupTags: ShipFittings["groups"] = new Map();
   const groups = new Map<string, SlotGroup["kinds"]>();
   for (const connection of children(child(component, "connections"), "connection")) {
     const tags = list(attr(connection, "tags"));
@@ -247,6 +288,7 @@ function readSlots(
     const group = attr(connection, "group");
     if (group === undefined) {
       slots.push({ id: name, kind, size, mandatory: tags.includes("mandatory"), fitList: EMPTY_FIT_LIST });
+      slotTags.set(name, tags);
       continue;
     }
     if (kind === "weapon") {
@@ -259,11 +301,14 @@ function readSlots(
     const entry = kindsOfGroup[kind];
     kindsOfGroup[kind] = { count: (entry?.count ?? 0) + 1, fitList: EMPTY_FIT_LIST };
     groups.set(group, kindsOfGroup);
+    const tagsOfGroup = groupTags.get(group) ?? {};
+    tagsOfGroup[kind] = [...(tagsOfGroup[kind] ?? []), tags];
+    groupTags.set(group, tagsOfGroup);
   }
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const slotGroups = [...groups].map(([id, kinds]) => ({
     id,
     kinds: Object.fromEntries(GROUP_KINDS.flatMap((k) => (kinds[k] ? [[k, kinds[k]]] : []))),
   }));
-  return { slots: slots.sort(byId), slotGroups: slotGroups.sort(byId) };
+  return { slots: slots.sort(byId), slotGroups: slotGroups.sort(byId), slotTags, groupTags };
 }

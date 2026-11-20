@@ -170,8 +170,14 @@ export type Ship = z.infer<typeof shipSchema>;
 
 // ---------------------------------------------------------------- equipment
 
+/**
+ * An item's size, from its type connection's size tag. Null when it has none
+ * (SWI's astromech shields, say): then only its other tags say what it fits.
+ */
+const equipmentSize = sizeSchema.nullable();
+
 const gunFields = {
-  size: sizeSchema,
+  size: equipmentSize,
   damage: z.object({ value: nonNegative, noShield: nonNegative }).strict(),
   barrelAmount: z.number().int().positive(),
   /** Bullet `reload@rate`: shots per second without a magazine. */
@@ -189,7 +195,11 @@ const gunFields = {
     })
     .strict()
     .nullable(),
-  /** Fit list of the missiles a launcher can fire; null if it isn't a launcher. */
+  /**
+   * Fit list of the missiles a launcher can fire; null if it isn't a launcher.
+   * A launcher's damage, rate and heat are its missile's, so its own gun
+   * fields are zero damage, one barrel, a rate of 1, and no magazine or heat.
+   */
   missiles: id.nullable(),
 };
 
@@ -200,7 +210,7 @@ export const equipmentSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("shield"),
       ...tradeableFields,
-      size: sizeSchema,
+      size: equipmentSize,
       capacity: nonNegative,
       rechargeRate: nonNegative,
       rechargeDelay: nonNegative,
@@ -210,7 +220,7 @@ export const equipmentSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("engine"),
       ...tradeableFields,
-      size: sizeSchema,
+      size: equipmentSize,
       thrust: z.object({ forward: nonNegative, reverse: nonNegative }).strict(),
       boost: z
         .object({
@@ -229,7 +239,7 @@ export const equipmentSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("thruster"),
       ...tradeableFields,
-      size: sizeSchema,
+      size: equipmentSize,
       thrust: z
         .object({ strafe: nonNegative, pitch: nonNegative, yaw: nonNegative, roll: nonNegative })
         .strict(),
