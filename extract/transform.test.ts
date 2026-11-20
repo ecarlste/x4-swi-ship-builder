@@ -236,6 +236,10 @@ describe("transform: the crew price", () => {
   it("fails when libraries/wares.xml has no crew ware", () => {
     expect(() => run(oneShipWorld().crew(null))).toThrow(/libraries\/wares\.xml has no ware "crew"/);
   });
+
+  it("fails when the crew ware's price lacks min, average or max, rather than price Crew at 0", () => {
+    expect(() => run(oneShipWorld().crew({ min: 4000, max: 8000 }))).toThrow(/ware crew <price>: no average/);
+  });
 });
 
 describe("transform: display names", () => {

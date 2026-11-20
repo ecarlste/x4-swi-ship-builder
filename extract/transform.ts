@@ -204,18 +204,20 @@ function readFactions(files: GameFiles, text: TextResolver, items: (Ship | Equip
 /**
  * The price of a ware that is neither a Ship nor Equipment, such as `crew`,
  * which Crew is bought as (ADR 0004). It is read from the merged files, so a
- * patch to it is picked up.
+ * patch to it is picked up. A missing min, average or max fails extraction
+ * rather than price the ware at 0.
  */
 function readWarePrice(files: GameFiles, id: string): Price {
   const ware = children(files.requireFile("libraries/wares.xml"), "ware").find((w) => attr(w, "id") === id);
   if (!ware) throw new ExtractError(`libraries/wares.xml has no ware "${id}"`);
   const price = child(ware, "price");
   const where = `ware ${id} <price>`;
-  return {
-    min: numberAttr(price, "min", where) ?? 0,
-    average: numberAttr(price, "average", where) ?? 0,
-    max: numberAttr(price, "max", where) ?? 0,
+  const read = (name: keyof Price): number => {
+    const value = numberAttr(price, name, where);
+    if (value === undefined) throw new ExtractError(`${where}: no ${name}`);
+    return value;
   };
+  return { min: read("min"), average: read("average"), max: read("max") };
 }
 
 /** Display names for the licence types, which the game only names per Faction. */

@@ -16,7 +16,7 @@ export class FixtureWorld {
   private ships: ShipSpec[] = [];
   private equipmentSpecs: EquipmentSpec[] = [];
   private extraText: { page: string; id: string; text: string }[] = [];
-  private crewPrice: PriceSpec | null = { min: 40, average: 50, max: 60 };
+  private crewPrice: Partial<PriceSpec> | null = { min: 40, average: 50, max: 60 };
   /** Game path → extra XML files, written as given. */
   readonly extraFiles: Record<string, string> = {};
 
@@ -41,8 +41,8 @@ export class FixtureWorld {
     return this;
   }
 
-  /** The `crew` ware's price, which Crew is bought at; null leaves the ware out. */
-  crew(price: PriceSpec | null): this {
+  /** The `crew` ware's price, which Crew is bought at; null leaves the ware out, a missing field its attribute. */
+  crew(price: Partial<PriceSpec> | null): this {
     this.crewPrice = price;
     return this;
   }
@@ -222,7 +222,7 @@ export class FixtureWorld {
       const price = this.crewPrice;
       wares.push(
         `<ware id="crew" name="${newText("Crewman")}" transport="passenger" volume="1">` +
-          `<price min="${price.min}" average="${price.average}" max="${price.max}"/></ware>`,
+          `<price ${Object.entries(price).map(([k, v]) => `${k}="${v}"`).join(" ")}/></ware>`,
       );
     }
 
