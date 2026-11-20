@@ -22,6 +22,9 @@ const copyLink = (page: Page) => page.getByRole("toolbar").getByRole("button", {
 const saveButton = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: "Save", exact: true });
 const saveDialog = (page: Page) => page.getByRole("dialog", { name: "Save Loadout" });
 
+/** What the page's clipboard holds. (A string expression, since the e2e tsconfig has no DOM types.) */
+const readClipboard = (page: Page) => page.evaluate<string>("navigator.clipboard.readText()");
+
 /** A Share Link fragment carrying this value, built in the page the way the app builds one. */
 async function fragmentFor(page: Page, value: unknown) {
   return page.evaluate(async (json) => {
@@ -52,7 +55,7 @@ test("a copied link opens the same Loadout, with its name, in a new page", async
 
   await copyLink(page).click();
   await expect(page.getByRole("status")).toContainText("Link copied");
-  const link = await page.evaluate(() => navigator.clipboard.readText());
+  const link = await readClipboard(page);
   expect(link).toMatch(/\/#l=[A-Za-z0-9_-]+$/);
 
   const other = await context.newPage();
@@ -70,7 +73,8 @@ test("a link copied from an unsaved Loadout opens without a name", async ({ cont
   await openShip(page, "S", "Swiftwing Courier");
   await fit(page, /con_weapon_01/, "Zephyr Cannon");
   await copyLink(page).click();
-  const link = await page.evaluate(() => navigator.clipboard.readText());
+  await expect(page.getByRole("status")).toContainText("Link copied");
+  const link = await readClipboard(page);
 
   const other = await context.newPage();
   await other.goto(link);
