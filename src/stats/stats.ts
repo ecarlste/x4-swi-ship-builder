@@ -11,11 +11,13 @@ import { crewCount, shipEngines, type Loadout } from "../builder/loadout.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
+import { shownValue } from "./figure.ts";
 
 export type { MissingUpgrade } from "./mandatory.ts";
 /** Per-Equipment figures for a weapon or turret, e.g. for the comparison popover. */
 export { gunOutput, type GunOutput } from "./firepower.ts";
-export { compareEquipment, type Comparison, type Figure, type MissileRow, type Verdict } from "./comparison.ts";
+export { compareEquipment, type Comparison, type Figure, type MissileRow } from "./comparison.ts";
+export { compareFigure, comparePrice, type Verdict } from "./figure.ts";
 
 /** One stat row of the configuration screen. */
 export interface StatRow {
@@ -29,6 +31,8 @@ export interface StatRow {
   shown: number;
   decimals: number;
   group: string;
+  /** Whether a fall in this row is better, as for a recharge delay. */
+  lowerIsBetter: boolean;
 }
 
 export interface LoadoutStats {
@@ -47,11 +51,8 @@ const STORAGE_ROWS: [CargoType, string, string][] = [
   ["condensate", "CondensateCapacity", "Condensate Storage"],
 ];
 
-/** Rounds down to `decimals` places, like the game's `Helper.floor`. */
-function floorTo(value: number, decimals: number): number {
-  const scale = 10 ** decimals;
-  return Math.floor(value * scale) / scale;
-}
+/** Rows whose change is better when it falls: a shorter recharge delay or travel charge time. */
+const LOWER_IS_BETTER = new Set(["ShieldDelay", "GroupedShieldDelay", "TravelChargeTime"]);
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 const mean = (values: number[]) => (values.length === 0 ? 0 : sum(values) / values.length);
@@ -70,7 +71,16 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   const rows: StatRow[] = [];
   const add = (id: string, label: string, unit: string, decimals: number, group: string, value: number) =>
-    rows.push({ id, label, unit, value, shown: floorTo(value, decimals), decimals, group });
+    rows.push({
+      id,
+      label,
+      unit,
+      value,
+      shown: shownValue(value, decimals),
+      decimals,
+      group,
+      lowerIsBetter: LOWER_IS_BETTER.has(id),
+    });
 
   add("HullValue", "Hull", "MJ", 0, "combat", ship.stats.hull);
   add("ShieldValue", "Shield", "MJ", 0, "combat", sum(shields.map((s) => s.capacity)));

@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { LoadoutStats, StatRow } from "../stats/stats.ts";
+import { compareFigure, comparePrice, type LoadoutStats, type StatRow, type Verdict } from "../stats/stats.ts";
 import { formatCredits, formatNumber, formatSigned } from "./format.ts";
 
 /** The value as the game prints it: already rounded down, with its decimals and thousands separators. */
@@ -8,7 +8,8 @@ const formatted = (row: StatRow) => formatNumber(row.shown, row.decimals);
 /** A change as "+1,000" or "−1,000" (a true minus sign) with the row's decimals; empty when there is none. */
 const signed = (change: number, decimals: number) => (change === 0 ? "" : formatSigned(change, decimals));
 
-const direction = (change: number) => (change > 0 ? "up" : change < 0 ? "down" : "");
+/** A change's class: green when better, red when worse, none when the same. */
+const verdictClass = (verdict: Verdict) => (verdict === "same" ? "" : verdict);
 
 /** Rows the game indents under the row above them. */
 const SUB_ROWS = new Set([
@@ -38,14 +39,15 @@ const TOOLTIPS: Record<string, string> = {
  * estimate (ADR 0003, ADR 0004).
  *
  * Given `was`, the stats of the Loadout as it was opened or last saved, each
- * row also gets an unlabelled change column (green up, red down).
+ * row also gets an unlabelled change column (green better, red worse). A
+ * longer delay or charge time, or a higher Price, is worse.
  */
 export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: LoadoutStats | null }) {
   const headingId = useId();
   const priceId = useId();
   const groups = [...new Set(stats.rows.map((r) => r.group))];
   const wasShown = new Map(was?.rows.map((r) => [r.id, r.shown]));
-  const priceChange = was ? Math.round(stats.price.average) - Math.round(was.price.average) : 0;
+  const priceChange = was ? comparePrice(stats.price.average, was.price.average) : null;
 
   return (
     <>
@@ -64,7 +66,7 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
                     {r.unit && ` (${r.unit})`}
                   </th>
                   <td>{formatted(r)}</td>
-                  {was && <ChangeCell change={r.shown - (wasShown.get(r.id) ?? r.shown)} decimals={r.decimals} />}
+                  {was && <ChangeCell row={r} was={wasShown.get(r.id) ?? r.shown} />}
                 </tr>
               ))}
           </tbody>
@@ -77,10 +79,10 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
           <span className="stats-price-range">
             {formatNumber(stats.price.min, 0)} – {formatCredits(stats.price.max)}
           </span>
-          {priceChange !== 0 && (
+          {priceChange && priceChange.difference !== 0 && (
             <>
               {" "}
-              <span className={`stat-change ${direction(priceChange)}`}>{signed(priceChange, 0)} Cr</span>
+              <span className={`stat-change ${verdictClass(priceChange.verdict)}`}>{signed(priceChange.difference, 0)} Cr</span>
             </>
           )}
         </p>
@@ -90,8 +92,7 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
   );
 }
 
-function ChangeCell({ change, decimals }: { change: number; decimals: number }) {
-  // Both values are already rounded down; rounding the difference drops float noise.
-  const rounded = Number(change.toFixed(decimals));
-  return <td className={`stat-change ${direction(rounded)}`.trim()}>{signed(rounded, decimals)}</td>;
+function ChangeCell({ row, was }: { row: StatRow; was: number }) {
+  const { difference, verdict } = compareFigure(row.shown, was, row);
+  return <td className={`stat-change ${verdictClass(verdict)}`.trim()}>{signed(difference, row.decimals)}</td>;
 }
