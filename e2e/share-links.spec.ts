@@ -44,6 +44,41 @@ test("a copied link opens the same Loadout, with its name, in a new page", async
   await expect(saveDialog(other).getByRole("textbox", { name: "Name" })).toHaveValue("Heavy Freighter");
 });
 
+test("Crew comes back when a Saved Loadout is reopened and when a Share Link is opened (ADR 0004)", async ({ context, page }) => {
+  // Resolving drops the Crew until #89 carries it through resolve. Remove this once #89 is merged.
+  test.fail();
+  const crewCount = (p: Page, role: string) => p.getByRole("spinbutton", { name: `${role} count` });
+  const expectCrew = async (p: Page) => {
+    await expect(crewCount(p, "Service crew")).toHaveValue("5");
+    await expect(crewCount(p, "Marines")).toHaveValue("3");
+  };
+  await pickShip(page, "L", "Ironback Hauler");
+  await crewCount(page, "Service crew").fill("5");
+  await crewCount(page, "Marines").fill("3");
+  await saveButton(page).click();
+  await saveDialog(page).getByRole("textbox", { name: "Name" }).fill("Boarding Hauler");
+  await saveDialog(page).getByRole("button", { name: "Save" }).click();
+  await expect(saveDialog(page)).toBeHidden();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Saved Loadouts" }).click();
+  await page
+    .getByRole("region", { name: "Saved Loadouts" })
+    .getByRole("listitem")
+    .filter({ hasText: "Boarding Hauler" })
+    .getByRole("button", { name: "Open" })
+    .click();
+  await expect(page.getByRole("combobox", { name: "Ship" })).toHaveValue("Ironback Hauler");
+  await expectCrew(page);
+
+  await copyLink(page).click();
+  await expect(page.getByRole("status")).toContainText("Link copied");
+  const other = await context.newPage();
+  await other.goto(await readClipboard(page));
+  await expect(other.getByRole("combobox", { name: "Ship" })).toHaveValue("Ironback Hauler");
+  await expectCrew(other);
+});
+
 test("a link copied from an unsaved Loadout opens without a name", async ({ context, page }) => {
   await pickShip(page, "S", "Swiftwing Courier");
   await fit(page, /con_weapon_01/, "Zephyr Cannon");
