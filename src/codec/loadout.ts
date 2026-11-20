@@ -50,6 +50,13 @@ export const savedLoadoutSchema = loadoutSchema.extend({
 
 export type SavedLoadout = z.infer<typeof savedLoadoutSchema>;
 
+/** A Loadout carried by a Share Link, with the name it had when it was shared. */
+export const sharedLoadoutSchema = loadoutSchema.extend({
+  name: z.string().trim().min(1).optional(),
+});
+
+export type SharedLoadout = z.infer<typeof sharedLoadoutSchema>;
+
 export type ParseResult<T> = { ok: true; loadout: T } | { ok: false; error: string };
 
 function parseWith<T>(schema: z.ZodType<T>, value: unknown): ParseResult<T> {
@@ -77,4 +84,9 @@ export function parseLoadout(value: unknown): ParseResult<Loadout> {
 /** Validates an untrusted value as a Saved Loadout. */
 export function parseSavedLoadout(value: unknown): ParseResult<SavedLoadout> {
   return parseWith(savedLoadoutSchema, value);
+}
+
+/** Validates an untrusted value as a Loadout carried by a Share Link. */
+export function parseSharedLoadout(value: unknown): ParseResult<SharedLoadout> {
+  return parseWith(sharedLoadoutSchema, value);
 }

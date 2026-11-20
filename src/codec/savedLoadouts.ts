@@ -95,6 +95,30 @@ export function saveLoadout(
   return { ok: true, saved };
 }
 
+/**
+ * Adds Saved Loadouts after the stored ones, as they are, without touching
+ * the rest. One whose id clashes with a stored one (or an earlier one added
+ * here) gets a new id, so both copies are kept.
+ */
+export function addSavedLoadouts(
+  storage: LoadoutStorage,
+  loadouts: SavedLoadout[],
+  { newId = () => crypto.randomUUID() }: { newId?: () => string } = {},
+): { ok: true; added: SavedLoadout[] } | { ok: false; error: string } {
+  const read = readRaw(storage);
+  if (!read.ok) return read;
+
+  const taken = new Set(read.raw.map(idOf).filter((id) => id !== undefined));
+  const added = loadouts.map((loadout) => {
+    let id = loadout.id;
+    while (taken.has(id)) id = newId();
+    taken.add(id);
+    return id === loadout.id ? loadout : { ...loadout, id };
+  });
+  writeRaw(storage, [...read.raw, ...added]);
+  return { ok: true, added };
+}
+
 /** Deletes one Saved Loadout: an OK one by its id, an Unreadable one by its place. */
 export function deleteSavedLoadout(storage: LoadoutStorage, entry: SavedLoadoutEntry) {
   const read = readRaw(storage);

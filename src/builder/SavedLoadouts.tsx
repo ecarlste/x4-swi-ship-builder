@@ -1,24 +1,30 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { Ship } from "../gameData.ts";
+import type { GameData } from "../gameData.ts";
 import type { SavedLoadoutEntry, SavedLoadoutList } from "../codec/savedLoadouts.ts";
+import { describeChange, resolveLoadout } from "../codec/resolve.ts";
 
 /**
- * The Saved Loadouts list: each one's name and Ship name, with Open and
- * Delete. An Unreadable entry offers Delete only.
+ * The Saved Loadouts list: each one's name and Ship name, with Open, Export
+ * and Delete. Each entry is checked against the Game Data: one that will
+ * change on opening is marked ⚠ with a count and a tooltip naming the
+ * changes; one whose Ship is gone is Unavailable, with Export and Delete only.
+ * An Unreadable entry offers Delete only. A version change alone isn't shown.
  */
 export function SavedLoadoutsList({
   list,
-  ships,
+  gameData,
   onOpen,
+  onExport,
   onDelete,
 }: {
   list: SavedLoadoutList;
-  ships: Ship[];
+  gameData: GameData;
   onOpen: (entry: Extract<SavedLoadoutEntry, { status: "ok" }>) => void;
+  onExport: (entry: Extract<SavedLoadoutEntry, { status: "ok" }>) => void;
   onDelete: (entry: SavedLoadoutEntry) => void;
 }) {
   const headingId = useId();
-  const shipName = (id: string) => ships.find((s) => s.id === id)?.name ?? id;
+  const shipName = (id: string) => gameData.ships.find((s) => s.id === id)?.name ?? id;
 
   return (
     <section className="saved-loadouts" aria-labelledby={headingId}>
@@ -30,32 +36,64 @@ export function SavedLoadoutsList({
       )}
       {list.ok && list.entries.length === 0 && <p className="saved-loadouts-empty">No Saved Loadouts yet.</p>}
       <ul>
-        {list.entries.map((entry) =>
-          entry.status === "ok" ? (
+        {list.entries.map((entry) => {
+          if (entry.status === "unreadable") {
+            return (
+              <li key={`unreadable-${entry.index}`} className="unreadable">
+                <span className="saved-loadout-name">Unreadable</span>{" "}
+                <span className="saved-loadout-error">{entry.error}</span>
+                <span className="saved-loadout-actions">
+                  <button type="button" onClick={() => onDelete(entry)}>
+                    Delete
+                  </button>
+                </span>
+              </li>
+            );
+          }
+          // Checked against the Game Data each time the list is shown.
+          const resolved = resolveLoadout(gameData, entry.loadout);
+          if (resolved.status === "unavailable") {
+            return (
+              <li key={`unavailable-${entry.loadout.id}-${entry.index}`} className="unavailable">
+                <span className="saved-loadout-name">{entry.loadout.name}</span>{" "}
+                <span className="saved-loadout-ship">
+                  Ship no longer in Game Data <span className="dim">{resolved.ship}</span>
+                </span>
+                <span className="saved-loadout-actions">
+                  <button type="button" onClick={() => onExport(entry)}>
+                    Export
+                  </button>
+                  <button type="button" onClick={() => onDelete(entry)}>
+                    Delete
+                  </button>
+                </span>
+              </li>
+            );
+          }
+          const changes = resolved.changes.length;
+          return (
             <li key={`ok-${entry.loadout.id}-${entry.index}`}>
               <span className="saved-loadout-name">{entry.loadout.name}</span>{" "}
               <span className="saved-loadout-ship">{shipName(entry.loadout.ship)}</span>
+              {changes > 0 && (
+                <span className="saved-loadout-changes" title={resolved.changes.map(describeChange).join("\n")}>
+                  ⚠ {changes} {changes === 1 ? "item no longer fits" : "items no longer fit"}
+                </span>
+              )}
               <span className="saved-loadout-actions">
                 <button type="button" onClick={() => onOpen(entry)}>
                   Open
                 </button>
+                <button type="button" onClick={() => onExport(entry)}>
+                  Export
+                </button>
                 <button type="button" onClick={() => onDelete(entry)}>
                   Delete
                 </button>
               </span>
             </li>
-          ) : (
-            <li key={`unreadable-${entry.index}`} className="unreadable">
-              <span className="saved-loadout-name">Unreadable</span>{" "}
-              <span className="saved-loadout-error">{entry.error}</span>
-              <span className="saved-loadout-actions">
-                <button type="button" onClick={() => onDelete(entry)}>
-                  Delete
-                </button>
-              </span>
-            </li>
-          ),
-        )}
+          );
+        })}
       </ul>
     </section>
   );
