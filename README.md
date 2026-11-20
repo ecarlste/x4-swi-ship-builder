@@ -91,3 +91,5 @@ npm run worktree -- 76 ticket-worktrees
 This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main`, copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
 
 A tracked pre-commit hook (`.githooks/`, wired up by `npm ci` through the `prepare` script) refuses commits on `main` in every worktree. For a deliberate one, set `ALLOW_MAIN_COMMIT=1`.
+
+No commit credits an AI tool. A tracked commit-msg hook removes `Co-authored-by` trailers naming one, and the `attribution` CI job (`.github/workflows/attribution.yml`, which re-runs when the PR description is edited) fails a PR whose commits (trailers, author or committer email) or description still do. The pattern lives in `scripts/aiAttribution.ts`.

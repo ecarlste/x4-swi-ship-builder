@@ -5,4 +5,6 @@ test-results/
 playwright-report/
 .env
 .cache/
-.claude/worktrees/
+# Only the project settings are shared; the rest of .claude/ is local.
+.claude/*
+!.claude/settings.json

@@ -1,7 +1,7 @@
-import { cpSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cleanEnv, repoRoot, run, tempDir } from "./testing/gitSandbox.ts";
+import { cleanEnv, installHooks, run, tempDir } from "./testing/gitSandbox.ts";
 
 /** The tracked pre-commit hook, run by git in a throwaway repo. */
 describe("pre-commit hook", () => {
@@ -11,8 +11,7 @@ describe("pre-commit hook", () => {
   beforeEach(() => {
     ({ dir: repo, cleanup } = tempDir());
     run("git", ["init", "-q", "-b", "main", repo]);
-    cpSync(join(repoRoot, ".githooks"), join(repo, ".githooks"), { recursive: true });
-    run("git", ["config", "core.hooksPath", ".githooks"], { cwd: repo });
+    installHooks(repo);
   });
   afterEach(() => cleanup());
 

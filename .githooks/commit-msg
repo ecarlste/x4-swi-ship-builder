@@ -1,0 +1,6 @@
+#!/bin/sh
+# Removes Co-authored-by trailers that credit an AI tool, leaving the rest of
+# the message as written. CI checks the same pattern (scripts/aiAttribution.ts).
+# `npm ci` wires this up through the `prepare` script (core.hooksPath).
+
+exec node "$(dirname "$0")/../scripts/aiAttribution.ts" strip "$1"

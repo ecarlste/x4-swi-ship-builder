@@ -1,0 +1,37 @@
+name: Attribution
+
+# No commit or PR description credits an AI tool (#91). The commit-msg hook
+# strips AI Co-authored-by trailers locally; this catches what got past it.
+# Its own workflow, not a job in ci.yml: it re-runs when the PR description is
+# edited, which must neither cancel nor skip CI's `check` job.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: attribution-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  attribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
+      - name: No AI attribution in the PR's commits or description
+        env:
+          PR_DESCRIPTION: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/aiAttribution.ts check "$BASE_SHA" "$HEAD_SHA"
