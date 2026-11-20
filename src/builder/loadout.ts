@@ -59,3 +59,21 @@ export function setSlot(loadout: Loadout, slotId: string, equipment: string | nu
   if (equipment) slots[slotId] = equipment;
   return withEntry(loadout, "slots", slots);
 }
+
+/**
+ * Sets one kind of a Slot Group: the Equipment and how many of the group's
+ * Slots it fills. Null, or a count of 0, empties it.
+ */
+export function setGroup(
+  loadout: Loadout,
+  groupId: string,
+  kind: SlotGroupKind,
+  entry: { equipment: string; count: number } | null,
+): Loadout {
+  const kinds = { ...loadout.groups?.[groupId] };
+  delete kinds[kind];
+  if (entry && entry.count > 0) kinds[kind] = entry;
+  const groups = withoutKey(loadout.groups, groupId);
+  if (Object.keys(kinds).length > 0) groups[groupId] = kinds;
+  return withEntry(loadout, "groups", groups);
+}

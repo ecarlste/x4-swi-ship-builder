@@ -76,3 +76,41 @@ test("picking another Ship opens it as an Empty Loadout", async ({ page }) => {
 
   await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/— empty —/);
 });
+
+test("a Slot Group has one row per kind, with an Equipment choice and a count up to the group's size", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+
+  // Rows for every kind of every group, after the Slots.
+  await expect(loadoutTable(page).getByRole("rowheader").first()).toContainText("con_shield_01");
+  await expect(row(page, /Turrets group_front/)).toBeVisible();
+  await expect(row(page, /Shields group_front/)).toBeVisible();
+  await expect(row(page, /Engines enginegroup/)).toBeVisible();
+
+  const turrets = row(page, /Turrets group_front/);
+  const count = turrets.getByRole("spinbutton");
+  await expect(count).toHaveValue("0");
+  await expect(count).toBeDisabled();
+  await expect(turrets.getByRole("cell").nth(1)).toContainText("/ 4");
+
+  // Picking Equipment fills the whole group; the count then narrows it.
+  await fit(page, /Turrets group_front/, "Flak Turret");
+  await expect(count).toHaveValue("4");
+  await expect(turrets.getByRole("cell").nth(3)).toHaveText("180,000 Cr");
+
+  await count.fill("2");
+  await expect(count).toHaveValue("2");
+  await expect(turrets.getByRole("cell").nth(3)).toHaveText("90,000 Cr");
+
+  // Never more than the group's size.
+  await count.fill("9");
+  await expect(count).toHaveValue("4");
+
+  // The other kinds of the same group are separate.
+  await expect(row(page, /Shields group_front/).getByRole("combobox")).toHaveText(/— empty —/);
+
+  // A count of 0 empties the row.
+  await count.fill("0");
+  await expect(turrets.getByRole("combobox")).toHaveText(/— empty —/);
+  await expect(count).toHaveValue("0");
+  await expect(turrets.getByRole("cell").nth(3)).toHaveText("");
+});
