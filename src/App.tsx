@@ -11,6 +11,8 @@ import { changedSince } from "./builder/changes.ts";
 import { SaveDialog, SavedLoadoutsList } from "./builder/SavedLoadouts.tsx";
 import type { SavedLoadout } from "./codec/loadout.ts";
 import { readShareLink, shareLinkUrl } from "./codec/shareLink.ts";
+import { resolveLoadout, type Resolution } from "./codec/resolve.ts";
+import { ChangesNotice } from "./builder/ChangesNotice.tsx";
 import {
   deleteSavedLoadout,
   readSavedLoadouts,
@@ -58,6 +60,10 @@ export function App() {
   const [naming, setNaming] = useState(false);
   const importInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ kind: "status" | "error"; text: string } | null>(null);
+  /** What resolving the opened Loadout against the Game Data dropped or clamped, until dismissed. */
+  const [notice, setNotice] = useState<Pick<Extract<Resolution, { status: "ok" }>, "changes" | "versions"> | null>(
+    null,
+  );
   const ship = loadout ? (gameData.ships.find((s) => s.id === loadout.ship) ?? null) : null;
 
   const stats = loadout && ship ? loadoutStats(gameData, loadout) : null;
@@ -74,6 +80,7 @@ export function App() {
     if (result.ok) {
       setOpened({ id: result.saved.id, name: result.saved.name });
       setSnapshot(loadout);
+      setNotice(null);
       setMessage({ kind: "status", text: `Saved “${result.saved.name}”.` });
     } else {
       setMessage({ kind: "error", text: result.error });
@@ -94,11 +101,26 @@ export function App() {
     setOpened(named);
     setShowSaved(false);
     setMessage(null);
+    setNotice(null);
+  };
+
+  /**
+   * Resolves a stored or shared Loadout against the Game Data and opens the
+   * repaired version, with a notice when anything was dropped or clamped.
+   * Returns the Ship's id when the Loadout is Unavailable.
+   */
+  const resolveAndOpen = (stored: Loadout, named: { id?: string; name: string } | null) => {
+    const resolved = resolveLoadout(gameData, stored);
+    if (resolved.status === "unavailable") return { unavailable: resolved.ship };
+    openLoadout(resolved.loadout, named);
+    if (resolved.changes.length > 0) setNotice({ changes: resolved.changes, versions: resolved.versions });
+    return null;
   };
 
   const open = (saved: SavedLoadout) => {
     const { id, name, createdAt: _c, updatedAt: _u, ...opening } = saved;
-    openLoadout(opening, { id, name });
+    const failed = resolveAndOpen(opening, { id, name });
+    if (failed) setMessage({ kind: "error", text: `This Saved Loadout's Ship (${failed.unavailable}) isn't in the Game Data.` });
   };
 
   const exportAll = () => {
@@ -155,11 +177,8 @@ export function App() {
         return;
       }
       const { name, ...shared } = result.loadout;
-      if (!gameData.ships.some((s) => s.id === shared.ship)) {
-        setMessage({ kind: "error", text: `This Share Link's Ship (${shared.ship}) isn't in the Game Data.` });
-        return;
-      }
-      openLoadout(shared, name === undefined ? null : { name });
+      const failed = resolveAndOpen(shared, name === undefined ? null : { name });
+      if (failed) setMessage({ kind: "error", text: `This Share Link's Ship (${failed.unavailable}) isn't in the Game Data.` });
     };
     void openShareLink();
     window.addEventListener("hashchange", openShareLink);
@@ -194,6 +213,7 @@ export function App() {
             setSnapshot(null);
             setOpened(null);
             setMessage(null);
+            setNotice(null);
           }}
         />
         {missing.length > 0 && (
@@ -251,13 +271,14 @@ export function App() {
           {message.text}
         </p>
       )}
+      {notice && <ChangesNotice {...notice} onDismiss={() => setNotice(null)} />}
       {naming && ship && (
         <SaveDialog suggestedName={opened?.name ?? ship.name} onSave={(name) => save({ name })} onCancel={() => setNaming(false)} />
       )}
       {showSaved && (
         <SavedLoadoutsList
           list={savedList}
-          ships={gameData.ships}
+          gameData={gameData}
           onOpen={(entry) => open(entry.loadout)}
           onExport={(entry) => download([entry.loadout], fileNameFor(entry.loadout.name))}
           onDelete={remove}
