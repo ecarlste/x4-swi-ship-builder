@@ -77,6 +77,32 @@ test("picking another Ship opens it as an Empty Loadout", async ({ page }) => {
   await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/— empty —/);
 });
 
+test("the thruster has its own row and dropdown", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+
+  await fit(page, "Thruster", "Nimble Thruster S");
+  await expect(row(page, "Thruster").getByRole("cell")).toHaveText([
+    /Nimble Thruster S/,
+    "1",
+    "400 N strafe",
+    "3,500 Cr",
+  ]);
+});
+
+test("software is chosen from the Ship's software options", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+
+  const scanner = page.getByRole("checkbox", { name: "Long Scanner" });
+  const scannerRow = loadoutTable(page).getByRole("row").filter({ has: scanner });
+  await expect(page.getByRole("checkbox", { name: "Flight Assist Mk1" })).not.toBeChecked();
+  await expect(scanner).not.toBeChecked();
+
+  await scanner.check();
+  await expect(scannerRow.getByRole("cell").nth(3)).toHaveText("11,000 Cr");
+  await scanner.uncheck();
+  await expect(scannerRow.getByRole("cell").nth(3)).toHaveText("");
+});
+
 test("a Slot Group has one row per kind, with an Equipment choice and a count up to the group's size", async ({ page }) => {
   await openShip(page, "L", "Ironback Hauler");
 

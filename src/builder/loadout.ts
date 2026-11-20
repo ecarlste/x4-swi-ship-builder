@@ -60,6 +60,18 @@ export function setSlot(loadout: Loadout, slotId: string, equipment: string | nu
   return withEntry(loadout, "slots", slots);
 }
 
+/** Fits the thruster, or removes it with null. */
+export function setThruster(loadout: Loadout, equipment: string | null): Loadout {
+  return withEntry(loadout, "thruster", equipment ?? undefined);
+}
+
+/** Adds or removes one piece of software. */
+export function setSoftware(loadout: Loadout, equipment: string, fitted: boolean): Loadout {
+  const software = (loadout.software ?? []).filter((id) => id !== equipment);
+  if (fitted) software.push(equipment);
+  return withEntry(loadout, "software", software);
+}
+
 /**
  * Sets one kind of a Slot Group: the Equipment and how many of the group's
  * Slots it fills. Null, or a count of 0, empties it.

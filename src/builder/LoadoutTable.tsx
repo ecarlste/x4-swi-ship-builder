@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
-import { setGroup, setSlot, type Loadout, type SlotGroupKind } from "./loadout.ts";
+import { setGroup, setSlot, setSoftware, setThruster, type Loadout, type SlotGroupKind } from "./loadout.ts";
 
 const KIND_LABEL: Record<SlotKind, string> = {
   weapon: "Weapon",
@@ -58,6 +58,7 @@ export function LoadoutTable({
   const fitList = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
   const options = (fitListId: string) =>
     (fitList.get(fitListId) ?? []).flatMap((id) => equipment.get(id) ?? []);
+  const thruster = equipment.get(loadout.thruster ?? "") ?? null;
 
   return (
     <table className="loadout-table" aria-label="Loadout">
@@ -142,6 +143,42 @@ export function LoadoutTable({
             );
           }),
         )}
+        <Row
+          label="Thruster"
+          equipment={
+            <EquipmentDropdown
+              label="Thruster Equipment"
+              options={options(ship.thrusters)}
+              value={thruster?.id ?? null}
+              onChange={(id) => onChange(setThruster(loadout, id))}
+            />
+          }
+          quantity={thruster ? "1" : ""}
+          keyValue={thruster ? keyValue(thruster) : ""}
+          price={thruster ? credits(thruster.price.average) : ""}
+        />
+        {options(ship.software.fitList).map((item) => {
+          const fitted = loadout.software?.includes(item.id) ?? false;
+          return (
+            <Row
+              key={item.id}
+              label="Software"
+              equipment={
+                <label className="software">
+                  <input
+                    type="checkbox"
+                    checked={fitted}
+                    onChange={(e) => onChange(setSoftware(loadout, item.id, e.target.checked))}
+                  />{" "}
+                  {item.name}
+                </label>
+              }
+              quantity={fitted ? "1" : ""}
+              keyValue=""
+              price={fitted ? credits(item.price.average) : ""}
+            />
+          );
+        })}
       </tbody>
     </table>
   );
