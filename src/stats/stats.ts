@@ -6,7 +6,7 @@
  * `menu_ship_configuration.lua`; values are rounded down to the row's
  * decimals, as the screen does.
  */
-import type { Equipment, GameData } from "../gameData.ts";
+import type { CargoType, Equipment, GameData } from "../gameData.ts";
 import type { Loadout } from "../builder/loadout.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
@@ -43,6 +43,14 @@ export interface LoadoutStats {
   /** The mandatory upgrades the Loadout lacks, in Loadout table order. */
   missing: MissingUpgrade[];
 }
+
+/** The game's storage rows, in its order, by cargo type. */
+const STORAGE_ROWS: [CargoType, string, string][] = [
+  ["container", "ContainerCapacity", "Container Storage"],
+  ["solid", "SolidCapacity", "Solid Storage"],
+  ["liquid", "LiquidCapacity", "Liquid Storage"],
+  ["condensate", "CondensateCapacity", "Condensate Storage"],
+];
 
 /** Rounds down to `decimals` places, like the game's `Helper.floor`. */
 function floorTo(value: number, decimals: number): number {
@@ -82,9 +90,13 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
       ? [{ capacity: item.capacity * entry.count, rate: item.rechargeRate * entry.count, delay: item.rechargeDelay }]
       : [];
   });
-  add("GroupedShieldValue", "Avg. Group Shield", "MJ", 0, "combat", mean(groupShields.map((g) => g.capacity)));
-  add("GroupedShieldRate", "Recharge Rate", "MW", 0, "combat", mean(groupShields.map((g) => g.rate)));
-  add("GroupedShieldDelay", "Recharge Delay", "s", 2, "combat", mean(groupShields.map((g) => g.delay)));
+  // Only L/XL Ships have shield Slot Groups, so only they get these rows (story 31).
+  const capShip = ship.size === "l" || ship.size === "xl";
+  if (capShip) {
+    add("GroupedShieldValue", "Avg. Group Shield", "MJ", 0, "combat", mean(groupShields.map((g) => g.capacity)));
+    add("GroupedShieldRate", "Recharge Rate", "MW", 0, "combat", mean(groupShields.map((g) => g.rate)));
+    add("GroupedShieldDelay", "Recharge Delay", "s", 2, "combat", mean(groupShields.map((g) => g.delay)));
+  }
   add("RadarRange", "Radar Range", "km", 0, "combat", ship.stats.radarRange / 1000);
 
   const fitLists = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
@@ -110,12 +122,15 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     const item = ofKind(id, "turret");
     return item ? [output(item).burst * count] : [];
   });
-  const turretId = ship.size === "l" || ship.size === "xl" ? "GroupedTurretSustainedDPS" : "TurretSustainedDPS";
+  const turretId = capShip ? "GroupedTurretSustainedDPS" : "TurretSustainedDPS";
   add(turretId, "Avg. Turret Output", "MW", 0, "combat", sum(turrets) / 6);
 
-  // The game splits storage into container, solid, liquid and condensate
-  // rows; Game Data holds one cargo capacity, so it is one row here.
-  add("CargoCapacity", "Cargo", "m³", 0, "storage", ship.capacities.cargo);
+  // The game's storage rows, for the cargo types the Ship takes. Game Data
+  // holds the Ship's total capacity; each type's row shows it, which is right
+  // when every storage takes the same types (extraction warns otherwise).
+  for (const [type, id, label] of STORAGE_ROWS) {
+    if (ship.cargoTypes.includes(type)) add(id, label, "m³", 0, "storage", ship.capacities.cargo);
+  }
 
   // Flight (#12). Engines in Slots count once, engines in Slot Groups once per count.
   const engines = [

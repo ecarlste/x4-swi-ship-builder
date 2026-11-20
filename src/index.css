@@ -146,7 +146,8 @@ input {
   color: #8a93a6;
 }
 
-.ship-block h2 {
+.ship-block h2,
+.stats-heading {
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -159,9 +160,13 @@ input {
   list-style: none;
 }
 
+.stats-heading {
+  margin-top: 16px;
+}
+
 .stats-table {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 4px;
   border-collapse: collapse;
   font-size: 14px;
 }

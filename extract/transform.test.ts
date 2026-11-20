@@ -351,6 +351,19 @@ describe("transform: Ships", () => {
     expect(ship("fx_none").cargoTypes).toEqual([]);
   });
 
+  it("warns about a Ship whose storages take different cargo types, since only the total is kept", () => {
+    const { report } = run(
+      oneShipWorld()
+        .ship({ id: "fx_mixed", owners: ["fx_guild"], storage: [{ capacity: 500, tags: "solid liquid" }, { capacity: 100, tags: "container" }] })
+        .ship({ id: "fx_universal", owners: ["fx_guild"], storage: [{ capacity: 500, tags: "container solid" }, { capacity: 100, tags: "solid container" }] }),
+    );
+
+    expect(report()).toContain(
+      "fx_mixed: its storages take different cargo types (liquid solid; container), so each storage row shows the total of 600",
+    );
+    expect(report()).not.toContain("fx_universal: its storages");
+  });
+
   it("reads Slots and Slot Groups from the component's connections", () => {
     const { ship, report } = run(
       oneShipWorld().station({ faction: "fx_guild", builds: ["ship_l"] }).ship({

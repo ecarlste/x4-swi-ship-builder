@@ -46,6 +46,7 @@ const TOOLTIPS: Record<string, string> = {
  * row also gets an unlabelled change column (green up, red down).
  */
 export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: LoadoutStats | null }) {
+  const headingId = useId();
   const priceId = useId();
   const groups = [...new Set(stats.rows.map((r) => r.group))];
   const wasShown = new Map(was?.rows.map((r) => [r.id, r.shown]));
@@ -53,7 +54,10 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
 
   return (
     <>
-      <table className="stats-table" aria-label="Ship statistics">
+      <h2 id={headingId} className="stats-heading">
+        Stats
+      </h2>
+      <table className="stats-table" aria-labelledby={headingId}>
         {groups.map((group) => (
           <tbody key={group}>
             {stats.rows

@@ -34,9 +34,8 @@ test("an Empty Loadout shows the Ship's own stats and zeros for what isn't fitte
   await expect(stat(page, "Hull (MJ)")).toHaveText("3,000");
   await expect(stat(page, "Shield (MJ)")).toHaveText("0");
   await expect(stat(page, "Recharge Delay (s)")).toHaveText("0.00");
-  await expect(stat(page, "Avg. Group Shield (MJ)")).toHaveText("0");
   await expect(stat(page, "Radar Range (km)")).toHaveText("20");
-  await expect(stat(page, "Cargo (m³)")).toHaveText("50");
+  await expect(stat(page, "Container Storage (m³)")).toHaveText("50");
   await expect(stat(page, "Crew")).toHaveText("2");
   await expect(stat(page, "Missiles")).toHaveText("10");
   await expect(stat(page, "Countermeasures")).toHaveText("5");
@@ -44,6 +43,20 @@ test("an Empty Loadout shows the Ship's own stats and zeros for what isn't fitte
   const price = stats(page).getByRole("region", { name: "Price" });
   await expect(price).toContainText("100,000 Cr");
   await expect(price).toContainText("80,000 – 120,000 Cr");
+});
+
+test("the Stats panel has a visible Stats heading", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+
+  await expect(stats(page).getByRole("heading", { name: "Stats", exact: true })).toBeVisible();
+  await expect(stats(page).getByRole("table", { name: "Stats" })).toBeVisible();
+});
+
+test("an S Ship has no Avg. Group Shield rows, and only its own cargo type", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+
+  await expect(stats(page).getByRole("rowheader", { name: "Avg. Group Shield (MJ)" })).toHaveCount(0);
+  await expect(stats(page).getByRole("rowheader", { name: /Storage/ })).toHaveText(["Container Storage (m³)"]);
 });
 
 test("the Stats panel updates as equipment changes", async ({ page }) => {

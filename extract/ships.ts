@@ -141,6 +141,14 @@ function readShip(files: GameFiles, text: TextResolver, ctx: ShipContext): { shi
   const accValue = (d: string) => numberAttr(acc, d, `${where} macro <accfactors>`) ?? 1;
 
   const cargo = readCargo(files, macro, where);
+  // The builder shows each cargo type's storage row with the total, which is
+  // right only when every storage takes the same types.
+  if (cargo.typeSets.length > 1) {
+    warnings.push(
+      `${id}: its storages take different cargo types (${cargo.typeSets.join("; ")}), ` +
+        `so each storage row shows the total of ${cargo.capacity}`,
+    );
+  }
   const componentRef = attr(child(macro, "component"), "ref");
   if (componentRef === undefined) throw new ExtractError(`${where}: its macro has no <component ref>`);
   const component = files.component(componentRef, `${where} macro`).element;
@@ -227,10 +235,18 @@ function classDefaults(files: GameFiles): Map<string, JsonElement> {
   return defaults;
 }
 
-/** The capacity and cargo types of the storage macros connected to the ship macro. */
-function readCargo(files: GameFiles, macro: JsonElement, where: string): { capacity: number; types: CargoType[] } {
+/**
+ * The capacity and cargo types of the storage macros connected to the ship
+ * macro. `typeSets` holds each storage's own types, sorted and space-joined.
+ */
+function readCargo(
+  files: GameFiles,
+  macro: JsonElement,
+  where: string,
+): { capacity: number; types: CargoType[]; typeSets: string[] } {
   let capacity = 0;
   const types = new Set<CargoType>();
+  const typeSets = new Set<string>();
   for (const connection of children(child(macro, "connections"), "connection")) {
     for (const ref of children(connection, "macro")) {
       const name = attr(ref, "ref");
@@ -239,14 +255,16 @@ function readCargo(files: GameFiles, macro: JsonElement, where: string): { capac
       if (attr(connected, "class") !== "storage") continue;
       const cargo = child(child(connected, "properties"), "cargo");
       capacity += numberAttr(cargo, "max", `storage macro ${name} <cargo>`) ?? 0;
-      for (const tag of list(attr(cargo, "tags"))) {
+      const own = list(attr(cargo, "tags")).map((tag) => {
         const type = cargoTypeSchema.safeParse(tag);
         if (!type.success) throw new ExtractError(`storage macro ${name} has an unknown cargo type "${tag}"`);
         types.add(type.data);
-      }
+        return type.data;
+      });
+      typeSets.add([...new Set(own)].sort().join(" "));
     }
   }
-  return { capacity, types: [...types].sort() };
+  return { capacity, types: [...types].sort(), typeSets: [...typeSets] };
 }
 
 /**

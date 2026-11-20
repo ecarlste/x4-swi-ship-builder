@@ -16,6 +16,7 @@ import {
   weaponSlot,
 } from "./testing/fixtures.ts";
 import { engine, engineSlot, thruster } from "./testing/fixtures.ts";
+import type { Ship } from "../gameData.ts";
 
 /** The row for one of the game's `UILoadoutStatistics5` fields. */
 function row(rows: StatRow[], id: string): StatRow {
@@ -128,6 +129,16 @@ describe("survivability", () => {
       }),
     );
     expect(row(stats.rows, "GroupedShieldDelay").shown).toBe(5.5);
+  });
+
+  test.each(["s", "m"] as const)("a %s Ship has no Avg. Group Shield rows", (size) => {
+    const stats = loadoutStats(gameData([ship({ size })]), loadout("fx_ship"));
+    expect(stats.rows.filter((r) => r.id.startsWith("GroupedShield"))).toEqual([]);
+  });
+
+  test.each(["l", "xl"] as const)("an %s Ship shows Avg. Group Shield rows even with no group shield fitted", (size) => {
+    const stats = loadoutStats(gameData([ship({ size })]), loadout("fx_ship"));
+    expect(stats.rows.filter((r) => r.id.startsWith("GroupedShield")).map((r) => r.shown)).toEqual([0, 0, 0]);
   });
 });
 
@@ -259,8 +270,13 @@ describe("capacities", () => {
   const freighter = ship({
     stats: { ...ship().stats, radarRange: 40000 },
     capacities: { missiles: 6, drones: 12, deployables: 5, countermeasures: 8, crew: 4, cargo: 6200 },
+    cargoTypes: ["container"],
   });
   const stats = loadoutStats(gameData([freighter]), loadout("fx_ship"));
+  const storageRows = (cargoTypes: Ship["cargoTypes"]) =>
+    loadoutStats(gameData([ship({ ...freighter, cargoTypes })]), loadout("fx_ship"))
+      .rows.filter((r) => r.group === "storage")
+      .map((r) => [r.id, r.label, r.unit, r.shown]);
 
   test("Crew is people@capacity plus the pilot (YT-1300: 4 + 1 = 5)", () => {
     expect(row(stats.rows, "CrewCapacity")).toMatchObject({ label: "Crew", shown: 5 });
@@ -270,18 +286,34 @@ describe("capacities", () => {
     expect(row(stats.rows, "RadarRange")).toMatchObject({ label: "Radar Range", unit: "km", shown: 40 });
   });
 
-  test("missile, drone, deployable and countermeasure capacities and cargo come from the Ship", () => {
+  test("missile, drone, deployable and countermeasure capacities come from the Ship", () => {
     expect(row(stats.rows, "MissileCapacity")).toMatchObject({ label: "Missiles", shown: 6 });
     expect(row(stats.rows, "UnitCapacity")).toMatchObject({ label: "Units", shown: 12 });
     expect(row(stats.rows, "DeployableCapacity")).toMatchObject({ label: "Deployables", shown: 5 });
     expect(row(stats.rows, "CountermeasureCapacity")).toMatchObject({ label: "Countermeasures", shown: 8 });
-    expect(row(stats.rows, "CargoCapacity")).toMatchObject({ unit: "m³", shown: 6200 });
+  });
+
+  test("cargo shows the game's storage row for the Ship's cargo type", () => {
+    expect(storageRows(["container"])).toEqual([["ContainerCapacity", "Container Storage", "m³", 6200]]);
+    expect(storageRows(["condensate"])).toEqual([["CondensateCapacity", "Condensate Storage", "m³", 6200]]);
+  });
+
+  test("a Ship whose storage takes several cargo types shows a row for each, in the game's order", () => {
+    expect(storageRows(["container", "liquid", "solid"])).toEqual([
+      ["ContainerCapacity", "Container Storage", "m³", 6200],
+      ["SolidCapacity", "Solid Storage", "m³", 6200],
+      ["LiquidCapacity", "Liquid Storage", "m³", 6200],
+    ]);
+  });
+
+  test("a Ship with no storage shows no storage rows", () => {
+    expect(storageRows([])).toEqual([]);
   });
 });
 
 describe("the configuration screen's rows", () => {
   test("come in the game's order, labels, units, decimals and groups", () => {
-    const stats = loadoutStats(gameData([ship()]), loadout("fx_ship"));
+    const stats = loadoutStats(gameData([ship({ size: "l", cargoTypes: ["container"] })]), loadout("fx_ship"));
     expect(stats.rows.map(({ group, label, unit, decimals }) => [group, label, unit, decimals])).toEqual([
       ["combat", "Hull", "MJ", 0],
       ["combat", "Shield", "MJ", 0],
@@ -294,7 +326,7 @@ describe("the configuration screen's rows", () => {
       ["combat", "Burst Weapon Output", "MW", 0],
       ["combat", "Sustained Weapon Output", "MW", 0],
       ["combat", "Avg. Turret Output", "MW", 0],
-      ["storage", "Cargo", "m³", 0],
+      ["storage", "Container Storage", "m³", 0],
       ["flight", "Speed", "m/s", 0],
       ["flight", "Acceleration", "m/s²", 0],
       ["flight", "Boost Speed", "m/s", 0],
@@ -330,13 +362,9 @@ describe("the configuration screen's rows", () => {
       "ShieldValue",
       "ShieldRate",
       "ShieldDelay",
-      "GroupedShieldValue",
-      "GroupedShieldRate",
-      "GroupedShieldDelay",
       "BurstDPS",
       "SustainedDPS",
       "TurretSustainedDPS",
-      "CargoCapacity",
       "MissileCapacity",
     ]) {
       expect(row(stats.rows, id).shown, id).toBe(0);
