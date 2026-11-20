@@ -39,6 +39,15 @@ export const loadoutSchema = z.object({
   software: z.array(id).optional(),
   /** A consumable's Equipment id → count. */
   consumables: z.record(id, positiveCount).optional(),
+  /**
+   * The Crew: service crew and marines, sharing the Ship's crew capacity, which
+   * resolving checks. No Captain: every Ship gets one free (ADR 0004). With
+   * both counts at 0 it is left out, so an empty one is rejected.
+   */
+  crew: z
+    .strictObject({ service: positiveCount.optional(), marines: positiveCount.optional() })
+    .refine((crew) => crew.service !== undefined || crew.marines !== undefined, "Crew needs service crew or marines")
+    .optional(),
 });
 
 export type Loadout = z.infer<typeof loadoutSchema>;

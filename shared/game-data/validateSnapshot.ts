@@ -1,8 +1,8 @@
-import type { Equipment, Faction, FitList, Licence, Manifest, Ship } from "./schema.ts";
+import type { Equipment, Faction, FitList, Licence, Manifest, Price, Ship } from "./schema.ts";
 import { snapshotSchema } from "./schema.ts";
 import { checkIntegrity } from "./integrity.ts";
 
-/** The six files of a snapshot, without the `.json` extension. */
+/** The seven files of a snapshot, without the `.json` extension. */
 export const SNAPSHOT_FILES = [
   "manifest",
   "ships",
@@ -10,6 +10,7 @@ export const SNAPSHOT_FILES = [
   "fit-lists",
   "factions",
   "licences",
+  "crew-price",
 ] as const;
 export type SnapshotFile = (typeof SNAPSHOT_FILES)[number];
 
@@ -24,6 +25,8 @@ export interface GameData {
   fitLists: FitList[];
   factions: Faction[];
   licences: Licence[];
+  /** What each member of the Crew, service crew or marine, costs (ADR 0004). */
+  crewPrice: Price;
 }
 
 export type ValidationResult =
@@ -55,6 +58,7 @@ export function validateSnapshot(raw: RawSnapshot): ValidationResult {
     fitLists: data["fit-lists"],
     factions: data.factions,
     licences: data.licences,
+    crewPrice: data["crew-price"],
   };
   return { ok: true, gameData, errors: [] };
 }

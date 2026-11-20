@@ -255,3 +255,42 @@ test("a Slot Group has one row per kind, with an Equipment choice and a count up
   await expect(count).toHaveValue("0");
   await expect(turrets.getByRole("cell").nth(3)).toHaveText("");
 });
+
+test("service crew and marines share the Ship's crew capacity, and Price adds each at the crew price", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+  const crew = loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ });
+  const price = page.getByRole("complementary", { name: "Stats" }).getByRole("region", { name: "Price" });
+
+  // A new Loadout has no Crew, only the Captain, who isn't a count.
+  await expect(crew.getByRole("rowheader")).toHaveText(["Service crew", "Marines"]);
+  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*0 \/ 20$/);
+  await expect(countOf(page, "Service crew")).toHaveValue("0");
+  await expect(countOf(page, "Marines")).toHaveValue("0");
+  // The header carries the shared capacity; a count beside it would read as that much more free.
+  await expect(rowOf(page, "Service crew").getByRole("cell").nth(1)).not.toContainText("/");
+  await expect(loadoutTable(page)).not.toContainText(/captain/i);
+  await expect(price).toContainText("2,500,000 Cr");
+
+  // The fixture's crew price averages 6,000 Cr.
+  await countOf(page, "Service crew").fill("12");
+  await expect(rowOf(page, "Service crew").getByRole("cell").nth(3)).toHaveText("72,000 Cr");
+  await expect(crew.getByRole("columnheader")).toHaveText(/12 \/ 20$/);
+  await expect(price).toContainText("2,572,000 Cr");
+
+  // Marines get only what the service crew leave, and the reverse.
+  await countOf(page, "Marines").fill("15");
+  await expect(countOf(page, "Marines")).toHaveValue("8");
+  await expect(rowOf(page, "Marines").getByRole("cell").nth(3)).toHaveText("48,000 Cr");
+  await expect(crew.getByRole("columnheader")).toHaveText(/20 \/ 20$/);
+  await expect(price).toContainText("2,620,000 Cr");
+  await countOf(page, "Service crew").fill("13");
+  await expect(countOf(page, "Service crew")).toHaveValue("12");
+});
+
+test("a Ship with no crew capacity has no Crew section", async ({ page }) => {
+  await openShip(page, "S", "Needle Striker");
+
+  await expect(row(page, "Thruster")).toBeVisible();
+  await expect(loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ })).toHaveCount(0);
+  await expect(countOf(page, "Service crew")).toHaveCount(0);
+});

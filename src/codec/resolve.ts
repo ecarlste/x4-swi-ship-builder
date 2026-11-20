@@ -4,21 +4,27 @@
  *
  * A Ship that isn't in the Game Data makes the Loadout Unavailable. Unknown
  * Equipment, Slots or Slot Groups, and Equipment that no longer fits, are
- * dropped; a count above the new capacity is clamped. Ids are matched as
+ * dropped; a count above the new capacity is clamped. Crew over the Ship's
+ * crew capacity is cut to fit, service crew first (ADR 0004). Ids are matched as
  * they are: there are no rename tables. A version change on its own isn't a
  * change.
  */
 import type { GameData } from "../../shared/game-data/validateSnapshot.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import {
+  CREW_CUT_ORDER,
+  CREW_ROLE_NAMES,
   consumableOptions,
+  crewCount,
   setConsumable,
+  setCrew,
   setEngine,
   setGroup,
   setSlot,
   setSoftware,
   setThruster,
   shipEngines,
+  type CrewRole,
 } from "../builder/loadout.ts";
 import type { Loadout, SlotGroupKind } from "./loadout.ts";
 
@@ -37,10 +43,15 @@ export type ChangePlace =
 /** Why an entry was dropped. */
 export type DropReason = "unknown-equipment" | "unknown-slot" | "unknown-slot-group" | "no-longer-fits";
 
-/** One drop or clamp. `name` is the Equipment's name, or its raw id when it isn't in the Game Data. */
+/**
+ * One drop or clamp of Equipment, or one Crew role cut to fit the Ship's crew
+ * capacity. `name` is the Equipment's name, or its raw id when it isn't in the
+ * Game Data.
+ */
 export type LoadoutChange =
   | { type: "dropped"; place: ChangePlace; equipment: string; name: string; reason: DropReason }
-  | { type: "clamped"; place: ChangePlace; equipment: string; name: string; from: number; to: number };
+  | { type: "clamped"; place: ChangePlace; equipment: string; name: string; from: number; to: number }
+  | { type: "crew-cut"; role: CrewRole; from: number; to: number };
 
 export type Resolution =
   | { status: "unavailable"; ship: string }
@@ -79,10 +90,14 @@ const DROP_TEXT: Record<DropReason, string> = {
 
 /** One line saying what a change did, for notices and tooltips. */
 export function describeChange(change: LoadoutChange): string {
-  const where = `${change.name} ${placeText(change.place)}`;
-  return change.type === "dropped"
-    ? `${where}: dropped, ${DROP_TEXT[change.reason]}`
-    : `${where}: count cut from ${change.from} to ${change.to}`;
+  switch (change.type) {
+    case "dropped":
+      return `${change.name} ${placeText(change.place)}: dropped, ${DROP_TEXT[change.reason]}`;
+    case "clamped":
+      return `${change.name} ${placeText(change.place)}: count cut from ${change.from} to ${change.to}`;
+    case "crew-cut":
+      return `${CREW_ROLE_NAMES[change.role]} in crew: count cut from ${change.from} to ${change.to}`;
+  }
 }
 
 /** Checks a Loadout against the Game Data, returning the repaired Loadout and every change. */
@@ -152,6 +167,16 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
       if (count < stored) changes.push({ type: "clamped", place, equipment: id, name: nameOf(id), from: stored, to: count });
       repaired = setConsumable(repaired, id, count);
     }
+  }
+
+  // Service crew and marines share the Ship's crew capacity (ADR 0004).
+  let over = crewCount(loadout) - ship.capacities.crew;
+  for (const role of CREW_CUT_ORDER) {
+    const stored = loadout.crew?.[role] ?? 0;
+    const cut = Math.max(0, Math.min(over, stored));
+    over -= cut;
+    if (cut > 0) changes.push({ type: "crew-cut", role, from: stored, to: stored - cut });
+    repaired = setCrew(repaired, role, stored - cut);
   }
 
   return { status: "ok", loadout: repaired, changes, versions: { from: loadout.gameData, to } };

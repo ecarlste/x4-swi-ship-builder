@@ -121,6 +121,7 @@ export function gameData(ships: Ship[], equipment: Equipment[] = [], fitLists: F
     fitLists: [{ id: "fl_any", equipment: equipment.map((e) => e.id) }, ...fitLists],
     factions: [{ id: "fx_guild", name: "Fixture Guild" }],
     licences: [],
+    crewPrice: { min: 5000, average: 7500, max: 10000 },
   };
 }
 

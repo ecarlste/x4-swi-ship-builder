@@ -70,6 +70,35 @@ describe("reading Saved Loadouts", () => {
   });
 });
 
+describe("Saved Loadouts and Crew (ADR 0004)", () => {
+  test("they're stored under the same key as before Crew", () => {
+    expect(SAVED_LOADOUTS_KEY).toBe("swi-builder:saved-loadouts:v1");
+  });
+
+  test("a saved Loadout keeps its Crew when it's read back", () => {
+    const storage = memoryStorage();
+    const boarding = { ...loadout, crew: { service: 2, marines: 3 } };
+    const now = new Date("2026-11-19T12:00:00.000Z");
+
+    saveLoadout(storage, boarding, { name: "Boarding" }, { now, newId: ids(stored.id) });
+
+    const saved = { ...boarding, id: stored.id, name: "Boarding", createdAt: now.toISOString(), updatedAt: now.toISOString() };
+    expect(readSavedLoadouts(storage)).toEqual({ ok: true, entries: [{ status: "ok", index: 0, loadout: saved }] });
+  });
+
+  test("one saved before Crew existed still reads, with no Crew", () => {
+    const list = readSavedLoadouts(memoryStorage([stored]));
+
+    expect(list.entries).toEqual([{ status: "ok", index: 0, loadout: stored }]);
+  });
+
+  test("one whose Crew count isn't a positive integer is Unreadable", () => {
+    const list = readSavedLoadouts(memoryStorage([{ ...stored, crew: { service: 0 } }, { ...stored, crew: { marines: 1.5 } }]));
+
+    expect(list.entries.map((e) => e.status)).toEqual(["unreadable", "unreadable"]);
+  });
+});
+
 describe("saving a Loadout", () => {
   test("a first save adds it under a name with a new id and times", () => {
     const storage = memoryStorage();

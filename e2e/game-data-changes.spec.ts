@@ -160,6 +160,37 @@ test.describe("opening a Loadout that changes", () => {
     await expect(page.getByRole("toolbar")).toContainText("Escort");
   });
 
+  test("Crew over the Ship's crew capacity opens cut to fit, service crew first, with the cuts in the notice", async ({ page }) => {
+    // The Swiftwing Courier holds 1 Crew.
+    const { id: _id, createdAt: _c, updatedAt: _u, ...shared } = savedLoadout({ crew: { service: 1, marines: 2 } });
+    await page.goto(`/${await fragmentFor(page, shared)}`);
+
+    await expect(notice(page).getByRole("listitem")).toHaveText([
+      "Service crew in crew: count cut from 1 to 0",
+      "Marines in crew: count cut from 2 to 1",
+    ]);
+    await expect(page.getByRole("spinbutton", { name: "Service crew count" })).toHaveValue("0");
+    await expect(page.getByRole("spinbutton", { name: "Marines count" })).toHaveValue("1");
+    // The repaired Loadout is the snapshot, so nothing shows as changed since loading.
+    await expect(page.getByText(/was:/)).toHaveCount(0);
+  });
+
+  test("Crew on a Ship with no crew capacity opens with all of it cut, and no Crew section", async ({ page }) => {
+    // The Needle Striker holds no Crew, only its Captain.
+    const { id: _id, createdAt: _c, updatedAt: _u, ...shared } = savedLoadout({
+      ship: "fx_needle",
+      crew: { service: 1, marines: 2 },
+    });
+    await page.goto(`/${await fragmentFor(page, shared)}`);
+
+    await expect(notice(page).getByRole("listitem")).toHaveText([
+      "Service crew in crew: count cut from 1 to 0",
+      "Marines in crew: count cut from 2 to 0",
+    ]);
+    await expect(page.getByRole("spinbutton", { name: "Service crew count" })).toHaveCount(0);
+    await expect(page.getByRole("spinbutton", { name: "Marines count" })).toHaveCount(0);
+  });
+
   test("an imported Loadout opens repaired, with the notice", async ({ page }) => {
     const chooser = page.waitForEvent("filechooser");
     await toolbarButton(page, "Import").click();

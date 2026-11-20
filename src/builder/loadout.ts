@@ -20,7 +20,7 @@ export function emptyLoadout(gameData: GameData, ship: Ship): Loadout {
 }
 
 /** Drops an optional key when its value is empty, keeping the Loadout sparse. */
-function withEntry<K extends "slots" | "groups" | "engine" | "thruster" | "software" | "consumables">(
+function withEntry<K extends "slots" | "groups" | "engine" | "thruster" | "software" | "consumables" | "crew">(
   loadout: Loadout,
   key: K,
   value: Loadout[K] | undefined,
@@ -49,6 +49,36 @@ export function setConsumable(loadout: Loadout, equipment: string, count: number
   const consumables = withoutKey(loadout.consumables, equipment);
   if (count > 0) consumables[equipment] = count;
   return withEntry(loadout, "consumables", consumables);
+}
+
+/** One of the Crew's two counts. */
+export type CrewRole = keyof NonNullable<Loadout["crew"]>;
+
+/** The Crew's roles, in the order they're shown. */
+export const CREW_ROLES: readonly CrewRole[] = ["service", "marines"];
+
+/** Each Crew role's name, as shown. */
+export const CREW_ROLE_NAMES: Record<CrewRole, string> = { service: "Service crew", marines: "Marines" };
+
+/**
+ * The order Crew over the Ship's crew capacity is cut in: service crew first,
+ * since marines are the deliberate choice (ADR 0004).
+ */
+export const CREW_CUT_ORDER: readonly CrewRole[] = ["service", "marines"];
+
+/** How many Crew a Loadout carries, service crew and marines together. The Captain isn't Crew. */
+export function crewCount(loadout: Loadout): number {
+  return (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
+}
+
+/**
+ * Sets one Crew count; 0 removes it, and with both at 0 the Loadout has no
+ * Crew (ADR 0004). It doesn't check the Ship's crew capacity: the UI offers
+ * only counts that fit.
+ */
+export function setCrew(loadout: Loadout, role: CrewRole, count: number): Loadout {
+  const { [role]: _old, ...crew } = loadout.crew ?? {};
+  return withEntry(loadout, "crew", count > 0 ? { ...crew, [role]: count } : crew);
 }
 
 export type ConsumableKind = "missile" | "drone" | "deployable" | "countermeasure";

@@ -11,6 +11,7 @@ import fitLists from "@snapshot/fit-lists.json";
 import licences from "@snapshot/licences.json";
 import manifest from "@snapshot/manifest.json";
 import ships from "@snapshot/ships.json";
+import crewPrice from "@snapshot/crew-price.json";
 import { validateSnapshot, type GameData } from "../shared/game-data/validateSnapshot.ts";
 
 export type { GameData } from "../shared/game-data/validateSnapshot.ts";
@@ -24,6 +25,7 @@ function load(): GameData {
     "fit-lists": fitLists,
     factions,
     licences,
+    "crew-price": crewPrice,
   });
   if (!result.ok) {
     throw new Error(`The bundled Game Data is invalid:\n${result.errors.join("\n")}`);

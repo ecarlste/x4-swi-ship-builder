@@ -105,6 +105,41 @@ describe("importing a Loadout File", () => {
   });
 });
 
+describe("Loadout Files and Crew (ADR 0004)", () => {
+  const boarding = { ...escort, crew: { service: 2, marines: 3 } };
+
+  test("an exported Loadout's Crew comes back unchanged on import", () => {
+    const storage = memoryStorage();
+
+    const result = importLoadoutFile(storage, exportLoadoutFile([boarding, gone]));
+
+    expect(result).toEqual({ ok: true, added: [boarding, gone] });
+    expect(listed(storage)).toEqual([boarding, gone]);
+  });
+
+  test("the envelope is the same as before Crew", () => {
+    expect(Object.keys(JSON.parse(exportLoadoutFile([boarding])))).toEqual(["app", "format", "loadouts"]);
+    expect(JSON.parse(exportLoadoutFile([boarding]))).toMatchObject({ app: "x4-swi-ship-builder", format: 1 });
+  });
+
+  test("a file from before Crew imports, with no Crew", () => {
+    const storage = memoryStorage();
+
+    expect(importLoadoutFile(storage, file())).toEqual({ ok: true, added: [escort] });
+  });
+
+  test("a Crew count that isn't a positive integer fails the whole file", () => {
+    for (const crew of [{ service: 0 }, { marines: -2 }, { service: 0.5 }]) {
+      const storage = memoryStorage();
+      expect(importLoadoutFile(storage, file({ loadouts: [escort, { ...boarding, crew }] }))).toEqual({
+        ok: false,
+        error: expect.stringMatching(/isn't a Loadout File/),
+      });
+      expect(storage.raw()).toBeNull();
+    }
+  });
+});
+
 describe("rejecting a Loadout File in full", () => {
   const rejects = (text: string, error: RegExp | string) => {
     const storage = memoryStorage([gone]);

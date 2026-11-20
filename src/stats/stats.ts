@@ -6,8 +6,8 @@
  * `menu_ship_configuration.lua`; values are rounded down to the row's
  * decimals, as the screen does.
  */
-import type { CargoType, Equipment, GameData } from "../gameData.ts";
-import { shipEngines, type Loadout } from "../builder/loadout.ts";
+import type { CargoType, Equipment, GameData, Price } from "../gameData.ts";
+import { crewCount, shipEngines, type Loadout } from "../builder/loadout.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
@@ -29,12 +29,6 @@ export interface StatRow {
   shown: number;
   decimals: number;
   group: string;
-}
-
-export interface Price {
-  min: number;
-  average: number;
-  max: number;
 }
 
 export interface LoadoutStats {
@@ -201,7 +195,11 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   return {
     rows,
-    price: price(ship.price, loadout, engineCount, index),
+    price: totalPrice([
+      [ship.price, 1],
+      ...equipmentBought(loadout, engineCount, index),
+      [gameData.crewPrice, crewCount(loadout)],
+    ]),
     missing: missingMandatory(gameData, ship, loadout),
   };
 }
@@ -216,12 +214,27 @@ function turningInDegrees(degreesPerSecond: number): number {
 }
 
 /**
- * Ship + Equipment (the engine once per engine) + consumables + software, each at its min, average and max.
+ * Ship + Equipment (the engine once per engine) + consumables + software + Crew, each at its min, average and max.
  * The game's total is the sum of the same lines, confirmed in game by the #63 reference row.
+ * Each member of the Crew is bought at the crew price; the Captain is free (ADR 0004).
  * Differs from the game on purpose (ADR 0003): each line is at Game Data's average with
- * min–max as the range, not the station's price, and crew is left out.
+ * min–max as the range, not the station's price.
  */
-function price(shipPrice: Price, loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): Price {
+function totalPrice(lines: [Price, number][]): Price {
+  return lines.reduce(addTimes, { min: 0, average: 0, max: 0 });
+}
+
+/** A running total plus a price bought `count` times. */
+function addTimes(total: Price, [price, count]: [Price, number]): Price {
+  return {
+    min: total.min + price.min * count,
+    average: total.average + price.average * count,
+    max: total.max + price.max * count,
+  };
+}
+
+/** The Loadout's Equipment as price lines, the engine once per engine; Equipment not in Game Data costs nothing. */
+function equipmentBought(loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): [Price, number][] {
   const bought: [string, number][] = [
     ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
     ...Object.values(loadout.groups ?? {}).flatMap((kinds) =>
@@ -232,13 +245,8 @@ function price(shipPrice: Price, loadout: Loadout, engineCount: number, { equipm
     ...(loadout.software ?? []).map((id): [string, number] => [id, 1]),
     ...Object.entries(loadout.consumables ?? {}),
   ];
-  const total = { ...shipPrice };
-  for (const [id, count] of bought) {
+  return bought.flatMap(([id, count]): [Price, number][] => {
     const item = equipment.get(id);
-    if (!item) continue;
-    total.min += item.price.min * count;
-    total.average += item.price.average * count;
-    total.max += item.price.max * count;
-  }
-  return total;
+    return item ? [[item.price, count]] : [];
+  });
 }

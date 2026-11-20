@@ -458,7 +458,7 @@ describe("mandatory upgrades", () => {
   });
 });
 
-// Game Data's average and min–max, not the station's price, and no crew (ADR 0003).
+// Game Data's average and min–max, not the station's price (ADR 0003), and the Crew but not the Captain (ADR 0004).
 describe("price", () => {
   test("totals the Ship, fitted Equipment, group counts, the engine per engine, consumables and software, as average and min–max", () => {
     const at = (average: number) => ({ min: average - 10, average, max: average + 10 });
@@ -489,6 +489,35 @@ describe("price", () => {
     );
     // 1,000,000 + 5,000 + 3 × 700 + 2 × 2,000 + 300 + 8 × 20; each of the 16 items is ±10.
     expect(stats.price).toEqual({ min: 1_011_400, average: 1_011_560, max: 1_011_720 });
+  });
+
+  /** A Ship with room for 10 Crew. */
+  const crewed = (overrides: Parameters<typeof ship>[0] = {}) =>
+    ship({ ...overrides, capacities: { ...ship().capacities, crew: 10 } });
+
+  test("adds each member of the Crew at the crew price's min, average and max (ADR 0004)", () => {
+    const freighter = crewed({ price: { min: 90_000, average: 100_000, max: 110_000 } });
+    const data = gameData([freighter]);
+    // The fixture's crew price is 5,000 / 7,500 / 10,000; 4 + 2 Crew.
+    const stats = loadoutStats(data, loadout("fx_ship", { crew: { service: 4, marines: 2 } }));
+    expect(stats.price).toEqual({ min: 120_000, average: 145_000, max: 170_000 });
+  });
+
+  test("leaves the Captain out: a Loadout without Crew is the Ship alone", () => {
+    const freighter = crewed({ price: { min: 90_000, average: 100_000, max: 110_000 } });
+    expect(loadoutStats(gameData([freighter]), loadout("fx_ship")).price).toEqual({ min: 90_000, average: 100_000, max: 110_000 });
+  });
+
+  test("two fits that differ only in Crew differ in Price by the Crew alone, and in no other stat", () => {
+    const freighter = crewed();
+    const data = gameData([freighter], [priced("software", "scanner", { min: 250, average: 300, max: 350 })]);
+    const without = loadoutStats(data, loadout("fx_ship", { software: ["scanner"] }));
+    const withMarines = loadoutStats(data, loadout("fx_ship", { software: ["scanner"], crew: { marines: 3 } }));
+    expect(withMarines.price.min - without.price.min).toBe(15_000);
+    expect(withMarines.price.average - without.price.average).toBe(22_500);
+    expect(withMarines.price.max - without.price.max).toBe(30_000);
+    expect(withMarines.rows).toEqual(without.rows);
+    expect(row(withMarines.rows, "CrewCapacity").shown).toBe(11);
   });
 });
 

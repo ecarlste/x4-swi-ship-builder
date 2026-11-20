@@ -1,7 +1,7 @@
 /**
  * The Game Data shape, shared by the extraction pipeline and the app.
  *
- * A snapshot is six JSON files. Ids are the game's own (ware ids, connection
+ * A snapshot is seven JSON files. Ids are the game's own (ware ids, connection
  * names, group names, faction ids); Game Data holds raw inputs in game units
  * and no computed stats. See GLOSSARY.md and issue #7 for the decisions.
  */
@@ -15,11 +15,12 @@ export const sizeSchema = z.enum(["s", "m", "l", "xl"]);
 export type Size = z.infer<typeof sizeSchema>;
 
 /**
- * A ware's price as the game files give it. Usually min <= average <= max,
- * but SWI has a few wares that break that; they are kept as written and
- * listed in the extraction report.
+ * A price as the game files give it, for a Ship, a piece of Equipment or a
+ * member of the Crew. Usually min <= average <= max, but SWI has a few that
+ * break that; they are kept as written and listed in the extraction report.
  */
 const priceSchema = z.object({ min: nonNegative, average: nonNegative, max: nonNegative }).strict();
+export type Price = z.infer<typeof priceSchema>;
 
 /** Fields every Ship and piece of Equipment has. */
 const tradeableFields = {
@@ -298,6 +299,8 @@ export const snapshotSchema = z
     "fit-lists": z.array(fitListSchema),
     factions: z.array(factionSchema),
     licences: z.array(licenceSchema),
+    /** What each member of the Crew, service crew or marine, costs (ADR 0004). */
+    "crew-price": priceSchema,
   })
   .strict();
 

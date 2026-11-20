@@ -11,6 +11,7 @@ const full = {
   thruster: "thruster_s",
   software: ["software_dock"],
   consumables: { missile_proton: 20 },
+  crew: { service: 2, marines: 3 },
 };
 
 const saved = {
@@ -37,6 +38,22 @@ describe("parseLoadout", () => {
     expect(parseLoadout({ ...full, groups: { g: { weapon: { equipment: "t", count: 1 } } } }).ok).toBe(false);
     expect(parseLoadout("nope").ok).toBe(false);
     expect(parseLoadout({ ...empty, gameData: undefined }).ok).toBe(false);
+  });
+
+  test("accepts Crew with only one of its counts (ADR 0004)", () => {
+    expect(parseLoadout({ ...empty, crew: { marines: 1 } }).ok).toBe(true);
+    expect(parseLoadout({ ...empty, crew: { service: 4 } }).ok).toBe(true);
+  });
+
+  test("rejects a Crew count that isn't a positive integer", () => {
+    expect(parseLoadout({ ...empty, crew: { service: 0 } }).ok).toBe(false);
+    expect(parseLoadout({ ...empty, crew: { marines: -1 } }).ok).toBe(false);
+    expect(parseLoadout({ ...empty, crew: { service: 1.5 } }).ok).toBe(false);
+    expect(parseLoadout({ ...empty, crew: { captain: 1 } }).ok).toBe(false);
+  });
+
+  test("rejects an empty Crew: with both counts at 0, crew is left out", () => {
+    expect(parseLoadout({ ...empty, crew: {} }).ok).toBe(false);
   });
 
   test("rejects engines in a Slot Group: the engine is fitted to the whole Ship (#50)", () => {

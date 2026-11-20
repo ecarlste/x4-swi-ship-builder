@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { shotDamage } from "../stats/firepower.ts";
@@ -6,8 +6,12 @@ import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
 import {
+  CREW_ROLE_NAMES,
+  CREW_ROLES,
+  crewCount,
   consumableOptions,
   setConsumable,
+  setCrew,
   setEngine,
   setGroup,
   setSlot,
@@ -63,6 +67,7 @@ function keyValue(item: Equipment): string {
 /**
  * The editable Loadout table: one row for all the Ship's engines, which take
  * one engine type between them (ADR 0001), then one row per other Slot.
+ * After the Equipment, a Crew section for a Ship with crew capacity.
  * Columns: Slot, Equipment, quantity, key value and average price.
  */
 export function LoadoutTable({
@@ -200,6 +205,7 @@ export function LoadoutTable({
                     label={`${label} count`}
                     value={count}
                     max={part.count}
+                    limit={part.count}
                     disabled={!fitted}
                     onChange={(n) => fitted && change(setGroup(loadout, group.id, kind, { equipment: fitted.id, count: n }))}
                   />
@@ -282,26 +288,93 @@ export function LoadoutTable({
           );
         })}
       </tbody>
+      {ship.capacities.crew > 0 && (
+        <CrewSection
+          capacity={ship.capacities.crew}
+          crewPrice={gameData.crewPrice.average}
+          loadout={loadout}
+          was={was}
+          onChange={change}
+        />
+      )}
     </table>
   );
 }
 
 /**
- * A count shown as "count / max". Typed values are clamped to 0..limit, where
- * limit defaults to max (it is lower when other items share the capacity).
+ * The Crew, after the Equipment: service crew and marines, sharing the Ship's
+ * crew capacity, each at the crew price. The Captain is free and not a count
+ * (ADR 0004).
+ */
+function CrewSection({
+  capacity,
+  crewPrice,
+  loadout,
+  was,
+  onChange,
+}: {
+  capacity: number;
+  crewPrice: number;
+  loadout: Loadout;
+  was: Loadout | null;
+  onChange: (loadout: Loadout) => void;
+}) {
+  const headingId = useId();
+  const used = crewCount(loadout);
+  return (
+    <tbody aria-labelledby={headingId}>
+      <tr className="section">
+        <th scope="col" colSpan={5} id={headingId}>
+          Crew{" "}
+          <span className="dim">
+            {formatNumber(used)} / {formatNumber(capacity)}
+          </span>
+        </th>
+      </tr>
+      {CREW_ROLES.map((role) => {
+        const label = CREW_ROLE_NAMES[role];
+        const count = loadout.crew?.[role] ?? 0;
+        const before = was?.crew?.[role] ?? 0;
+        return (
+          <Row
+            key={role}
+            label={label}
+            equipment=""
+            quantity={
+              <CountInput
+                label={`${label} count`}
+                value={count}
+                // Service crew and marines share the Ship's crew capacity, which the header shows.
+                limit={capacity - (used - count)}
+                onChange={(n) => onChange(setCrew(loadout, role, n))}
+              />
+            }
+            keyValue=""
+            price={count > 0 ? formatCredits(crewPrice * count) : ""}
+            was={was && before !== count ? formatNumber(before) : undefined}
+          />
+        );
+      })}
+    </tbody>
+  );
+}
+
+/**
+ * A count, shown as "count / max" when given a max. Typed values are clamped
+ * to 0..limit; limit is lower than max when other items share the capacity.
  */
 function CountInput({
   label,
   value,
   max,
-  limit = max,
+  limit,
   disabled,
   onChange,
 }: {
   label: string;
   value: number;
-  max: number;
-  limit?: number;
+  max?: number;
+  limit: number;
   disabled?: boolean;
   onChange: (count: number) => void;
 }) {
@@ -319,8 +392,8 @@ function CountInput({
           const n = Math.floor(Number(e.target.value));
           onChange(Number.isFinite(n) ? Math.max(0, Math.min(limit, n)) : 0);
         }}
-      />{" "}
-      / {formatNumber(max)}
+      />
+      {max !== undefined && <> / {formatNumber(max)}</>}
     </span>
   );
 }
