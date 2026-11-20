@@ -1,9 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
+import { playwrightPort } from "./e2e/port.ts";
 
-const port = Number(process.env.PW_PORT ?? 5179);
+const port = playwrightPort(import.meta.dirname, process.env);
 
 export default defineConfig({
   testDir: "e2e",
+  // e2e/*.test.ts are Vitest unit tests of the e2e helpers.
+  testMatch: "**/*.spec.ts",
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
