@@ -499,7 +499,7 @@ input {
   text-align: left;
 }
 
-.comparison-figures td.num {
+.comparison-figures .num {
   text-align: right;
 }
 

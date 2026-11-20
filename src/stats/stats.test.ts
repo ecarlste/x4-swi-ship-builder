@@ -266,6 +266,62 @@ describe("firepower", () => {
   });
 });
 
+// The builder's own rule, not the game's (ADR 0002): a launcher fires its loaded
+// compatible missile with the highest output, and gives 0 with none loaded.
+// Inputs are the 091_x4-800 Game Data's.
+describe("a launcher fires its best loaded missile (ADR 0002)", () => {
+  // Gozanti C-ROC Corsair: a Krupx Medium Warhead Launcher and a KV22 (1,744 / 1,564).
+  const corsair = ship({ id: "gozanti_croc_raider", slots: [weaponSlot("con_weapon_01"), weaponSlot("con_weapon_02")] });
+  const kv22 = gun("weapon", "weapon_kv22_m_laser", {
+    damage: { value: 1428, noShield: 462 },
+    fireRate: 1.2,
+    magazine: { size: 2, reloadTime: 0.5 },
+    heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
+  });
+  const krupxMedium = launcher("weapon", "weapon_protonlauncher", "fl_krupx_medium");
+  const ion = missile("missile_ion_medium", 3000, 0, 18); // 166.6
+  const proton = missile("missile_proton_medium", 12500, 12500, 18); // 1,388.8
+  const corsairData = gameData(
+    [corsair],
+    [kv22, krupxMedium, ion, proton],
+    // The fit list's order puts the weaker missile first.
+    [{ id: "fl_krupx_medium", equipment: ["missile_ion_medium", "missile_proton_medium"] }],
+  );
+  const corsairWith = (consumables: Record<string, number>) =>
+    loadoutStats(
+      corsairData,
+      loadout("gozanti_croc_raider", {
+        slots: { con_weapon_01: "weapon_protonlauncher", con_weapon_02: "weapon_kv22_m_laser" },
+        consumables,
+      }),
+    );
+  const output = (stats: ReturnType<typeof loadoutStats>) => [row(stats.rows, "BurstDPS").shown, row(stats.rows, "SustainedDPS").shown];
+
+  test("with two compatible missiles loaded, it fires the stronger (C2, 5 Ion + 5 Proton: 3,133 / 2,953)", () => {
+    expect(output(corsairWith({ missile_ion_medium: 5, missile_proton_medium: 5 }))).toEqual([3133, 2953]);
+  });
+
+  test("with only the weaker missile loaded, it fires that one (C4, 5 Ion: 1,911)", () => {
+    expect(output(corsairWith({ missile_ion_medium: 5 }))[0]).toBe(1911);
+  });
+
+  test("with no compatible missile loaded, it gives 0 and the gun counts alone (C5: 1,744 / 1,564)", () => {
+    expect(output(corsairWith({}))).toEqual([1744, 1564]);
+  });
+
+  test("a launcher turret in a Slot Group with no missiles gives 0 (H3, Heraklon: Avg. Turret Output 0)", () => {
+    const heraklon = ship({ id: "heraklon_solid", size: "l", slotGroups: [turretGroup("missile", 1)] });
+    const tubeLight = launcher("turret", "turret_m_conctubelight", "fl_concussion_light");
+    const concussion = missile("missile_concussion_light", 5000, 1500, 4);
+    const data = gameData([heraklon], [tubeLight, concussion], [{ id: "fl_concussion_light", equipment: ["missile_concussion_light"] }]);
+    const stats = loadoutStats(
+      data,
+      loadout("heraklon_solid", { groups: { missile: { turret: { equipment: "turret_m_conctubelight", count: 1 } } } }),
+    );
+    expect(row(stats.rows, "GroupedTurretSustainedDPS").shown).toBe(0);
+  });
+});
+
 describe("capacities", () => {
   const freighter = ship({
     stats: { ...ship().stats, radarRange: 40000 },

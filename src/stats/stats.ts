@@ -15,7 +15,7 @@ import { gunOutput, launcherMissile } from "./firepower.ts";
 export type { MissingUpgrade } from "./mandatory.ts";
 /** Per-Equipment figures for a weapon or turret, e.g. for the comparison popover. */
 export { gunOutput, type GunOutput } from "./firepower.ts";
-export { compareEquipment, type Comparison, type Figure, type Verdict } from "./comparison.ts";
+export { compareEquipment, type Comparison, type Figure, type MissileRow, type Verdict } from "./comparison.ts";
 
 /** One stat row of the configuration screen. */
 export interface StatRow {

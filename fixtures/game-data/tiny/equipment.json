@@ -94,5 +94,10 @@
     "kind": "missile", "id": "fx_torpedo", "name": "Heavy Torpedo", "nameId": "{900002,18}",
     "price": { "min": 2000, "average": 2500, "max": 3000 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
     "explosionDamage": 9000, "hullDamage": 1000, "barrelAmount": 1, "reloadTime": 12
+  },
+  {
+    "kind": "missile", "id": "fx_ion_torpedo", "name": "Ion Torpedo", "nameId": "{900002,19}",
+    "price": { "min": 1500, "average": 1800, "max": 2100 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
+    "explosionDamage": 3000, "hullDamage": 0, "barrelAmount": 1, "reloadTime": 18
   }
 ]

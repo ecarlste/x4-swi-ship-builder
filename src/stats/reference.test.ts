@@ -431,6 +431,130 @@ describe("one engine type across engine Slot Groups, in game on X4 8.00 + SWI 0.
   });
 });
 
+/**
+ * Launchers, in game on X4 8.00 + SWI 0.9.1 HF (#63). The game fires one fixed
+ * missile per launcher whatever is loaded, even with none: the last compatible
+ * missile by ware id. The builder fires the best loaded one instead (ADR 0002,
+ * #65). Each Loadout here loads the missile the game showed, so the two rules
+ * agree and the screen's value checks the formula. Only the weapon rows are
+ * asserted; the Loadouts leave out engines, shields and thrusters, which they
+ * don't depend on. Each launcher has its full fit list from Game Data.
+ */
+describe("launchers, with the missile the game showed loaded (#63, #65)", () => {
+  const corsair = ship({ id: "gozanti_croc_raider", size: "m" });
+  const xwing = sShip("t65b_xwing", {});
+  const awing = sShip("rz1awing", {});
+  const vulture = sShip("vulture_droid", {});
+  const ywing = sShip("ywing_btla4", {});
+  const heraklon = ship({ id: "heraklon_solid", size: "l", slotGroups: [{ id: "missile", kinds: { turret: { count: 1, fitList: "fl_any" } } }] });
+
+  const launchers: Equipment[] = [
+    launcher("weapon", "weapon_protonlauncher", "fl_krupx_medium"),
+    launcher("weapon", "weapon_krupx_s_guided", "fl_krupx"),
+    launcher("weapon", "weapon_hm6launcher", "fl_hm6"),
+    launcher("weapon", "weapon_rackvulture", "fl_rack"),
+    launcher("weapon", "weapon_flexlauncher", "fl_flex"),
+    launcher("turret", "turret_m_conctubelight", "fl_conctube"),
+    // Missiles: id, explosion damage, hull damage, reload.
+    missile("missile_carbonite", 4500, 4000, 9),
+    missile("missile_concussion_light", 5000, 1500, 4),
+    missile("missile_concussion_medium", 13000, 3000, 10),
+    missile("missile_discord", 1500, 3000, 10),
+    missile("missile_ion_light", 2000, 0, 10),
+    missile("missile_ion_medium", 3000, 0, 18),
+    missile("missile_proton_light", 7000, 7000, 10),
+    missile("missile_proton_medium", 12500, 12500, 18),
+    // The Corsair's guns and turrets.
+    gun("weapon", "weapon_kv22_m_laser", {
+      damage: { value: 1428, noShield: 462 },
+      fireRate: 1.2,
+      magazine: { size: 2, reloadTime: 0.5 },
+      heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
+    }),
+    gun("turret", "turret_m_ag2g", {
+      damage: { value: 102, noShield: 34 },
+      fireRate: 5,
+      barrelAmount: 2,
+      magazine: { size: 20, reloadTime: 3 },
+    }),
+    gun("turret", "turret_m_duallaser_orange", {
+      damage: { value: 255, noShield: 189 },
+      fireRate: 2,
+      barrelAmount: 2,
+      magazine: { size: 2, reloadTime: 3 },
+    }),
+    gun("turret", "turret_m_llaser_red", {
+      damage: { value: 255, noShield: 126 },
+      fireRate: 3,
+      magazine: { size: 3, reloadTime: 2 },
+    }),
+  ];
+  const launcherData = gameData([corsair, xwing, awing, vulture, ywing, heraklon], launchers, [
+    { id: "fl_krupx_medium", equipment: ["missile_ion_medium", "missile_proton_medium"] },
+    { id: "fl_krupx", equipment: ["missile_carbonite", "missile_concussion_light", "missile_ion_light", "missile_proton_light"] },
+    { id: "fl_hm6", equipment: ["missile_carbonite", "missile_concussion_light"] },
+    { id: "fl_rack", equipment: ["missile_concussion_light", "missile_discord"] },
+    {
+      id: "fl_flex",
+      equipment: ["missile_carbonite", "missile_concussion_medium", "missile_ion_medium", "missile_proton_medium"],
+    },
+    { id: "fl_conctube", equipment: ["missile_concussion_light"] },
+  ]);
+
+  /** One launcher in `slot`, with `missile` loaded: the Burst / Sustained Weapon Output. */
+  const oneLauncher = (shipId: string, slot: string, launcherId: string, missileId: string) =>
+    loadoutStats(launcherData, loadout(shipId, { slots: { [slot]: launcherId }, consumables: { [missileId]: 4 } }));
+
+  test("C3. Corsair, Krupx Medium + KV22, AG-2G R + OPD Dual O + 2× SL-1 R, 5 Proton: 3,133 / 2,953", () => {
+    const stats = loadoutStats(
+      launcherData,
+      loadout("gozanti_croc_raider", {
+        slots: {
+          con_weapon_01: "weapon_protonlauncher",
+          con_weapon_02: "weapon_kv22_m_laser",
+          con_turret_01: "turret_m_ag2g",
+          con_turret_02: "turret_m_duallaser_orange",
+          con_m_turret_3: "turret_m_llaser_red",
+          con_m_turret_4: "turret_m_llaser_red",
+        },
+        consumables: { missile_proton_medium: 5 },
+      }),
+    );
+    expectScreen(stats, { BurstDPS: 3133, SustainedDPS: 2953 });
+  });
+
+  test("X1. X-wing T65B, Krupx Warhead Launcher, MG7-A Light Proton: 1,400", () => {
+    const stats = oneLauncher("t65b_xwing", "con_weapon_05", "weapon_krupx_s_guided", "missile_proton_light");
+    expectScreen(stats, { BurstDPS: 1400, SustainedDPS: 1400 });
+  });
+
+  test("A1. A-wing RZ1, HM-6 Launcher, ST2 Light Concussion: 1,625", () => {
+    const stats = oneLauncher("rz1awing", "con_weapon_03", "weapon_hm6launcher", "missile_concussion_light");
+    expectScreen(stats, { BurstDPS: 1625, SustainedDPS: 1625 });
+  });
+
+  test("V1. Vulture-class droid, Missile Rack, Discord: 450", () => {
+    const stats = oneLauncher("vulture_droid", "con_primaryweapon_05", "weapon_rackvulture", "missile_discord");
+    expectScreen(stats, { BurstDPS: 450, SustainedDPS: 450 });
+  });
+
+  test("Y1. Y-wing BTL-A4, Flex Tube Launcher, MG4-A Medium Proton: 1,388", () => {
+    const stats = oneLauncher("ywing_btla4", "con_weapon_04", "weapon_flexlauncher", "missile_proton_medium");
+    expectScreen(stats, { BurstDPS: 1388, SustainedDPS: 1388 });
+  });
+
+  test("H3. Heraklon Ore Miner, 1× Light Concussion Missile Launcher in `missile`, ST2 Light Concussion: Avg. Turret Output 270", () => {
+    const stats = loadoutStats(
+      launcherData,
+      loadout("heraklon_solid", {
+        groups: { missile: { turret: { equipment: "turret_m_conctubelight", count: 1 } } },
+        consumables: { missile_concussion_light: 4 },
+      }),
+    );
+    expectScreen(stats, { GroupedTurretSustainedDPS: 270 });
+  });
+});
+
 describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
   test("Gozanti-class Miner, 2× Seismic Mining Drill (no reload@rate): Burst 12, Sustained 12, one shot a second", () => {
     const stats = loadoutStats(
