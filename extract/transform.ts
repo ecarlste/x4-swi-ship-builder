@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Equipment, Faction, Licence, Manifest, Ship, Size } from "../shared/game-data/schema.ts";
+import type { Equipment, Faction, FitList, Licence, Manifest, Ship, Size } from "../shared/game-data/schema.ts";
 import { SNAPSHOT_FILES, validateSnapshot, type RawSnapshot } from "../shared/game-data/validateSnapshot.ts";
 import { ExtractError } from "./errors.ts";
 import { attr, child, children, numberAttr, GameFiles } from "./gameFiles.ts";
 import type { MergeLog } from "./merge.ts";
+import { diffSnapshots, renderDiff, type DiffableSnapshot } from "./diff.ts";
 import { renderReport, table } from "./report.ts";
 import { readEquipment } from "./equipment.ts";
 import { readShips, type LeftOut } from "./ships.ts";
@@ -29,6 +30,8 @@ export interface TransformResult {
   /** Equipment in the snapshot, and how many Equipment wares have a Seller before the "fits a buildable Ship" filter. */
   equipment: { included: number; withSeller: number };
   reportPath: string;
+  /** `snapshot-diff.md`, beside the report: the diff against the snapshot `current` pointed at before. */
+  diffPath: string;
 }
 
 /** What Stage 1 recorded in `layers.json`. */
@@ -43,7 +46,9 @@ interface LayersJson {
  * snapshot to `<gameDataDir>/<swi-version>_x4-<x4-version>/`, then points
  * `<gameDataDir>/current` at it. The snapshot is validated by the shared
  * schema and integrity pass before anything is written. `extract-report.md`
- * in the cache gets the merge log plus every Ship left out and why.
+ * in the cache gets the merge log plus every Ship left out and why, and
+ * `snapshot-diff.md` beside it the Ships and Equipment added, removed and
+ * changed since the snapshot `current` pointed at before.
  */
 export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Date() }: TransformOptions): TransformResult {
   const layers = readJson<LayersJson>(join(cacheDir, "layers.json"), "Run the merge stage first.");
@@ -90,6 +95,9 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
     throw new ExtractError(`The snapshot failed validation:\n${validation.errors.map((e) => `  ${e}`).join("\n")}`);
   }
 
+  const current = join(gameDataDir, "current");
+  const previous = readPrevious(current);
+
   const folder = `${manifest.swi.version}_x4-${manifest.x4.version}`;
   const snapshotDir = join(gameDataDir, folder);
   rmSync(snapshotDir, { recursive: true, force: true });
@@ -97,7 +105,6 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
   for (const file of SNAPSHOT_FILES) {
     writeFileSync(join(snapshotDir, `${file}.json`), JSON.stringify(snapshot[file], null, 2) + "\n");
   }
-  const current = join(gameDataDir, "current");
   if (existsSync(current) || isSymlink(current)) rmSync(current, { recursive: true, force: true });
   symlinkSync(folder, current, "dir");
 
@@ -105,7 +112,12 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
   const mergeLog = existsSync(join(cacheDir, "merge-log.json"))
     ? readJson<MergeLog>(join(cacheDir, "merge-log.json"), "")
     : undefined;
-  writeFileSync(reportPath, renderReport(mergeLog, transformReport(leftOut, fitted.leftOut, warnings)));
+  const capped = bindingRotationCaps(ships, equipment, fitted.fitLists);
+  writeFileSync(reportPath, renderReport(mergeLog, transformReport(leftOut, fitted.leftOut, warnings, capped)));
+
+  const next: DiffableSnapshot = { manifest, ships, equipment };
+  const diffPath = join(cacheDir, "snapshot-diff.md");
+  writeFileSync(diffPath, renderDiff(previous && diffSnapshots(previous, next), previous, next));
 
   const counts: Record<Size, number> = { s: 0, m: 0, l: 0, xl: 0 };
   for (const ship of ships) counts[ship.size]++;
@@ -114,7 +126,51 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
     ships: counts,
     equipment: { included: equipment.length, withSeller: fitted.withSeller },
     reportPath,
+    diffPath,
   };
+}
+
+/**
+ * The snapshot `current` points at, read before it is replaced: only what
+ * the diff needs, so a snapshot from an older schema still diffs. Undefined
+ * if there is none.
+ */
+function readPrevious(current: string): DiffableSnapshot | undefined {
+  const read = (file: string) => JSON.parse(readFileSync(join(current, `${file}.json`), "utf8"));
+  if (!existsSync(join(current, "manifest.json"))) return undefined;
+  return { manifest: read("manifest"), ships: read("ships"), equipment: read("equipment") };
+}
+
+interface RotationCap {
+  ship: string;
+  max: number;
+  /** Each thruster that would turn the Ship faster than `max`, with the axes it binds on and thrust / drag on each. */
+  thrusters: { id: string; axes: { axis: string; speed: number }[] }[];
+}
+
+/**
+ * Ships where `rotationspeed@max` would bind: for some thruster that fits
+ * the Ship, thrust / drag on an axis is above it (#12). The stats engine
+ * applies the cap as min(thrust / drag, max).
+ */
+function bindingRotationCaps(ships: Ship[], equipment: Equipment[], fitLists: FitList[]): RotationCap[] {
+  const lists = new Map(fitLists.map((f) => [f.id, f.equipment]));
+  const thrusters = new Map(
+    equipment.flatMap((e) => (e.kind === "thruster" ? [[e.id, e] as const] : [])),
+  );
+  return ships.flatMap((ship) => {
+    const max = ship.stats.maxRotationSpeed;
+    if (max === null) return [];
+    const binding = (lists.get(ship.thrusters) ?? []).flatMap((id) => {
+      const thruster = thrusters.get(id);
+      if (!thruster) return [];
+      const axes = (["pitch", "yaw", "roll"] as const)
+        .map((axis) => ({ axis, speed: thruster.thrust[axis] / ship.stats.drag[axis] }))
+        .filter(({ speed }) => speed > max);
+      return axes.length > 0 ? [{ id, axes }] : [];
+    });
+    return binding.length > 0 ? [{ ship: ship.id, max, thrusters: binding }] : [];
+  });
 }
 
 /** "Star Wars 0.9.1 HF" → "0.9.1 HF": the release label from the first version number on. */
@@ -223,7 +279,12 @@ function disambiguateNames(ships: Ship[], factions: Faction[]): Ship[] {
   return named;
 }
 
-function transformReport(shipsLeftOut: LeftOut[], equipmentLeftOut: LeftOut[], warnings: string[]): string[] {
+function transformReport(
+  shipsLeftOut: LeftOut[],
+  equipmentLeftOut: LeftOut[],
+  warnings: string[],
+  rotationCaps: RotationCap[],
+): string[] {
   const leftOutTable = (leftOut: LeftOut[]) =>
     table(
       ["Ware", "Reason"],
@@ -236,11 +297,25 @@ function transformReport(shipsLeftOut: LeftOut[], equipmentLeftOut: LeftOut[], w
     "## Equipment left out",
     "",
     ...leftOutTable(equipmentLeftOut),
+    "## Ships where rotationspeed@max binds",
+    "",
+    "Turning is min(thrust / drag, `rotationspeed@max`). These Ships turn slower than thrust / drag with the thrusters listed.",
+    "",
+    ...table(
+      ["Ship", "rotationspeed@max", "thrust / drag above it"],
+      rotationCaps.map((c) => [
+        c.ship,
+        String(c.max),
+        c.thrusters.map((t) => `${t.id}: ${t.axes.map((a) => `${a.axis} ${round(a.speed)}`).join(", ")}`).join("; "),
+      ]),
+    ),
     "## Warnings",
     "",
     ...(warnings.length === 0 ? ["None.", ""] : [...warnings.map((w) => `- ${w}`), ""]),
   ];
 }
+
+const round = (n: number) => String(Math.round(n * 1000) / 1000);
 
 const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 

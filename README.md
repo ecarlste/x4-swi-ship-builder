@@ -49,9 +49,23 @@ Then it builds Game Data from the cache and writes it to `game-data/<swi-version
 - Licences are named by type (`generaluseship` → "General Use Ship Licence"), since each Faction names its own copy. Its reputation is given only when every Seller asks for the same one.
 - The snapshot is validated by the shared schema and integrity pass before anything is written. Zero Ships, or a ware, macro, component, station group, construction plan, Faction or text reference that doesn't resolve, is a hard failure.
 - Zero Equipment is a hard failure too. The report adds every Ship and every piece of Equipment left out with its reason, and warnings for SWI data that breaks our rules (a slot with no size tag, a price outside min..max, a group name with stray spaces, a licence with different reputations per Seller, Equipment with a Seller but no compatible Slot, a Slot Group whose connections take different Equipment, a gun with no fire rate). `npm run extract` also prints how many Equipment wares have a Seller before the fits-a-buildable-Ship filter, to check against #18.
-- Compatibility lists come with #31: until then every Slot points at one empty fit list.
+- The report also lists every Ship where `rotationspeed@max` would bind: some thruster that fits it turns it faster than the cap (thrust / drag on pitch, yaw or roll above `max`), so the stats engine's `min(thrust/drag, max)` matters.
 
 For SWI 0.9.1 HF on X4 8.00 that is 210 Ships (S 65, M 56, L 66, XL 23).
+
+### Reviewing a new SWI release
+
+Before replacing `game-data/current`, extraction reads the snapshot it pointed at and diffs the new one against it. `.cache/extract/snapshot-diff.md`, beside the report, gives the counts and the ids and names of the Ships and Equipment added, removed and changed, with the fields that changed (`price.average`, `stats.drag.yaw`, `slots`…). Fit-list ids hash their contents, so a change in what fits a Slot shows as a change to the Ship. On a first extraction it says there is no previous snapshot.
+
+To re-run only Stage 2 from the cache (after changing the transform, say), without reading the install or merging again:
+
+```bash
+npm run extract -- --transform-only
+```
+
+This writes the snapshot, the report and the diff again; the diff is then against the snapshot of the previous run.
+
+The **Game Data check** (`shared/game-data/currentSnapshot.test.ts`, part of `npm run test:unit`) re-validates `game-data/current` against the shared zod schema and integrity pass. It is skipped when there is no snapshot, as in CI, which has no game files.
 
 ## Tests
 

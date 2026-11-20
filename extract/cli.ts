@@ -56,6 +56,7 @@ function main(): void {
   );
   console.log(`Snapshot: ${result.snapshotDir}`);
   console.log(`Report: ${result.reportPath}`);
+  console.log(`Diff: ${result.diffPath}`);
 }
 
 /** The repo's current commit, marked `-dirty` when the working tree has changes. */

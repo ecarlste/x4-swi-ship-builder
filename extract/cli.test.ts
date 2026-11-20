@@ -59,6 +59,7 @@ describe("npm run extract", () => {
     expect(stdout).toMatch(/Equipment: 1 \(1 wares have a Seller before the fits-a-buildable-Ship filter\)/);
     expect(existsSync(join(cacheDir, "files/libraries/wares.json"))).toBe(true);
     expect(existsSync(join(cacheDir, "extract-report.md"))).toBe(true);
+    expect(stdout).toContain(`Diff: ${join(cacheDir, "snapshot-diff.md")}`);
     expect(existsSync(join(gameDataDir, "current", "ships.json"))).toBe(true);
   });
 

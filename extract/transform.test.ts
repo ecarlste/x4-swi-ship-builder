@@ -422,3 +422,64 @@ describe("transform: Ships", () => {
     expect(report()).toMatch(/fx_odd: price isn't min <= average <= max \(300, 200, 400\)/);
   });
 });
+
+describe("transform: the snapshot diff", () => {
+  it("diffs the new snapshot against the one current pointed at, and writes the diff beside the report", () => {
+    const gameDataDir = mkdtempSync(join(tmpdir(), "game-data-"));
+    transform({ cacheDir: writeCache(oneShipWorld()), gameDataDir, pipelineCommit: "first", now: NOW });
+    // oneShipWorld, with the fighter's hull changed and a scout added.
+    const cacheDir = writeCache(
+      new FixtureWorld()
+        .faction({ id: "fx_guild", name: "Freight Guild", licences: [{ type: "generaluseship", name: "Guild Ship Licence", minrelation: "-0.01" }] })
+        .station({ faction: "fx_guild", builds: ["ship_s ship_m"] })
+        .ship({ id: "fx_fighter", name: "Fixture Fighter", owners: ["fx_guild"], licence: "generaluseship", properties: { hull: 9000 } })
+        .ship({ id: "fx_scout", name: "Fixture Scout", owners: ["fx_guild"] })
+        .equipment(smallEngine()),
+    );
+
+    const result = transform({ cacheDir, gameDataDir, pipelineCommit: "second", now: NOW });
+
+    expect(result.diffPath).toBe(join(cacheDir, "snapshot-diff.md"));
+    const diff = readFileSync(result.diffPath, "utf8");
+    expect(diff).toContain("| Ships | 1 | 0 | 1 |");
+    expect(diff).toContain("| fx_scout | Fixture Scout |");
+    expect(diff).toContain("| fx_fighter | Fixture Fighter | stats.hull |");
+  });
+
+  it("says when there is no previous snapshot", () => {
+    const { result } = run();
+
+    expect(readFileSync(result.diffPath, "utf8")).toContain("No previous snapshot to diff against");
+  });
+});
+
+describe("transform: rotationspeed@max", () => {
+  const thruster = (id: string, yaw: number) => ({
+    id,
+    kind: "thruster" as const,
+    connection: "thruster small component",
+    properties: `<thrust strafe="400" pitch="100" yaw="${yaw}" roll="100"/>`,
+  });
+  // The fixture Ships' drag is pitch 5, yaw 6, roll 7: turning is thrust / drag before the cap.
+  const world = () =>
+    oneShipWorld()
+      .ship({ id: "fx_capped", owners: ["fx_guild"], properties: { rotationspeed: 18 } })
+      .ship({ id: "fx_loose", owners: ["fx_guild"], properties: { rotationspeed: 50 } })
+      .equipment(thruster("fx_thruster_a", 60))
+      .equipment(thruster("fx_thruster_b", 120));
+
+  it("lists every Ship whose rotationspeed@max is below thrust / drag with a thruster that fits it", () => {
+    const { report } = run(world());
+
+    expect(report()).toContain("## Ships where rotationspeed@max binds");
+    expect(report()).toContain("| fx_capped | 18 | fx_thruster_a: pitch 20; fx_thruster_b: pitch 20, yaw 20 |");
+    expect(report()).not.toContain("| fx_loose |");
+    expect(report()).not.toContain("| fx_fighter |");
+  });
+
+  it("says None when no cap binds", () => {
+    const { report } = run();
+
+    expect(report()).toMatch(/## Ships where rotationspeed@max binds\n\n[^#|]*\nNone\./);
+  });
+});
