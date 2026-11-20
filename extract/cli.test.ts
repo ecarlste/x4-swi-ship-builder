@@ -56,6 +56,7 @@ describe("npm run extract", () => {
     expect(status).toBe(0);
     expect(stdout).toMatch(new RegExp(`Merged 7 layers into ${Object.keys(worldFiles).length} files in `));
     expect(stdout).toMatch(/Ships: 1 \(S 1, M 0, L 0, XL 0\)/);
+    expect(stdout).toMatch(/Equipment: 1 \(1 wares have a Seller before the fits-a-buildable-Ship filter\)/);
     expect(existsSync(join(cacheDir, "files/libraries/wares.json"))).toBe(true);
     expect(existsSync(join(cacheDir, "extract-report.md"))).toBe(true);
     expect(existsSync(join(gameDataDir, "current", "ships.json"))).toBe(true);

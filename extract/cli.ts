@@ -51,6 +51,9 @@ function main(): void {
   const result = transform({ cacheDir, gameDataDir, pipelineCommit: pipelineCommit() });
   const { s, m, l, xl } = result.ships;
   console.log(`Ships: ${s + m + l + xl} (S ${s}, M ${m}, L ${l}, XL ${xl})`);
+  console.log(
+    `Equipment: ${result.equipment.included} (${result.equipment.withSeller} wares have a Seller before the fits-a-buildable-Ship filter)`,
+  );
   console.log(`Snapshot: ${result.snapshotDir}`);
   console.log(`Report: ${result.reportPath}`);
 }

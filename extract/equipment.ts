@@ -25,7 +25,7 @@ interface Candidate {
   id: string;
   kind: EquipmentKind;
   ware: JsonElement;
-  /** The ware's macro; software has none. */
+  /** The ware's macro, for the kinds whose raw inputs or tags come from it. */
   macro: JsonElement | undefined;
   /** The type connection's tags, but for `component`; null for kinds without one. */
   connectionTags: string[] | null;
@@ -64,9 +64,11 @@ function readCandidates(files: GameFiles): Candidate[] {
     if (kind === undefined) continue;
     const id = attr(ware, "id")!;
     const where = `ware ${id}`;
+    // Drones, deployables, countermeasures and software have no raw inputs and match no tags.
+    const needsMacro = SLOT_KINDS.has(kind) || kind === "missile";
     const macroRef = attr(child(ware, "component"), "ref");
-    if (macroRef === undefined && kind !== "software") throw new ExtractError(`${where} has no <component ref>`);
-    const macro = macroRef === undefined ? undefined : files.macro(macroRef, where).element;
+    if (macroRef === undefined && needsMacro) throw new ExtractError(`${where} has no <component ref>`);
+    const macro = macroRef === undefined || !needsMacro ? undefined : files.macro(macroRef, where).element;
     const props = child(macro, "properties");
 
     let connectionTags: string[] | null = null;
@@ -256,6 +258,10 @@ export function readEquipment(
       leftOut.push({ ware: id, reason: item });
       warnings.push(`${id}: ${item}`);
       return;
+    }
+    const { min, average, max } = item.price;
+    if (!(min <= average && average <= max)) {
+      warnings.push(`${id}: price isn't min <= average <= max (${min}, ${average}, ${max})`);
     }
     included.set(id, item);
   };
