@@ -70,3 +70,28 @@ test("an L Ship's group shields show in the Avg. Group Shield rows, not the main
   await expect(stat(page, "Avg. Group Shield (MJ)")).toHaveText("10,000");
   await expect(stat(page, "Recharge Rate (MW)")).toHaveText("0");
 });
+
+test("the flight rows follow the engine and thruster", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+  await expect(stat(page, "Speed (m/s)")).toHaveText("0");
+  await expect(stat(page, "Yaw (°/s)")).toHaveText("0.0");
+
+  // Mass 10, drag 5 forward / 4 sideways; 1,500 thrust, boost ×4, travel ×10.
+  await fit(page, /con_engine_01/, "Sprint Engine S");
+  await expect(stat(page, "Speed (m/s)")).toHaveText("300");
+  await expect(stat(page, "Acceleration (m/s²)")).toHaveText("150");
+  await expect(stat(page, "Boost Speed (m/s)")).toHaveText("1,200");
+  await expect(stat(page, "Boost Acceleration (m/s²)")).toHaveText("300");
+  await expect(stat(page, "Boost Capacity (s)")).toHaveText("10.0");
+  await expect(stat(page, "Boost Recharge Rate (%/s)")).toHaveText("5.0");
+  await expect(stat(page, "Travel Speed (m/s)")).toHaveText("3,000");
+  await expect(stat(page, "Travel Acceleration (m/s²)")).toHaveText("150");
+  await expect(stat(page, "Travel Charge Time (s)")).toHaveText("5.0");
+
+  // Strafe 400; yaw 3 / 1.5 = 2 °/s, which the game's rad/s round trip shows as 1.9.
+  await fit(page, "Thruster", "Nimble Thruster S");
+  await expect(stat(page, "Strafe Speed (m/s)")).toHaveText("100.0");
+  await expect(stat(page, "Strafe Acceleration (m/s²)")).toHaveText("40.0");
+  await expect(stat(page, "Yaw (°/s)")).toHaveText("1.9");
+  await expect(stat(page, "Roll (°/s)")).toHaveText("2.0");
+});

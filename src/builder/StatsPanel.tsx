@@ -8,7 +8,19 @@ const formatted = (row: StatRow) =>
   row.shown.toLocaleString("en-US", { minimumFractionDigits: row.decimals, maximumFractionDigits: row.decimals });
 
 /** Rows the game indents under the row above them. */
-const SUB_ROWS = new Set(["ShieldRate", "ShieldDelay", "GroupedShieldRate", "GroupedShieldDelay"]);
+const SUB_ROWS = new Set([
+  "ShieldRate",
+  "ShieldDelay",
+  "GroupedShieldRate",
+  "GroupedShieldDelay",
+  "ForwardAcceleration",
+  "BoostAcceleration",
+  "BoostMaxDuration",
+  "BoostRechargeRate",
+  "TravelAcceleration",
+  "TravelChargeTime",
+  "HorizontalStrafeAcceleration",
+]);
 
 /** The game's mouse-over texts. */
 const TOOLTIPS: Record<string, string> = {

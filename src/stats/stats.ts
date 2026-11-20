@@ -87,6 +87,69 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   // rows; Game Data holds one cargo capacity, so it is one row here.
   add("CargoCapacity", "Cargo", "m³", 0, "storage", ship.capacities.cargo);
 
+  // Flight (#12). Engines in Slots count once, engines in Slot Groups once per count.
+  const engines = [
+    ...Object.values(loadout.slots ?? {}).flatMap((id) => {
+      const item = ofKind(id, "engine");
+      return item ? [{ item, count: 1 }] : [];
+    }),
+    ...Object.values(loadout.groups ?? {}).flatMap((kinds) => {
+      const item = kinds.engine && ofKind(kinds.engine.equipment, "engine");
+      return item && kinds.engine ? [{ item, count: kinds.engine.count }] : [];
+    }),
+  ];
+  const { drag, mass, accFactors, maxRotationSpeed } = ship.stats;
+  type Engine = Extract<Equipment, { kind: "engine" }>;
+  /** Σ engine forward thrust, each engine's thrust scaled by `factor`. */
+  const thrust = (factor: (e: Engine) => number = () => 1) =>
+    sum(engines.map(({ item, count }) => item.thrust.forward * factor(item) * count));
+  /** An engine property averaged over the fitted engines (they are normally all alike), or 0 with none. */
+  const perEngine = (pick: (e: Engine) => number) =>
+    mean(engines.flatMap(({ item, count }) => Array<number>(count).fill(pick(item))));
+  const acceleration = (thrust() / mass) * accFactors.forward;
+  const travelSpeed = thrust((e) => e.travel.thrust) / drag.forward;
+  const travelAttack = perEngine((e) => e.travel.attack);
+  const boostRecharge = perEngine((e) => e.boost.recharge);
+  add("ForwardSpeed", "Speed", "m/s", 0, "flight", thrust() / drag.forward);
+  add("ForwardAcceleration", "Acceleration", "m/s²", 0, "flight", acceleration);
+  add("BoostSpeed", "Boost Speed", "m/s", 0, "flight", thrust((e) => e.boost.thrust) / drag.forward);
+  add(
+    "BoostAcceleration",
+    "Boost Acceleration",
+    "m/s²",
+    0,
+    "flight",
+    (thrust((e) => e.boost.acceleration) / mass) * accFactors.forward,
+  );
+  add("BoostMaxDuration", "Boost Capacity", "s", 1, "flight", perEngine((e) => e.boost.duration));
+  // `boost@recharge` is the seconds for a full recharge.
+  add("BoostRechargeRate", "Boost Recharge Rate", "%/s", 1, "flight", boostRecharge > 0 ? 100 / boostRecharge : 0);
+  add("TravelSpeed", "Travel Speed", "m/s", 0, "flight", travelSpeed);
+  // Checked in game only for `travel@attack="0"` (acceleration unchanged). Otherwise taken as
+  // the seconds to reach travel speed, which is unconfirmed.
+  add(
+    "TravelAcceleration",
+    "Travel Acceleration",
+    "m/s²",
+    0,
+    "flight",
+    travelAttack > 0 ? travelSpeed / travelAttack : acceleration,
+  );
+  add("TravelChargeTime", "Travel Charge Time", "s", 1, "flight", perEngine((e) => e.travel.charge));
+
+  const thrusterItem = loadout.thruster ? ofKind(loadout.thruster, "thruster") : undefined;
+  const strafe = thrusterItem?.thrust.strafe ?? 0;
+  add("HorizontalStrafeSpeed", "Strafe Speed", "m/s", 1, "flight", strafe / drag.horizontal);
+  add("HorizontalStrafeAcceleration", "Strafe Acceleration", "m/s²", 1, "flight", (strafe / mass) * accFactors.horizontal);
+  for (const [id, label, axis] of [
+    ["YawSpeed", "Yaw", "yaw"],
+    ["PitchSpeed", "Pitch", "pitch"],
+    ["RollSpeed", "Roll", "roll"],
+  ] as const) {
+    const speed = Math.min((thrusterItem?.thrust[axis] ?? 0) / drag[axis], maxRotationSpeed ?? Infinity);
+    add(id, label, "°/s", 1, "flight", turningInDegrees(speed));
+  }
+
   add("CrewCapacity", "Crew", "", 0, "crew", ship.capacities.crew + 1);
   add("UnitCapacity", "Units", "", 0, "crew", ship.capacities.drones);
   add("MissileCapacity", "Missiles", "", 0, "crew", ship.capacities.missiles);
@@ -98,6 +161,15 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     price: price(ship.price, loadout, equipment),
     missing: missingMandatory(gameData, ship, loadout),
   };
+}
+
+/**
+ * Thrust / drag comes out in °/s, but the engine hands the UI a float32 in
+ * rad/s, which the Lua turns back into °/s. The round trip is why the
+ * X-wing's 40 shows as 39.9 (#12).
+ */
+function turningInDegrees(degreesPerSecond: number): number {
+  return (Math.fround((degreesPerSecond * Math.PI) / 180) * 180) / Math.PI;
 }
 
 /** Ship + Equipment + consumables + software, each at its min, average and max. */
