@@ -122,8 +122,8 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   // over a flat six directions (#12). Its rate of fire already counts
   // magazine reloads; heat isn't applied, as confirmed in game. L/XL Ships
   // show it as the game's grouped field, with the same formula.
-  // unconfirmed (#63): the sum / 6 and the grouped row. #12 saw outputs in game, but no
-  // reference Loadout checks Avg. Turret Output with a turret fitted.
+  // The grouped row's sum / 6 is confirmed in game: the Heraklon's H1 and H2 (#63, #67).
+  // unconfirmed (#63): the S/M row. No reference Loadout checks it with a turret fitted.
   const turrets = fittedGuns.flatMap(({ item, count }) => (item.kind === "turret" ? [output(item).burst * count] : []));
   const turretId = capShip ? "GroupedTurretSustainedDPS" : "TurretSustainedDPS";
   add(turretId, "Avg. Turret Output", "MW", 0, "combat", sum(turrets) / 6);

@@ -19,19 +19,19 @@
   {
     "kind": "weapon", "id": "fx_pulse_s", "name": "Pulse Blaster", "nameId": "{900002,5}",
     "price": { "min": 10000, "average": 12000, "max": 14000 }, "licence": null, "sellers": ["fx_corsairs", "fx_guild"],
-    "size": "s", "damage": { "value": 100, "noShield": 0 }, "barrelAmount": 1, "fireRate": 4,
+    "size": "s", "damage": { "value": 100, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 4,
     "magazine": null, "heat": { "perShot": 50, "overheat": 1000, "coolDelay": 1, "coolRate": 200 }, "missiles": null, "missileStorage": 0
   },
   {
     "kind": "weapon", "id": "fx_launcher_s", "name": "Dart Launcher", "nameId": "{900002,6}",
     "price": { "min": 15000, "average": 18000, "max": 21000 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
-    "size": "s", "damage": { "value": 0, "noShield": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
     "magazine": null, "heat": null, "missiles": "fl_missiles_s", "missileStorage": 0
   },
   {
     "kind": "turret", "id": "fx_turret_m", "name": "Flak Turret", "nameId": "{900002,7}",
     "price": { "min": 40000, "average": 45000, "max": 50000 }, "licence": null, "sellers": ["fx_guild"],
-    "size": "m", "damage": { "value": 80, "noShield": 10 }, "barrelAmount": 2, "fireRate": 3,
+    "size": "m", "damage": { "value": 80, "noShield": 10, "hull": 0 }, "barrelAmount": 2, "fireRate": 3,
     "magazine": { "size": 20, "reloadTime": 5 }, "heat": null, "missiles": null, "missileStorage": 0
   },
   {
@@ -81,13 +81,13 @@
   {
     "kind": "weapon", "id": "fx_cannon_s", "name": "Zephyr Cannon", "nameId": "{900002,16}",
     "price": { "min": 25000, "average": 30000, "max": 35000 }, "licence": null, "sellers": ["fx_guild"],
-    "size": "s", "damage": { "value": 300, "noShield": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "size": "s", "damage": { "value": 300, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
     "magazine": null, "heat": { "perShot": 100, "overheat": 1000, "coolDelay": 1, "coolRate": 200 }, "missiles": null, "missileStorage": 0
   },
   {
     "kind": "weapon", "id": "fx_tube_s", "name": "Torpedo Tube", "nameId": "{900002,17}",
     "price": { "min": 20000, "average": 24000, "max": 28000 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
-    "size": "s", "damage": { "value": 0, "noShield": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
     "magazine": null, "heat": null, "missiles": "fl_torpedoes_s", "missileStorage": 0
   },
   {
