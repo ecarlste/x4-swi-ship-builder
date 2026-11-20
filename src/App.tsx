@@ -8,6 +8,7 @@ import { emptyLoadout, type Loadout } from "./builder/loadout.ts";
 import { missingMandatory } from "./builder/mandatory.ts";
 import { SaveDialog, SavedLoadoutsList } from "./builder/SavedLoadouts.tsx";
 import type { SavedLoadout } from "./codec/loadout.ts";
+import { readShareLink, shareLinkUrl } from "./codec/shareLink.ts";
 import {
   deleteSavedLoadout,
   readSavedLoadouts,
@@ -20,8 +21,12 @@ const APP_TITLE = "X4: SWI Ship Builder";
 export function App() {
   /** The one in-app Loadout. Picking a Ship opens it as an Empty Loadout. */
   const [loadout, setLoadout] = useState<Loadout | null>(null);
-  /** The Saved Loadout the current Loadout was opened from or last saved as; Save updates it. */
-  const [opened, setOpened] = useState<{ id: string; name: string } | null>(null);
+  /**
+   * The name the current Loadout was opened or last saved under. With an id
+   * it's a Saved Loadout, which Save updates; without one it came from a Share
+   * Link, and Save asks for a name, suggesting this one.
+   */
+  const [opened, setOpened] = useState<{ id?: string; name: string } | null>(null);
   const [savedList, setSavedList] = useState(() => readSavedLoadouts(localStorage));
   const [showSaved, setShowSaved] = useState(false);
   const [naming, setNaming] = useState(false);
@@ -52,6 +57,47 @@ export function App() {
     setShowSaved(false);
     setMessage(null);
   };
+
+  const copyLink = async () => {
+    if (!loadout) return;
+    try {
+      const link = await shareLinkUrl(location.href, opened ? { ...loadout, name: opened.name } : loadout);
+      await navigator.clipboard.writeText(link);
+      setMessage({ kind: "status", text: "Link copied to the clipboard." });
+    } catch {
+      setMessage({ kind: "error", text: "The link couldn't be copied to the clipboard." });
+    }
+  };
+
+  /** Opens the Loadout a Share Link carries in the URL fragment, if there is one. */
+  useEffect(() => {
+    let cancelled = false;
+    const openShareLink = async () => {
+      const result = await readShareLink(location.hash);
+      if (cancelled || result === null) return;
+      // The link has done its job; edits shouldn't leave a stale Loadout in the address bar.
+      window.history.replaceState(null, "", location.pathname + location.search);
+      if (!result.ok) {
+        setMessage({ kind: "error", text: result.error });
+        return;
+      }
+      const { name, ...shared } = result.loadout;
+      if (!gameData.ships.some((s) => s.id === shared.ship)) {
+        setMessage({ kind: "error", text: `This Share Link's Ship (${shared.ship}) isn't in the Game Data.` });
+        return;
+      }
+      setLoadout(shared);
+      setOpened(name === undefined ? null : { name });
+      setShowSaved(false);
+      setMessage(null);
+    };
+    void openShareLink();
+    window.addEventListener("hashchange", openShareLink);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("hashchange", openShareLink);
+    };
+  }, []);
 
   const remove = (entry: SavedLoadoutEntry) => {
     deleteSavedLoadout(localStorage, entry);
@@ -99,9 +145,12 @@ export function App() {
           <button
             type="button"
             disabled={!loadout}
-            onClick={() => (opened ? save(opened) : setNaming(true))}
+            onClick={() => (opened?.id ? save({ id: opened.id, name: opened.name }) : setNaming(true))}
           >
             Save
+          </button>
+          <button type="button" disabled={!loadout} onClick={() => void copyLink()}>
+            Copy link
           </button>
         </div>
       </div>
@@ -114,7 +163,7 @@ export function App() {
         </p>
       )}
       {naming && ship && (
-        <SaveDialog suggestedName={ship.name} onSave={(name) => save({ name })} onCancel={() => setNaming(false)} />
+        <SaveDialog suggestedName={opened?.name ?? ship.name} onSave={(name) => save({ name })} onCancel={() => setNaming(false)} />
       )}
       {showSaved && (
         <SavedLoadoutsList
