@@ -81,3 +81,20 @@ export function gameData(ships: Ship[], equipment: Equipment[] = []): GameData {
 export function loadout(shipId: string, parts: Omit<Loadout, "format" | "gameData" | "ship"> = {}): Loadout {
   return { format: LOADOUT_FORMAT, gameData: { swi: "091", x4: "8.00" }, ship: shipId, ...parts };
 }
+
+// ---------------------------------------------------------------- flight
+
+export const engineSlot = (id: string): Slot => ({ id, kind: "engine", size: "s", mandatory: false, fitList: "fl_any" });
+
+export function engine(
+  id: string,
+  forward: number,
+  boost: { thrust: number; acceleration: number; duration: number; recharge: number },
+  travel: { thrust: number; charge: number; attack: number },
+): Equipment {
+  return { kind: "engine", ...tradeable(id), size: "s", thrust: { forward, reverse: forward }, boost, travel };
+}
+
+export function thruster(id: string, thrust: { strafe: number; pitch: number; yaw: number; roll: number }): Equipment {
+  return { kind: "thruster", ...tradeable(id), size: "s", thrust };
+}
