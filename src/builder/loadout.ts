@@ -3,7 +3,7 @@
  * serialize (spec #25, decided in #9): keyed by game ids, with empty entries
  * left out, so an Empty Loadout is `{ format, gameData, ship }`.
  */
-import type { GameData, Ship } from "../gameData.ts";
+import type { Equipment, GameData, Ship } from "../gameData.ts";
 
 export const LOADOUT_FORMAT = 1;
 
@@ -58,6 +58,65 @@ export function setSlot(loadout: Loadout, slotId: string, equipment: string | nu
   const slots = withoutKey(loadout.slots, slotId);
   if (equipment) slots[slotId] = equipment;
   return withEntry(loadout, "slots", slots);
+}
+
+/** Sets a consumable's count; 0 removes it. */
+export function setConsumable(loadout: Loadout, equipment: string, count: number): Loadout {
+  const consumables = withoutKey(loadout.consumables, equipment);
+  if (count > 0) consumables[equipment] = count;
+  return withEntry(loadout, "consumables", consumables);
+}
+
+export type ConsumableKind = "missile" | "drone" | "deployable" | "countermeasure";
+
+/** One kind of consumable the Ship can carry: its capacity and the items it can take. */
+export interface ConsumableOptions {
+  kind: ConsumableKind;
+  capacity: number;
+  items: Equipment[];
+}
+
+/**
+ * The consumables this Loadout can carry, by kind. Missiles are those a
+ * fitted launcher (in a Slot or a Slot Group) can fire; the rest come from
+ * the Ship's fit lists. Kinds the Ship has no capacity for are left out.
+ */
+export function consumableOptions(gameData: GameData, ship: Ship, loadout: Loadout): ConsumableOptions[] {
+  const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
+  const fitList = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
+  const items = (fitListIds: Iterable<string>) =>
+    [...new Set([...fitListIds].flatMap((id) => fitList.get(id) ?? []))]
+      .flatMap((id) => equipment.get(id) ?? [])
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+  const fittedIds = [
+    ...Object.values(loadout.slots ?? {}),
+    ...Object.values(loadout.groups ?? {}).flatMap((kinds) => Object.values(kinds).map((e) => e.equipment)),
+  ];
+  const missileLists = fittedIds.flatMap((id) => {
+    const item = equipment.get(id);
+    return (item?.kind === "weapon" || item?.kind === "turret") && item.missiles ? [item.missiles] : [];
+  });
+
+  const all: ConsumableOptions[] = [
+    { kind: "missile", capacity: ship.capacities.missiles, items: items(missileLists) },
+    { kind: "drone", capacity: ship.capacities.drones, items: items([ship.drones]) },
+    { kind: "deployable", capacity: ship.capacities.deployables, items: items([ship.deployables]) },
+    { kind: "countermeasure", capacity: ship.capacities.countermeasures, items: items([ship.countermeasures]) },
+  ];
+  return all.filter((o) => o.capacity > 0 && o.items.length > 0);
+}
+
+/**
+ * Removes consumables the Loadout can no longer carry, such as missiles whose
+ * launcher was just removed.
+ */
+export function withoutUncarriedConsumables(gameData: GameData, ship: Ship, loadout: Loadout): Loadout {
+  const carried = new Set(consumableOptions(gameData, ship, loadout).flatMap((o) => o.items.map((e) => e.id)));
+  const consumables = Object.fromEntries(
+    Object.entries(loadout.consumables ?? {}).filter(([id]) => carried.has(id)),
+  );
+  return withEntry(loadout, "consumables", consumables);
 }
 
 /** Fits the thruster, or removes it with null. */
