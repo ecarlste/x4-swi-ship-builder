@@ -32,10 +32,24 @@ It merges the layers in load order into one file per game path, in the gitignore
 - A file with a `<diff>` root patches the merged file at its path, in load order. The patcher (`extract/patch.ts`) supports `add` (with `pos` or `type="@attr"`), `replace` and `remove` on elements and attributes, `if` conditions and `silent`, and only the XPath `sel` forms found in the files we read: absolute paths with `/` and `//`, a final `@attr`, and the predicates `[@a='v']`, `[n]`, `… or …`, `[not(child)]` and `[not(child/@a='v')]`.
   - Any other selector is a hard failure, as is an `add` or `replace` whose `sel` matches nothing (unless it has `silent`) or a `sel` that matches more than one node.
   - A `remove` that matches nothing leaves the file as the game has it, and a patch for a file no earlier layer has patches nothing. Both are listed in the report instead.
+- An extension's language-neutral `t/0001.xml` is its English text when it has no `t/0001-l044.xml` of its own (SWI ships only the neutral file).
 
 Every duplicate id, whole-file replacement, non-diff library merge, skipped patch and unmatched removal is listed in `.cache/extract/extract-report.md`. `layers.json` records the load order and versions.
 
-Each merged file is pretty-printed JSON at a lowercased path that mirrors the game's (`libraries/wares.json`). Attributes become keys, child elements become arrays grouped by tag, and text becomes `#text`. If an attribute shares its name with a child element, the attribute's key gets an `@` prefix. Only libraries, the macro and component index, ship and equipment assets, and the English and language-neutral text files are read.
+Each merged file is pretty-printed JSON at a lowercased path that mirrors the game's (`libraries/wares.json`). Attributes become keys, child elements become arrays grouped by tag, and text becomes `#text`. If an attribute shares its name with a child element, the attribute's key gets an `@` prefix. Only libraries, the macro and component index, ship and equipment assets, station module macros, and the English and language-neutral text files are read.
+
+### Stage 2: the snapshot
+
+Then it builds Game Data from the cache and writes it to `game-data/<swi-version>_x4-<x4-version>/` (e.g. `091_x4-800/`), pointing the `game-data/current` symlink at it. `npm run extract -- --transform-only` re-runs only this stage from the cache.
+
+- **Buildable Ship**: a ware tagged `ship` with a Seller and none of the tags `noplayerbuild`, `missiononly`, `blueprintsaleonly` or `limited` (#15). A Faction is a Seller if it owns the ware and runs a station whose build modules cover the Ship's size: god.xml → stations.xml → stationgroups.xml → constructionplans.xml → `buildmodule` macros' `<builder classes>`, whatever the station's tags (#20).
+- Names are resolved in English from `t/0001-l044.xml`, keeping the text id. Where display names collide, the distinguishing Sellers are added (`Venator (Hutt Cartel)`); if Sellers can't tell the Ships apart, extraction fails.
+- Licences are named by type (`generaluseship` → "General Use Ship Licence"), since each Faction names its own copy. Its reputation is given only when every Seller asks for the same one.
+- The snapshot is validated by the shared schema and integrity pass before anything is written. Zero Ships, or a ware, macro, component, station group, construction plan, Faction or text reference that doesn't resolve, is a hard failure.
+- The report adds every Ship left out with its reason, and warnings for SWI data that breaks our rules (a slot with no size tag, a price outside min..max, a group name with stray spaces, a licence with different reputations per Seller).
+- Compatibility lists come with #31: until then every Slot points at one empty fit list.
+
+For SWI 0.9.1 HF on X4 8.00 that is 210 Ships (S 65, M 56, L 66, XL 23).
 
 ## Tests
 
