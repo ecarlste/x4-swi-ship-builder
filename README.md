@@ -67,7 +67,7 @@ npm run extract -- --transform-only
 
 This writes the snapshot, the report and the diff again; the diff is then against the snapshot of the previous run.
 
-The **Game Data check** (`shared/game-data/currentSnapshot.test.ts`, part of `npm run test:unit`) re-validates `game-data/current` against the shared zod schema and integrity pass. It is skipped when there is no snapshot, as in CI, which has no game files.
+The **Game Data check** (`shared/game-data/currentSnapshot.test.ts`, part of `npm run test:unit`) re-validates `game-data/current` against the shared zod schema and integrity pass. It is skipped when there is no snapshot, as in CI, which has no game files. Outside CI the skip prints a one-line warning, so a checkout with no snapshot doesn't read as fully green.
 
 ## Tests
 
@@ -78,3 +78,15 @@ npm test
 This runs Vitest (`npm run test:unit`) and then Playwright Test (`npm run test:ui`). Playwright serves the app with the fixture snapshot. The first time, install a browser with `npx playwright install --with-deps chromium`.
 
 Each checkout serves the app on its own port, hashed from the checkout's path into 20000–29999, so UI runs in two worktrees at once don't share a dev server (two paths can hash to the same port, but rarely). Rerunning in the same checkout reuses its server if it's still up. Set `PW_PORT` to pick the port yourself, e.g. `PW_PORT=5301 npm run test:ui`.
+
+## Worktrees
+
+Each ticket gets its own worktree, so sessions don't share a working tree, a snapshot or `node_modules`:
+
+```bash
+npm run worktree -- 76 ticket-worktrees
+```
+
+This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main`, runs `npm ci` there, copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files` and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
+
+A tracked pre-commit hook (`.githooks/`, wired up by `npm ci` through the `prepare` script) refuses commits on `main` in every worktree. For a deliberate one, set `ALLOW_MAIN_COMMIT=1`.

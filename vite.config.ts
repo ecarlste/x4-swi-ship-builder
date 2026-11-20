@@ -27,6 +27,6 @@ export default defineConfig({
     alias: { "@snapshot": gameDataDir },
   },
   test: {
-    include: ["src/**/*.test.{ts,tsx}", "shared/**/*.test.ts", "extract/**/*.test.ts", "e2e/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}", "shared/**/*.test.ts", "extract/**/*.test.ts", "e2e/**/*.test.ts", "scripts/**/*.test.ts"],
   },
 });

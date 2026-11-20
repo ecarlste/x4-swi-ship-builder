@@ -13,3 +13,7 @@ Default vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, 
 ### Domain docs
 
 Single-context: one GLOSSARY.md + docs/adr/ at the repo root. See `docs/agents/domain.md`.
+
+### Worktrees
+
+Ticket work happens in its own worktree (`npm run worktree -- <issue> <slug>`); the main checkout stays on a clean `main`. See `docs/agents/worktrees.md`.
