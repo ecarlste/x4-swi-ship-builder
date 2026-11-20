@@ -17,11 +17,25 @@ const signed = (change: number, decimals: number) =>
 const direction = (change: number) => (change > 0 ? "up" : change < 0 ? "down" : "");
 
 /** Rows the game indents under the row above them. */
-const SUB_ROWS = new Set(["ShieldRate", "ShieldDelay", "GroupedShieldRate", "GroupedShieldDelay"]);
+const SUB_ROWS = new Set([
+  "ShieldRate",
+  "ShieldDelay",
+  "GroupedShieldRate",
+  "GroupedShieldDelay",
+  "ForwardAcceleration",
+  "BoostAcceleration",
+  "BoostMaxDuration",
+  "BoostRechargeRate",
+  "TravelAcceleration",
+  "TravelChargeTime",
+  "HorizontalStrafeAcceleration",
+]);
 
 /** The game's mouse-over texts. */
 const TOOLTIPS: Record<string, string> = {
   GroupedShieldValue: "The average shield of the engine and turret groups.",
+  TurretSustainedDPS: "all turrets' damage averaged over six directions",
+  GroupedTurretSustainedDPS: "all turrets' damage averaged over six directions",
 };
 
 /**

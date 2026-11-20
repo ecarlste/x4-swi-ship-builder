@@ -2,7 +2,7 @@
  * Hand-made Game Data for stats engine tests. Names are made up; numbers are
  * copied from the in-game reference cases (#12, #22) as plain values.
  */
-import type { Equipment, GameData, Ship, Slot, SlotGroup } from "../../gameData.ts";
+import type { Equipment, FitList, GameData, Ship, Slot, SlotGroup } from "../../gameData.ts";
 import { LOADOUT_FORMAT, type Loadout } from "../../builder/loadout.ts";
 
 const tradeable = (id: string) => ({
@@ -51,6 +51,35 @@ export function shield(id: string, capacity: number, rechargeRate: number, recha
   return { kind: "shield", ...tradeable(id), size: "s", capacity, rechargeRate, rechargeDelay };
 }
 
+export const weaponSlot = (id: string): Slot => ({ id, kind: "weapon", size: "s", mandatory: false, fitList: "fl_any" });
+
+export const turretSlot = (id: string): Slot => ({ id, kind: "turret", size: "m", mandatory: false, fitList: "fl_any" });
+
+export const turretGroup = (id: string, count: number): SlotGroup => ({
+  id,
+  kinds: { turret: { count, fitList: "fl_any" } },
+});
+
+type Gun = Extract<Equipment, { kind: "weapon" | "turret" }>;
+
+/** A weapon or turret from its bullet's raw inputs; no magazine, heat or missiles unless given. */
+export function gun(
+  kind: "weapon" | "turret",
+  id: string,
+  inputs: Pick<Gun, "damage" | "fireRate"> & Partial<Pick<Gun, "barrelAmount" | "magazine" | "heat">>,
+): Gun {
+  return { kind, ...tradeable(id), size: "s", barrelAmount: 1, magazine: null, heat: null, missiles: null, ...inputs };
+}
+
+/** A missile launcher that fires the missiles of the fit list `missiles`. */
+export function launcher(kind: "weapon" | "turret", id: string, missiles: string): Gun {
+  return { ...gun(kind, id, { damage: { value: 0, noShield: 0 }, fireRate: 1 }), missiles };
+}
+
+export function missile(id: string, explosionDamage: number, hullDamage: number, reloadTime: number): Equipment {
+  return { kind: "missile", ...tradeable(id), explosionDamage, hullDamage, reloadTime };
+}
+
 /** A piece of Equipment of a kind with no stats of its own, at a price. */
 export function priced(
   kind: "software" | "drone" | "deployable" | "countermeasure",
@@ -60,7 +89,7 @@ export function priced(
   return { kind, ...tradeable(id), price };
 }
 
-export function gameData(ships: Ship[], equipment: Equipment[] = []): GameData {
+export function gameData(ships: Ship[], equipment: Equipment[] = [], fitLists: FitList[] = []): GameData {
   return {
     manifest: {
       swi: { version: "091", label: "0.9.1 HF", date: "2026-01-01" },
@@ -72,7 +101,7 @@ export function gameData(ships: Ship[], equipment: Equipment[] = []): GameData {
     },
     ships,
     equipment,
-    fitLists: [{ id: "fl_any", equipment: equipment.map((e) => e.id) }],
+    fitLists: [{ id: "fl_any", equipment: equipment.map((e) => e.id) }, ...fitLists],
     factions: [{ id: "fx_guild", name: "Fixture Guild" }],
     licences: [],
   };
@@ -80,4 +109,21 @@ export function gameData(ships: Ship[], equipment: Equipment[] = []): GameData {
 
 export function loadout(shipId: string, parts: Omit<Loadout, "format" | "gameData" | "ship"> = {}): Loadout {
   return { format: LOADOUT_FORMAT, gameData: { swi: "091", x4: "8.00" }, ship: shipId, ...parts };
+}
+
+// ---------------------------------------------------------------- flight
+
+export const engineSlot = (id: string): Slot => ({ id, kind: "engine", size: "s", mandatory: false, fitList: "fl_any" });
+
+export function engine(
+  id: string,
+  forward: number,
+  boost: { thrust: number; acceleration: number; duration: number; recharge: number },
+  travel: { thrust: number; charge: number; attack: number },
+): Equipment {
+  return { kind: "engine", ...tradeable(id), size: "s", thrust: { forward, reverse: forward }, boost, travel };
+}
+
+export function thruster(id: string, thrust: { strafe: number; pitch: number; yaw: number; roll: number }): Equipment {
+  return { kind: "thruster", ...tradeable(id), size: "s", thrust };
 }
