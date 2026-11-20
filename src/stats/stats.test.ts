@@ -221,7 +221,8 @@ describe("firepower", () => {
 
   // Class 546 Cruiser (#12): 18× RH3, 10× D6 and 2× XX-18, in turret Slots and
   // Slot Groups; #12 records each type's total (8,769.6 / 11,652 / 3,605.7).
-  // Inputs copied from the 091_x4-800 Game Data.
+  // Inputs copied from the 091_x4-800 Game Data: turret_m_quadlaser_red (RH3),
+  // turret_m_mtbdual_green (D6) and turret_l_doublelr_turbolaser546_green (XX-18).
   test("L Ships count Slot Group turrets too, as the grouped row (546 Cruiser: 4,004)", () => {
     const rh3 = gun("turret", "rh3", {
       damage: { value: 94, noShield: 80, hull: 0 },
