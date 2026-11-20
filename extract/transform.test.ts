@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { validateSnapshot } from "../shared/game-data/validateSnapshot.ts";
+import { SNAPSHOT_FILES, validateSnapshot } from "../shared/game-data/validateSnapshot.ts";
 import { FixtureWorld, oneShipWorld, smallEngine, writeCache } from "./testing/fixtureWorld.ts";
 import { transform } from "./transform.ts";
 
@@ -76,7 +76,7 @@ describe("transform: the snapshot", () => {
     expect(result.snapshotDir).toBe(join(gameDataDir, "123_x4-700"));
     expect(realpathSync(join(gameDataDir, "current"))).toBe(realpathSync(result.snapshotDir));
     const raw = Object.fromEntries(
-      ["manifest", "ships", "equipment", "fit-lists", "factions", "licences"].map((f) => [f, readJson(`${f}.json`)]),
+      SNAPSHOT_FILES.map((f) => [f, readJson(`${f}.json`)]),
     );
     expect(validateSnapshot(raw as never).errors).toEqual([]);
   });
@@ -223,6 +223,18 @@ describe("transform: Factions and Licences", () => {
       .equipment(smallEngine());
 
     expect(() => run(world)).toThrow(/Faction "fx_ghost" sells Ships or Equipment but libraries\/factions\.xml doesn't define it/);
+  });
+});
+
+describe("transform: the crew price", () => {
+  it("writes the crew ware's min, average and max, which Crew is bought at", () => {
+    const { readJson } = run(oneShipWorld().crew({ min: 4000, average: 6000, max: 8000 }));
+
+    expect(readJson("wares.json")).toEqual({ crew: { min: 4000, average: 6000, max: 8000 } });
+  });
+
+  it("fails when libraries/wares.xml has no crew ware", () => {
+    expect(() => run(oneShipWorld().crew(null))).toThrow(/libraries\/wares\.xml has no ware "crew"/);
   });
 });
 

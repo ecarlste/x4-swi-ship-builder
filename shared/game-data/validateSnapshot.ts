@@ -1,8 +1,8 @@
-import type { Equipment, Faction, FitList, Licence, Manifest, Ship } from "./schema.ts";
+import type { Equipment, Faction, FitList, Licence, Manifest, Ship, Wares } from "./schema.ts";
 import { snapshotSchema } from "./schema.ts";
 import { checkIntegrity } from "./integrity.ts";
 
-/** The six files of a snapshot, without the `.json` extension. */
+/** The seven files of a snapshot, without the `.json` extension. */
 export const SNAPSHOT_FILES = [
   "manifest",
   "ships",
@@ -10,6 +10,7 @@ export const SNAPSHOT_FILES = [
   "fit-lists",
   "factions",
   "licences",
+  "wares",
 ] as const;
 export type SnapshotFile = (typeof SNAPSHOT_FILES)[number];
 
@@ -24,6 +25,8 @@ export interface GameData {
   fitLists: FitList[];
   factions: Faction[];
   licences: Licence[];
+  /** Prices of wares that are neither a Ship nor Equipment, such as the crew price. */
+  wares: Wares;
 }
 
 export type ValidationResult =
@@ -55,6 +58,7 @@ export function validateSnapshot(raw: RawSnapshot): ValidationResult {
     fitLists: data["fit-lists"],
     factions: data.factions,
     licences: data.licences,
+    wares: data.wares,
   };
   return { ok: true, gameData, errors: [] };
 }

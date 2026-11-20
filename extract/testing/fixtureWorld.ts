@@ -16,6 +16,7 @@ export class FixtureWorld {
   private ships: ShipSpec[] = [];
   private equipmentSpecs: EquipmentSpec[] = [];
   private extraText: { page: string; id: string; text: string }[] = [];
+  private crewPrice: PriceSpec | null = { min: 40, average: 50, max: 60 };
   /** Game path → extra XML files, written as given. */
   readonly extraFiles: Record<string, string> = {};
 
@@ -37,6 +38,12 @@ export class FixtureWorld {
 
   equipment(spec: EquipmentSpec): this {
     this.equipmentSpecs.push(spec);
+    return this;
+  }
+
+  /** The `crew` ware's price, which Crew is bought at; null leaves the ware out. */
+  crew(price: PriceSpec | null): this {
+    this.crewPrice = price;
     return this;
   }
 
@@ -211,6 +218,14 @@ export class FixtureWorld {
       }
     }
 
+    if (this.crewPrice) {
+      const price = this.crewPrice;
+      wares.push(
+        `<ware id="crew" name="${newText("Crewman")}" transport="passenger" volume="1">` +
+          `<price min="${price.min}" average="${price.average}" max="${price.max}"/></ware>`,
+      );
+    }
+
     files["libraries/wares.xml"] = xml("wares", wares);
     files["index/macros.xml"] = xml("index", macroIndex.map(([n, v]) => `<entry name="${n}" value="${v}"/>`));
     files["index/components.xml"] = xml("index", componentIndex.map(([n, v]) => `<entry name="${n}" value="${v}"/>`));
@@ -222,6 +237,12 @@ export class FixtureWorld {
 
     return { ...files, ...this.extraFiles };
   }
+}
+
+export interface PriceSpec {
+  min: number;
+  average: number;
+  max: number;
 }
 
 export interface FactionSpec {

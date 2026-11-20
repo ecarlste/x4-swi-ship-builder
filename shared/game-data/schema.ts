@@ -1,7 +1,7 @@
 /**
  * The Game Data shape, shared by the extraction pipeline and the app.
  *
- * A snapshot is six JSON files. Ids are the game's own (ware ids, connection
+ * A snapshot is seven JSON files. Ids are the game's own (ware ids, connection
  * names, group names, faction ids); Game Data holds raw inputs in game units
  * and no computed stats. See GLOSSARY.md and issue #7 for the decisions.
  */
@@ -20,6 +20,7 @@ export type Size = z.infer<typeof sizeSchema>;
  * listed in the extraction report.
  */
 const priceSchema = z.object({ min: nonNegative, average: nonNegative, max: nonNegative }).strict();
+export type WarePrice = z.infer<typeof priceSchema>;
 
 /** Fields every Ship and piece of Equipment has. */
 const tradeableFields = {
@@ -288,6 +289,14 @@ export const licenceSchema = z
   .strict();
 export type Licence = z.infer<typeof licenceSchema>;
 
+/**
+ * Prices of wares a Loadout buys that are neither a Ship nor Equipment.
+ * `crew` is the base game's `crew` ware, which every member of the Crew,
+ * service crew or marine, is bought as (ADR 0004).
+ */
+export const waresSchema = z.object({ crew: priceSchema }).strict();
+export type Wares = z.infer<typeof waresSchema>;
+
 // ---------------------------------------------------------------- snapshot
 
 export const snapshotSchema = z
@@ -298,6 +307,7 @@ export const snapshotSchema = z
     "fit-lists": z.array(fitListSchema),
     factions: z.array(factionSchema),
     licences: z.array(licenceSchema),
+    wares: waresSchema,
   })
   .strict();
 
