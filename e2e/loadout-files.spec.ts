@@ -63,7 +63,8 @@ test("Export in the toolbar downloads every Saved Loadout as a Loadout File, lea
 
   expect(file.suggestedFilename()).toMatch(/\.json$/);
   const text = await readFile((await file.path())!, "utf8");
-  expect(text).toBe(loadoutFile([escort, freighter]));
+  expect(JSON.parse(text)).toEqual(JSON.parse(loadoutFile([escort, freighter])));
+  expect(text).toMatch(/^\{\n {2}"app": "x4-swi-ship-builder",\n {2}"format": 1,/);
   expect(await stored(page)).toBe(before);
 });
 
