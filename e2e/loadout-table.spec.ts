@@ -140,7 +140,10 @@ test("missiles are limited to those a fitted launcher can fire, sharing the Ship
   // No launcher, no missiles.
   await expect(loadoutTable(page).getByRole("rowheader", { name: "Missiles" })).toHaveCount(0);
 
+  // Only Corsair Clans sell the Dart Launcher, and only the Freight Guild sells the
+  // Courier: any compatible Equipment fits whatever its Faction.
   await fit(page, /con_weapon_01/, "Dart Launcher");
+  await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/Dart Launcher/);
   await expect(rowOf(page, "Dart Missile").getByRole("rowheader")).toHaveText("Missiles");
   await expect(rowOf(page, "Dart Missile").getByRole("cell").nth(1)).toContainText("/ 10");
   await expect(countOf(page, "Heavy Torpedo")).toHaveCount(0);
@@ -161,6 +164,62 @@ test("missiles are limited to those a fitted launcher can fire, sharing the Ship
   // Fitting it again starts from none.
   await fit(page, /con_weapon_01/, "Dart Launcher");
   await expect(countOf(page, "Dart Missile")).toHaveValue("0");
+});
+
+const MISSING = "Mandatory upgrade missing";
+
+test("the toolbar counts missing mandatory upgrades and the table marks their rows", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+
+  // Engines, the thruster and default software are mandatory; weapons aren't.
+  const warning = page.getByText(/mandatory missing/);
+  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+  await expect(warning).toHaveAttribute("title", "Engine con_engine_01\nThruster\nFlight Assist Mk1");
+  await expect(row(page, /con_engine_01/).getByTitle(MISSING)).toHaveText("*");
+  await expect(row(page, "Thruster").getByTitle(MISSING)).toBeVisible();
+  const flightAssist = page.getByRole("checkbox", { name: "Flight Assist Mk1" });
+  await expect(loadoutTable(page).getByRole("row").filter({ has: flightAssist }).getByTitle(MISSING)).toBeVisible();
+  await expect(row(page, /con_weapon_01/).getByTitle(MISSING)).toHaveCount(0);
+  await expect(loadoutTable(page).getByTitle(MISSING)).toHaveCount(3);
+
+  // Nothing is blocked: other rows can still be filled.
+  await fit(page, /con_weapon_01/, "Pulse Blaster");
+  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+
+  await fit(page, /con_engine_01/, "Sprint Engine S");
+  await expect(warning).toHaveText("⚠ 2 mandatory missing");
+  await expect(row(page, /con_engine_01/).getByTitle(MISSING)).toHaveCount(0);
+
+  await fit(page, "Thruster", "Nimble Thruster S");
+  await flightAssist.check();
+  await expect(warning).toBeHidden();
+  await expect(loadoutTable(page).getByTitle(MISSING)).toHaveCount(0);
+
+  // Emptying a mandatory row brings the warning back.
+  await fit(page, "Thruster", "— empty —");
+  await expect(warning).toHaveText("⚠ 1 mandatory missing");
+  await expect(warning).toHaveAttribute("title", "Thruster");
+});
+
+test("Slots tagged mandatory and engine Slot Groups count as mandatory upgrades", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+
+  const warning = page.getByText(/mandatory missing/);
+  await expect(warning).toHaveText("⚠ 4 mandatory missing");
+  await expect(warning).toHaveAttribute(
+    "title",
+    "Shield con_shield_01\nEngines enginegroup\nThruster\nFlight Assist Mk1",
+  );
+  await expect(row(page, /con_shield_01/).getByTitle(MISSING)).toBeVisible();
+  await expect(row(page, /Engines enginegroup/).getByTitle(MISSING)).toBeVisible();
+  // Turret and shield groups aren't mandatory.
+  await expect(row(page, /Turrets group_front/).getByTitle(MISSING)).toHaveCount(0);
+
+  // An engine group is missing until every one of its Slots is filled.
+  await fit(page, /Engines enginegroup/, "Haul Engine L");
+  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+  await page.getByRole("spinbutton", { name: "enginegroup Engines count" }).fill("1");
+  await expect(warning).toHaveText("⚠ 4 mandatory missing");
 });
 
 test("a Slot Group has one row per kind, with an Equipment choice and a count up to the group's size", async ({ page }) => {

@@ -51,7 +51,7 @@
     },
     "capacities": { "missiles": 0, "drones": 20, "deployables": 10, "countermeasures": 20, "crew": 20, "cargo": 30000 },
     "slots": [
-      { "id": "con_shield_01", "kind": "shield", "size": "m", "mandatory": false, "fitList": "fl_shield_m" }
+      { "id": "con_shield_01", "kind": "shield", "size": "m", "mandatory": true, "fitList": "fl_shield_m" }
     ],
     "slotGroups": [
       {

@@ -65,11 +65,14 @@ export function LoadoutTable({
   gameData,
   ship,
   loadout,
+  missing,
   onChange,
 }: {
   gameData: GameData;
   ship: Ship;
   loadout: Loadout;
+  /** Rows of mandatory upgrades the Loadout lacks, as `missingMandatory` names them. */
+  missing: Set<string>;
   onChange: (loadout: Loadout) => void;
 }) {
   const equipment = new Map(gameData.equipment.map((e) => [e.id, e]));
@@ -102,6 +105,7 @@ export function LoadoutTable({
           return (
             <Row
               key={slot.id}
+              missing={missing.has(`slot:${slot.id}`)}
               label={
                 <>
                   {slot.size.toUpperCase()} {KIND_LABEL[slot.kind]} <span className="dim">{slot.id}</span>
@@ -132,6 +136,7 @@ export function LoadoutTable({
             return (
               <Row
                 key={`${group.id}/${kind}`}
+                missing={missing.has(`group:${group.id}:${kind}`)}
                 label={
                   <>
                     {GROUP_KIND_LABEL[kind]} <span className="dim">{group.id}</span>
@@ -166,6 +171,7 @@ export function LoadoutTable({
         )}
         <Row
           label="Thruster"
+          missing={missing.has("thruster")}
           equipment={
             <EquipmentDropdown
               label="Thruster Equipment"
@@ -209,6 +215,7 @@ export function LoadoutTable({
             <Row
               key={item.id}
               label="Software"
+              missing={missing.has(`software:${item.id}`)}
               equipment={
                 <label className="software">
                   <input
@@ -271,20 +278,32 @@ function CountInput({
 
 function Row({
   label,
+  missing = false,
   equipment,
   quantity,
   keyValue,
   price,
 }: {
   label: ReactNode;
+  missing?: boolean;
   equipment: ReactNode;
   quantity: ReactNode;
   keyValue: string;
   price: string;
 }) {
   return (
-    <tr>
-      <th scope="row">{label}</th>
+    <tr className={missing ? "missing" : undefined}>
+      <th scope="row">
+        {label}
+        {missing && (
+          <>
+            {" "}
+            <span className="missing-mark" title="Mandatory upgrade missing">
+              *
+            </span>
+          </>
+        )}
+      </th>
       <td>{equipment}</td>
       <td className="num">{quantity}</td>
       <td className="dim">{keyValue}</td>
