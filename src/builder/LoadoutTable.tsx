@@ -3,6 +3,7 @@ import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
+import { formatCredits, formatNumber } from "./format.ts";
 import {
   consumableOptions,
   setConsumable,
@@ -37,23 +38,21 @@ const GROUP_KIND_LABEL: Record<SlotGroupKind, string> = {
   engine: "Engines",
 };
 
-const number = (n: number) => n.toLocaleString("en");
-const credits = (n: number) => `${number(n)} Cr`;
 
 /** The one figure the table shows for an item, from its raw inputs. */
 function keyValue(item: Equipment): string {
   switch (item.kind) {
     case "weapon":
     case "turret":
-      return `${number(item.damage.value + item.damage.noShield)} dmg/shot`;
+      return `${formatNumber(item.damage.value + item.damage.noShield)} dmg/shot`;
     case "shield":
-      return `${number(item.capacity)} MJ`;
+      return `${formatNumber(item.capacity)} MJ`;
     case "engine":
-      return `${number(item.thrust.forward)} N`;
+      return `${formatNumber(item.thrust.forward)} N`;
     case "thruster":
-      return `${number(item.thrust.strafe)} N strafe`;
+      return `${formatNumber(item.thrust.strafe)} N strafe`;
     case "missile":
-      return `${number(item.explosionDamage + item.hullDamage)} dmg`;
+      return `${formatNumber(item.explosionDamage + item.hullDamage)} dmg`;
     default:
       return "";
   }
@@ -133,7 +132,7 @@ export function LoadoutTable({
               }
               quantity={fitted ? "1" : ""}
               keyValue={fitted ? keyValue(fitted) : ""}
-              price={fitted ? credits(fitted.price.average) : ""}
+              price={fitted ? formatCredits(fitted.price.average) : ""}
               was={wasText(nameOf(was?.slots?.[slot.id]), nameOf(loadout.slots?.[slot.id]))}
             />
           );
@@ -178,7 +177,7 @@ export function LoadoutTable({
                   />
                 }
                 keyValue={fitted ? keyValue(fitted) : ""}
-                price={fitted ? credits(fitted.price.average * count) : ""}
+                price={fitted ? formatCredits(fitted.price.average * count) : ""}
                 was={wasText(groupText(was?.groups?.[group.id]?.[kind]), groupText(entry))}
               />
             );
@@ -198,7 +197,7 @@ export function LoadoutTable({
           }
           quantity={thruster ? "1" : ""}
           keyValue={thruster ? keyValue(thruster) : ""}
-          price={thruster ? credits(thruster.price.average) : ""}
+          price={thruster ? formatCredits(thruster.price.average) : ""}
           was={wasText(nameOf(was?.thruster), nameOf(loadout.thruster))}
         />
         {consumables.flatMap((group) => {
@@ -221,8 +220,8 @@ export function LoadoutTable({
                   />
                 }
                 keyValue={count > 0 ? keyValue(item) : ""}
-                price={count > 0 ? credits(item.price.average * count) : ""}
-                was={wasText(number(was?.consumables?.[item.id] ?? 0), number(count))}
+                price={count > 0 ? formatCredits(item.price.average * count) : ""}
+                was={wasText(formatNumber(was?.consumables?.[item.id] ?? 0), formatNumber(count))}
               />
             );
           });
@@ -246,7 +245,7 @@ export function LoadoutTable({
               }
               quantity={fitted ? "1" : ""}
               keyValue=""
-              price={fitted ? credits(item.price.average) : ""}
+              price={fitted ? formatCredits(item.price.average) : ""}
               was={wasText(
                 was?.software?.includes(item.id) ? "fitted" : "not fitted",
                 fitted ? "fitted" : "not fitted",
@@ -293,7 +292,7 @@ function CountInput({
           onChange(Number.isFinite(n) ? Math.max(0, Math.min(limit, n)) : 0);
         }}
       />{" "}
-      / {number(max)}
+      / {formatNumber(max)}
     </span>
   );
 }

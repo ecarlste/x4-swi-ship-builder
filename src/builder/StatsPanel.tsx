@@ -1,18 +1,12 @@
 import { useId } from "react";
 import type { LoadoutStats, StatRow } from "../stats/stats.ts";
-
-const number = (value: number) => Math.round(value).toLocaleString("en-US");
+import { formatCredits, formatNumber, formatSigned } from "./format.ts";
 
 /** The value as the game prints it: already rounded down, with its decimals and thousands separators. */
-const formatted = (row: StatRow) =>
-  row.shown.toLocaleString("en-US", { minimumFractionDigits: row.decimals, maximumFractionDigits: row.decimals });
+const formatted = (row: StatRow) => formatNumber(row.shown, row.decimals);
 
 /** A change as "+1,000" or "−1,000" (a true minus sign) with the row's decimals; empty when there is none. */
-const signed = (change: number, decimals: number) =>
-  change === 0
-    ? ""
-    : (change > 0 ? "+" : "−") +
-      Math.abs(change).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+const signed = (change: number, decimals: number) => (change === 0 ? "" : formatSigned(change, decimals));
 
 const direction = (change: number) => (change > 0 ? "up" : change < 0 ? "down" : "");
 
@@ -78,9 +72,9 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
       <section className="stats-price" aria-labelledby={priceId}>
         <h2 id={priceId}>Price</h2>
         <p>
-          <span className="stats-price-average">{number(stats.price.average)} Cr</span>{" "}
+          <span className="stats-price-average">{formatCredits(stats.price.average)}</span>{" "}
           <span className="stats-price-range">
-            {number(stats.price.min)} – {number(stats.price.max)} Cr
+            {formatNumber(stats.price.min, 0)} – {formatCredits(stats.price.max)}
           </span>
           {priceChange !== 0 && (
             <>

@@ -3,15 +3,10 @@ import { indexGameData } from "../gameDataIndex.ts";
 import type { Loadout } from "./loadout.ts";
 import { compareEquipment } from "../stats/stats.ts";
 import { licenceText } from "./licence.ts";
-
-const format = (n: number, decimals = 0) =>
-  n.toLocaleString("en", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+import { formatCredits, formatNumber, formatSigned } from "./format.ts";
 
 /** "+300", "−100" (a true minus sign) or "±0". */
-function signed(n: number, decimals = 0): string {
-  if (n === 0) return "±0";
-  return `${n > 0 ? "+" : "−"}${format(Math.abs(n), decimals)}`;
-}
+const signed = (n: number, decimals = 0) => (n === 0 ? "±0" : formatSigned(n, decimals));
 
 const decimalsOf = (n: number) => (Number.isInteger(n) ? 0 : 1);
 
@@ -40,14 +35,14 @@ export function ComparisonPopover({
       const decimals = Math.max(decimalsOf(f.shown), decimalsOf(f.difference));
       return {
         label: f.label,
-        value: `${format(f.shown, decimals)}${f.unit ? ` ${f.unit}` : ""}`,
+        value: `${formatNumber(f.shown, decimals)}${f.unit ? ` ${f.unit}` : ""}`,
         difference: signed(f.difference, decimals),
         verdict: f.verdict,
       };
     }),
     {
       label: "Price",
-      value: `${format(comparison.price.shown)} Cr`,
+      value: formatCredits(comparison.price.shown),
       difference: signed(comparison.price.difference),
       verdict: comparison.price.verdict,
     },
