@@ -1,6 +1,6 @@
 /**
  * Weapon and turret output, from the formulas confirmed in game (#12, #8, #39).
- * Damage is against hull: a bullet's `value + noshield`, a missile's
+ * Damage is against hull: a bullet's `value + noshield + hull` (#63, #67), a missile's
  * `explosiondamage value + hull`, times the barrels.
  */
 import type { Equipment } from "../gameData.ts";
@@ -37,8 +37,18 @@ export function gunOutput(gun: Gun, missile?: Missile): GunOutput {
     ? gun.magazine.size / (gun.magazine.reloadTime + gun.magazine.size / gun.fireRate)
     : gun.fireRate;
   // unconfirmed (#63): the bullet's `barrelamount`. Every reference gun has 1.
-  const burst = (gun.damage.value + gun.damage.noShield) * gun.barrelAmount * rateOfFire;
+  const burst = shotDamage(gun) * gun.barrelAmount * rateOfFire;
   return { rateOfFire, burst, sustained: burst * heatUptime(gun, rateOfFire) };
+}
+
+/**
+ * A bullet's damage per shot and barrel against hull: `value + noshield + hull`.
+ * `hull` confirmed in game by the Mining Beam Turret (#63, #67).
+ * unconfirmed (#63): a bullet with both `hull` and `noshield`, such as
+ * `turret_l_mando_massdriver`. No reference gun has both.
+ */
+export function shotDamage(gun: Gun): number {
+  return gun.damage.value + gun.damage.noShield + gun.damage.hull;
 }
 
 /**

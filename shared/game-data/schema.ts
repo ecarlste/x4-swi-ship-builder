@@ -178,7 +178,8 @@ const equipmentSize = sizeSchema.nullable();
 
 const gunFields = {
   size: equipmentSize,
-  damage: z.object({ value: nonNegative, noShield: nonNegative }).strict(),
+  /** Bullet `damage`: `value`, `noshield` and `hull` all count against hull (#67). */
+  damage: z.object({ value: nonNegative, noShield: nonNegative, hull: nonNegative }).strict(),
   barrelAmount: z.number().int().positive(),
   /** Bullet `reload@rate`: shots per second without a magazine. */
   fireRate: z.number().positive(),

@@ -7,13 +7,13 @@ const at = <E extends Equipment>(item: E, average: number): E => ({ ...item, pri
 
 // Pulse: 400 burst; fires 5 s, cools 6 s → 181.81 sustained.
 const pulse = gun("weapon", "pulse", {
-  damage: { value: 100, noShield: 0 },
+  damage: { value: 100, noShield: 0, hull: 0 },
   fireRate: 4,
   heat: { perShot: 50, overheat: 1000, coolDelay: 1, coolRate: 200 },
 });
 // Zephyr: 300 burst; fires 10 s, cools 6 s → 187.5 sustained.
 const zephyr = gun("weapon", "zephyr", {
-  damage: { value: 300, noShield: 0 },
+  damage: { value: 300, noShield: 0, hull: 0 },
   fireRate: 1,
   heat: { perShot: 100, overheat: 1000, coolDelay: 1, coolRate: 200 },
 });
@@ -56,7 +56,7 @@ describe("weapons and turrets", () => {
 // Medium Warhead Launcher, whose fit list puts the weaker Ion Torpedo first.
 describe("a hovered launcher shows one row per missile (ADR 0002)", () => {
   const kv22 = gun("weapon", "kv22", {
-    damage: { value: 1428, noShield: 462 },
+    damage: { value: 1428, noShield: 462, hull: 0 },
     fireRate: 1.2,
     magazine: { size: 2, reloadTime: 0.5 },
     heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },

@@ -146,7 +146,7 @@ describe("firepower", () => {
   // T-65B X-wing (#12): four KX5 lasers and two Krupx launchers with MG7-A torpedoes.
   const xwing = ship({ slots: [1, 2, 3, 4, 5, 6].map((n) => weaponSlot(`con_weapon_0${n}`)) });
   const kx5 = gun("weapon", "kx5", {
-    damage: { value: 193, noShield: 135 },
+    damage: { value: 193, noShield: 135, hull: 0 },
     fireRate: 2.4,
     heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
   });
@@ -179,13 +179,13 @@ describe("firepower", () => {
 
   // Encyclopedia turret entries (#12): rate of fire and Weapon Output.
   const rh2 = gun("turret", "rh2", {
-    damage: { value: 255, noShield: 189 },
+    damage: { value: 255, noShield: 189, hull: 0 },
     barrelAmount: 2,
     fireRate: 2,
     magazine: { size: 2, reloadTime: 3 },
   });
   const rm76 = gun("turret", "rm76", {
-    damage: { value: 110, noShield: 35 },
+    damage: { value: 110, noShield: 35, hull: 0 },
     fireRate: 5,
     magazine: { size: 20, reloadTime: 3 },
   });
@@ -224,18 +224,18 @@ describe("firepower", () => {
   // inputs are made up to give the same per-turret output through magazines: unconfirmed (#63).
   test("L Ships count Slot Group turrets too, as the grouped row (546 Cruiser: 4,004)", () => {
     const rh3 = gun("turret", "rh3", {
-      damage: { value: 174, noShield: 0 },
+      damage: { value: 174, noShield: 0, hull: 0 },
       barrelAmount: 2,
       fireRate: 3.5,
       magazine: { size: 7, reloadTime: 3 },
     }); // 348 × 1.4 = 487.2
     const d6 = gun("turret", "d6", {
-      damage: { value: 600, noShield: 371 },
+      damage: { value: 600, noShield: 371, hull: 0 },
       fireRate: 3,
       magazine: { size: 6, reloadTime: 3 },
     }); // 971 × 1.2 = 1,165.2
     const xx18 = gun("turret", "xx18", {
-      damage: { value: 800, noShield: 401.9 },
+      damage: { value: 800, noShield: 401.9, hull: 0 },
       fireRate: 3,
       magazine: { size: 3, reloadTime: 1 },
     }); // 1,201.9 × 1.5 = 1,802.85
@@ -273,7 +273,7 @@ describe("a launcher fires its best loaded missile (ADR 0002)", () => {
   // Gozanti C-ROC Corsair: a Krupx Medium Warhead Launcher and a KV22 (1,744 / 1,564).
   const corsair = ship({ id: "gozanti_croc_raider", slots: [weaponSlot("con_weapon_01"), weaponSlot("con_weapon_02")] });
   const kv22 = gun("weapon", "weapon_kv22_m_laser", {
-    damage: { value: 1428, noShield: 462 },
+    damage: { value: 1428, noShield: 462, hull: 0 },
     fireRate: 1.2,
     magazine: { size: 2, reloadTime: 0.5 },
     heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },

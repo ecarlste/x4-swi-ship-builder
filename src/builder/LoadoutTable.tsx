@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
+import { shotDamage } from "../stats/firepower.ts";
 import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
@@ -45,7 +46,7 @@ function keyValue(item: Equipment): string {
   switch (item.kind) {
     case "weapon":
     case "turret":
-      return `${formatNumber(item.damage.value + item.damage.noShield)} dmg/shot`;
+      return `${formatNumber(shotDamage(item))} dmg/shot`;
     case "shield":
       return `${formatNumber(item.capacity)} MJ`;
     case "engine":

@@ -389,7 +389,7 @@ function readItem(
           kind: c.kind,
           ...common,
           size: c.size,
-          damage: { value: 0, noShield: 0 },
+          damage: { value: 0, noShield: 0, hull: 0 },
           barrelAmount: 1,
           fireRate: 1,
           magazine: null,
@@ -415,7 +415,11 @@ function readItem(
         kind: c.kind,
         ...common,
         size: c.size,
-        damage: { value: num(bullet, "damage", "value"), noShield: num(bullet, "damage", "noshield") },
+        damage: {
+          value: num(bullet, "damage", "value"),
+          noShield: num(bullet, "damage", "noshield"),
+          hull: num(bullet, "damage", "hull"),
+        },
         barrelAmount: num(bullet, "bullet", "barrelamount", 1),
         fireRate,
         magazine:

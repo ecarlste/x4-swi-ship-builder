@@ -84,7 +84,7 @@ export function gun(
 
 /** A missile launcher that fires the missiles of the fit list `missiles`, with its own missile storage. */
 export function launcher(kind: "weapon" | "turret", id: string, missiles: string, missileStorage = 0): Gun {
-  return { ...gun(kind, id, { damage: { value: 0, noShield: 0 }, fireRate: 1 }), missiles, missileStorage };
+  return { ...gun(kind, id, { damage: { value: 0, noShield: 0, hull: 0 }, fireRate: 1 }), missiles, missileStorage };
 }
 
 export function missile(

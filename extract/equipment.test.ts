@@ -64,7 +64,7 @@ describe("transform: Equipment", () => {
             `<bullet class="fx_kx7_bullet_macro"/><heat overheat="11000" cooldelay="0.63" coolrate="3000" reenable="9500"/>` +
             `<reload rate="99"/>`,
           bullet:
-            `<bullet amount="1" barrelamount="2" speed="4000"/><damage value="100" noshield="20" shield="5"/>` +
+            `<bullet amount="1" barrelamount="2" speed="4000"/><damage value="100" noshield="20" hull="7" shield="5"/>` +
             `<reload rate="4"/><ammunition value="12" reload="3"/><heat value="300"/>`,
         }),
       ),
@@ -79,7 +79,7 @@ describe("transform: Equipment", () => {
       licence: "militaryequipment",
       sellers: ["fx_guild"],
       size: "s",
-      damage: { value: 100, noShield: 20 },
+      damage: { value: 100, noShield: 20, hull: 7 },
       barrelAmount: 2,
       fireRate: 4,
       magazine: { size: 12, reloadTime: 3 },
@@ -97,7 +97,7 @@ describe("transform: Equipment", () => {
     );
 
     expect(item("fx_drill")).toMatchObject({
-      damage: { value: 6, noShield: 0 },
+      damage: { value: 6, noShield: 0, hull: 0 },
       barrelAmount: 1,
       fireRate: 1,
       magazine: null,
@@ -343,7 +343,7 @@ describe("transform: fit lists", () => {
 
     expect(item("fx_launcher")).toMatchObject({
       kind: "weapon",
-      damage: { value: 0, noShield: 0 },
+      damage: { value: 0, noShield: 0, hull: 0 },
       barrelAmount: 1,
       fireRate: 1,
       magazine: null,

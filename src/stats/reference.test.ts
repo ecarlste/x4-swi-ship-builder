@@ -96,6 +96,17 @@ const mWeaponSlot = (id: string) => ({ ...weaponSlot(id), size: "m" as const });
 // Only the two weapon Slots #63 fitted.
 const gozantiMiner = ship({ id: "gozanti_civ_miner", size: "m", slots: [mWeaponSlot("con_weapon_01"), mWeaponSlot("con_weapon_02")] });
 
+/** A Slot Group with `count` turrets. */
+const turretGroup = (id: string, count: number) => ({ id, kinds: { turret: { count, fitList: "fl_any" } } });
+
+// The Heraklon Ore Miner's turret Slot Groups, counted once per connection (#68). Its shield
+// and engine kinds are left out: the turret row doesn't depend on them.
+const heraklon = ship({
+  id: "heraklon_solid",
+  size: "l",
+  slotGroups: [turretGroup("left-pd", 8), turretGroup("right-pd", 8), turretGroup("left-mine", 4), turretGroup("right-mine", 4)],
+});
+
 const cruiser546 = ship({
   id: "imp_cruiser_546",
   size: "l",
@@ -197,17 +208,26 @@ const equipment: Equipment[] = [
   shield("shield_s_r2astrohead", 450, 25, 0),
   shield("shield_s_tabsx", 2749, 70, 8),
   gun("weapon", "weapon_ls7_s_laser", {
-    damage: { value: 150, noShield: 100 },
+    damage: { value: 150, noShield: 100, hull: 0 },
     fireRate: 3,
     heat: { perShot: 150, overheat: 10000, coolDelay: 1.25, coolRate: 3500 },
   }),
   gun("weapon", "weapon_kx10_s_laser", {
-    damage: { value: 440, noShield: 289 },
+    damage: { value: 440, noShield: 289, hull: 0 },
     fireRate: 1.5,
     heat: { perShot: 450, overheat: 11000, coolDelay: 0.63, coolRate: 3000 },
   }),
   // The Seismic Mining Drill's bullet has <reload time="4"/> and no reload@rate: extraction gives 1 shot a second (#66).
-  gun("weapon", "weapon_mining_drill", { damage: { value: 6, noShield: 0 }, fireRate: 1 }),
+  gun("weapon", "weapon_mining_drill", { damage: { value: 6, noShield: 0, hull: 0 }, fireRate: 1 }),
+  // The RH2 Dual Laser Cannon Turret G and the Mining Beam Turret, as in 091_x4-800.
+  gun("turret", "turret_m_duallaser_green", {
+    damage: { value: 255, noShield: 189, hull: 0 },
+    fireRate: 2,
+    barrelAmount: 2,
+    magazine: { size: 2, reloadTime: 3 },
+  }),
+  // The Mining Beam Turret's bullet: <damage value="2" hull="1"/>, no reload@rate (#66).
+  gun("turret", "turret_m_sw_mining_02", { damage: { value: 2, noShield: 0, hull: 1 }, fireRate: 1 }),
   // The Light Rocket Launcher has <storage capacity="6"/>; the Heavy Proton Torpedo Launcher has none.
   launcher("weapon", "weapon_light_rocket_launcher", "fl_rockets", 6),
   missile("missile_rocket_light", 1500, 1000, 2, 3),
@@ -215,7 +235,7 @@ const equipment: Equipment[] = [
   missile("missile_proton_heavy", 24000, 24000, 23),
 ];
 
-const data = gameData([tieFighter, n1, n1Modified, gozanti, gozantiMiner, cruiser546, settie, venator, aa9, providence], equipment, [
+const data = gameData([tieFighter, n1, n1Modified, gozanti, gozantiMiner, heraklon, cruiser546, settie, venator, aa9, providence], equipment, [
   { id: "fl_rockets", equipment: ["missile_rocket_light"] },
   { id: "fl_torpedoes", equipment: ["missile_proton_heavy"] },
 ]);
@@ -466,25 +486,25 @@ describe("launchers, with the missile the game showed loaded (#63, #65)", () => 
     missile("missile_proton_medium", 12500, 12500, 18),
     // The Corsair's guns and turrets.
     gun("weapon", "weapon_kv22_m_laser", {
-      damage: { value: 1428, noShield: 462 },
+      damage: { value: 1428, noShield: 462, hull: 0 },
       fireRate: 1.2,
       magazine: { size: 2, reloadTime: 0.5 },
       heat: { perShot: 280, overheat: 10000, coolDelay: 1.13, coolRate: 3000 },
     }),
     gun("turret", "turret_m_ag2g", {
-      damage: { value: 102, noShield: 34 },
+      damage: { value: 102, noShield: 34, hull: 0 },
       fireRate: 5,
       barrelAmount: 2,
       magazine: { size: 20, reloadTime: 3 },
     }),
     gun("turret", "turret_m_duallaser_orange", {
-      damage: { value: 255, noShield: 189 },
+      damage: { value: 255, noShield: 189, hull: 0 },
       fireRate: 2,
       barrelAmount: 2,
       magazine: { size: 2, reloadTime: 3 },
     }),
     gun("turret", "turret_m_llaser_red", {
-      damage: { value: 255, noShield: 126 },
+      damage: { value: 255, noShield: 126, hull: 0 },
       fireRate: 3,
       magazine: { size: 3, reloadTime: 2 },
     }),
@@ -562,5 +582,30 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#63)", () => {
       loadout("gozanti_civ_miner", { slots: { con_weapon_01: "weapon_mining_drill", con_weapon_02: "weapon_mining_drill" } }),
     );
     expectScreen(stats, { BurstDPS: 12, SustainedDPS: 12 });
+  });
+
+  // H1's turrets: 8 RH2 G in left-pd and 3 in right-pd showed 814 (11 × 444 / 6).
+  const h1Groups = {
+    "left-pd": { turret: { equipment: "turret_m_duallaser_green", count: 8 } },
+    "right-pd": { turret: { equipment: "turret_m_duallaser_green", count: 3 } },
+  };
+
+  test("H1. Heraklon Ore Miner, 11× RH2 Dual G in Slot Groups: Avg. Turret Output 814", () => {
+    const stats = loadoutStats(data, loadout("heraklon_solid", { groups: h1Groups }));
+    expectScreen(stats, { GroupedTurretSustainedDPS: 814 });
+  });
+
+  test("H2. H1 + 8× Mining Beam Turret (damage value 2, hull 1): Avg. Turret Output 818, so damage@hull counts", () => {
+    const stats = loadoutStats(
+      data,
+      loadout("heraklon_solid", {
+        groups: {
+          ...h1Groups,
+          "left-mine": { turret: { equipment: "turret_m_sw_mining_02", count: 4 } },
+          "right-mine": { turret: { equipment: "turret_m_sw_mining_02", count: 4 } },
+        },
+      }),
+    );
+    expectScreen(stats, { GroupedTurretSustainedDPS: 818 });
   });
 });
