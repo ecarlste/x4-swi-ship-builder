@@ -7,6 +7,15 @@ const number = (value: number) => Math.round(value).toLocaleString("en-US");
 const formatted = (row: StatRow) =>
   row.shown.toLocaleString("en-US", { minimumFractionDigits: row.decimals, maximumFractionDigits: row.decimals });
 
+/** A change as "+1,000" or "−1,000" (a true minus sign) with the row's decimals; empty when there is none. */
+const signed = (change: number, decimals: number) =>
+  change === 0
+    ? ""
+    : (change > 0 ? "+" : "−") +
+      Math.abs(change).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+const direction = (change: number) => (change > 0 ? "up" : change < 0 ? "down" : "");
+
 /** Rows the game indents under the row above them. */
 const SUB_ROWS = new Set(["ShieldRate", "ShieldDelay", "GroupedShieldRate", "GroupedShieldDelay"]);
 
@@ -18,10 +27,15 @@ const TOOLTIPS: Record<string, string> = {
 /**
  * The game's stat rows, grouped as the configuration screen groups them,
  * then the Loadout's total price with its min–max range.
+ *
+ * Given `was`, the stats of the Loadout as it was opened or last saved, each
+ * row also gets an unlabelled change column (green up, red down).
  */
-export function StatsPanel({ stats }: { stats: LoadoutStats }) {
+export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: LoadoutStats | null }) {
   const priceId = useId();
   const groups = [...new Set(stats.rows.map((r) => r.group))];
+  const wasShown = new Map(was?.rows.map((r) => [r.id, r.shown]));
+  const priceChange = was ? Math.round(stats.price.average) - Math.round(was.price.average) : 0;
 
   return (
     <>
@@ -37,6 +51,7 @@ export function StatsPanel({ stats }: { stats: LoadoutStats }) {
                     {r.unit && ` (${r.unit})`}
                   </th>
                   <td>{formatted(r)}</td>
+                  {was && <ChangeCell change={r.shown - (wasShown.get(r.id) ?? r.shown)} decimals={r.decimals} />}
                 </tr>
               ))}
           </tbody>
@@ -49,8 +64,20 @@ export function StatsPanel({ stats }: { stats: LoadoutStats }) {
           <span className="stats-price-range">
             {number(stats.price.min)} – {number(stats.price.max)} Cr
           </span>
+          {priceChange !== 0 && (
+            <>
+              {" "}
+              <span className={`stat-change ${direction(priceChange)}`}>{signed(priceChange, 0)} Cr</span>
+            </>
+          )}
         </p>
       </section>
     </>
   );
+}
+
+function ChangeCell({ change, decimals }: { change: number; decimals: number }) {
+  // Both values are already rounded down; rounding the difference drops float noise.
+  const rounded = Number(change.toFixed(decimals));
+  return <td className={`stat-change ${direction(rounded)}`.trim()}>{signed(rounded, decimals)}</td>;
 }
