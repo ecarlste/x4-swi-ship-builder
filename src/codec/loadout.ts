@@ -18,7 +18,8 @@ const positiveCount = z.number().int().positive();
 
 const groupEntrySchema = z.object({ equipment: id, count: positiveCount });
 
-export const slotGroupKindSchema = z.enum(["turret", "shield", "engine"]);
+/** The kinds a Loadout fits per Slot Group. Engines aren't one: the engine is fitted to the whole Ship (ADR 0001). */
+export const slotGroupKindSchema = z.enum(["turret", "shield"]);
 export type SlotGroupKind = z.infer<typeof slotGroupKindSchema>;
 
 export const loadoutSchema = z.object({
@@ -30,6 +31,8 @@ export const loadoutSchema = z.object({
   slots: z.record(id, id).optional(),
   /** Slot Group id → kind → the Equipment fitted and how many of the Slot Group's Slots it fills. */
   groups: z.record(id, z.partialRecord(slotGroupKindSchema, groupEntrySchema)).optional(),
+  /** The engine's Equipment id, fitted to all of the Ship's engine Slots and engine Slot Groups. */
+  engine: id.optional(),
   /** The thruster's Equipment id. */
   thruster: id.optional(),
   /** The software's Equipment ids. */

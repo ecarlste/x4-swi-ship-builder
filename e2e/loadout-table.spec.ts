@@ -154,8 +154,8 @@ test("the toolbar counts missing mandatory upgrades and the table marks their ro
   // Engines, the thruster and default software are mandatory; weapons aren't.
   const warning = page.getByText(/mandatory missing/);
   await expect(warning).toHaveText("⚠ 3 mandatory missing");
-  await expect(warning).toHaveAttribute("title", "Engine con_engine_01\nThruster\nFlight Assist Mk1");
-  await expect(row(page, /con_engine_01/).getByTitle(MISSING)).toHaveText("*");
+  await expect(warning).toHaveAttribute("title", "Engines\nThruster\nFlight Assist Mk1");
+  await expect(row(page, /^Engines/).getByTitle(MISSING)).toHaveText("*");
   await expect(row(page, "Thruster").getByTitle(MISSING)).toBeVisible();
   const flightAssist = page.getByRole("checkbox", { name: "Flight Assist Mk1" });
   await expect(loadoutTable(page).getByRole("row").filter({ has: flightAssist }).getByTitle(MISSING)).toBeVisible();
@@ -166,9 +166,9 @@ test("the toolbar counts missing mandatory upgrades and the table marks their ro
   await fit(page, /con_weapon_01/, "Pulse Blaster");
   await expect(warning).toHaveText("⚠ 3 mandatory missing");
 
-  await fit(page, /con_engine_01/, "Sprint Engine S");
+  await fit(page, /^Engines/, "Sprint Engine S");
   await expect(warning).toHaveText("⚠ 2 mandatory missing");
-  await expect(row(page, /con_engine_01/).getByTitle(MISSING)).toHaveCount(0);
+  await expect(row(page, /^Engines/).getByTitle(MISSING)).toHaveCount(0);
 
   await fit(page, "Thruster", "Nimble Thruster S");
   await flightAssist.check();
@@ -181,35 +181,51 @@ test("the toolbar counts missing mandatory upgrades and the table marks their ro
   await expect(warning).toHaveAttribute("title", "Thruster");
 });
 
-test("Slots tagged mandatory and engine Slot Groups count as mandatory upgrades", async ({ page }) => {
+test("Slots tagged mandatory and the engines in a Slot Group count as mandatory upgrades", async ({ page }) => {
   await openShip(page, "L", "Ironback Hauler");
 
   const warning = page.getByText(/mandatory missing/);
   await expect(warning).toHaveText("⚠ 4 mandatory missing");
   await expect(warning).toHaveAttribute(
     "title",
-    "Shield con_shield_01\nEngines enginegroup\nThruster\nFlight Assist Mk1",
+    "Engines\nShield con_shield_01\nThruster\nFlight Assist Mk1",
   );
   await expect(row(page, /con_shield_01/).getByTitle(MISSING)).toBeVisible();
-  await expect(row(page, /Engines enginegroup/).getByTitle(MISSING)).toBeVisible();
+  await expect(row(page, /^Engines/).getByTitle(MISSING)).toBeVisible();
   // Turret and shield groups aren't mandatory.
   await expect(row(page, /Turrets group_front/).getByTitle(MISSING)).toHaveCount(0);
 
-  // An engine group is missing until every one of its Slots is filled.
-  await fit(page, /Engines enginegroup/, "Haul Engine L");
+  await fit(page, /^Engines/, "Haul Engine L");
   await expect(warning).toHaveText("⚠ 3 mandatory missing");
-  await page.getByRole("spinbutton", { name: "enginegroup Engines count" }).fill("1");
-  await expect(warning).toHaveText("⚠ 4 mandatory missing");
+});
+
+test("one Engines row fits one engine type to all of the Ship's engines (#50)", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+
+  // The Hauler's two engines are in a Slot Group; they get one row, first, and no group row.
+  const engines = row(page, /^Engines/);
+  await expect(loadoutTable(page).getByRole("rowheader").first()).toHaveText(/^Engines 2×/);
+  await expect(row(page, /Engines enginegroup/)).toHaveCount(0);
+  await expect(engines.getByRole("spinbutton")).toHaveCount(0);
+
+  // Picking an engine fits it to every engine, and prices it per engine.
+  await fit(page, /^Engines/, "Haul Engine L");
+  await expect(engines.getByRole("cell").nth(1)).toHaveText("2");
+  await expect(engines.getByRole("cell").nth(3)).toHaveText("440,000 Cr");
+
+  // Emptying it removes them all.
+  await fit(page, /^Engines/, "— empty —");
+  await expect(engines.getByRole("cell").nth(1)).toHaveText("");
+  await expect(engines.getByRole("cell").nth(3)).toHaveText("");
 });
 
 test("a Slot Group has one row per kind, with an Equipment choice and a count up to the group's size", async ({ page }) => {
   await openShip(page, "L", "Ironback Hauler");
 
-  // Rows for every kind of every group, after the Slots.
-  await expect(loadoutTable(page).getByRole("rowheader").first()).toContainText("con_shield_01");
+  // Rows for every turret and shield kind of every group, after the Slots. Engines have their own row.
+  await expect(loadoutTable(page).getByRole("rowheader").nth(1)).toContainText("con_shield_01");
   await expect(row(page, /Turrets group_front/)).toBeVisible();
   await expect(row(page, /Shields group_front/)).toBeVisible();
-  await expect(row(page, /Engines enginegroup/)).toBeVisible();
 
   const turrets = row(page, /Turrets group_front/);
   const count = turrets.getByRole("spinbutton");

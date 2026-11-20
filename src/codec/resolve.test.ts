@@ -100,6 +100,54 @@ describe("resolveLoadout: Slots", () => {
   });
 });
 
+describe("resolveLoadout: the engine", () => {
+  test("an engine that still fits is kept, and a change in the Ship's engine count isn't reported", () => {
+    // The Hauler's engine Slot Group grows from 2 Slots to 3 in this Game Data.
+    const moreEngines = {
+      ...gameData,
+      ships: gameData.ships.map((s) =>
+        s.id === "fx_hauler"
+          ? { ...s, slotGroups: s.slotGroups.map((g) => (g.kinds.engine ? { ...g, kinds: { ...g.kinds, engine: { ...g.kinds.engine, count: 3 } } } : g)) }
+          : s,
+      ),
+    };
+    const result = resolveLoadout(moreEngines, loadout({ ship: "fx_hauler", gameData: older, engine: "fx_engine_l" }));
+    if (result.status !== "ok") throw new Error("expected the Ship to be known");
+    expect(result.loadout.engine).toBe("fx_engine_l");
+    expect(result.changes).toEqual([]);
+  });
+
+  test("an engine in an engine Slot's entry under slots is dropped: engines are fitted to the whole Ship", () => {
+    const { loadout: repaired, changes } = resolved(loadout({ slots: { con_engine_01: "fx_engine_s" } }));
+    expect(repaired).not.toHaveProperty("slots");
+    expect(changes).toEqual([
+      {
+        type: "dropped",
+        place: { kind: "slot", slot: "con_engine_01" },
+        equipment: "fx_engine_s",
+        name: expect.any(String),
+        reason: "unknown-slot",
+      },
+    ]);
+  });
+
+  test("an engine the Ship's engines no longer take is dropped", () => {
+    const { loadout: repaired, changes } = resolved(loadout({ engine: "fx_engine_l" }));
+    expect(repaired).not.toHaveProperty("engine");
+    expect(changes).toEqual([
+      { type: "dropped", place: { kind: "engine" }, equipment: "fx_engine_l", name: "Haul Engine L", reason: "no-longer-fits" },
+    ]);
+    expect(describeChange(changes[0])).toBe("Haul Engine L as engine: dropped, it no longer fits");
+  });
+
+  test("an engine that isn't in the Game Data is dropped, under its raw id", () => {
+    const { changes } = resolved(loadout({ engine: "fx_gone" }));
+    expect(changes).toEqual([
+      { type: "dropped", place: { kind: "engine" }, equipment: "fx_gone", name: "fx_gone", reason: "unknown-equipment" },
+    ]);
+  });
+});
+
 describe("resolveLoadout: Slot Groups", () => {
   const hauler = (groups: Loadout["groups"]) => loadout({ ship: "fx_hauler", groups });
 
@@ -108,12 +156,11 @@ describe("resolveLoadout: Slot Groups", () => {
       hauler({
         group_front: { turret: { equipment: "fx_turret_m", count: 2 } },
         group_back: { turret: { equipment: "fx_turret_m", count: 2 } },
-        enginegroup: { engine: { equipment: "fx_engine_l", count: 2 }, turret: { equipment: "fx_turret_m", count: 1 } },
+        enginegroup: { turret: { equipment: "fx_turret_m", count: 1 } },
       }),
     );
     expect(repaired.groups).toEqual({
       group_front: { turret: { equipment: "fx_turret_m", count: 2 } },
-      enginegroup: { engine: { equipment: "fx_engine_l", count: 2 } },
     });
     expect(changes).toEqual([
       {

@@ -5,6 +5,7 @@
  */
 import type { Equipment, GameData, Ship } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
+import { engineParts } from "../../shared/game-data/engines.ts";
 import { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
 
 export { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
@@ -19,7 +20,7 @@ export function emptyLoadout(gameData: GameData, ship: Ship): Loadout {
 }
 
 /** Drops an optional key when its value is empty, keeping the Loadout sparse. */
-function withEntry<K extends "slots" | "groups" | "thruster" | "software" | "consumables">(
+function withEntry<K extends "slots" | "groups" | "engine" | "thruster" | "software" | "consumables">(
   loadout: Loadout,
   key: K,
   value: Loadout[K] | undefined,
@@ -99,6 +100,23 @@ export function withoutUncarriedConsumables(gameData: GameData, ship: Ship, load
     Object.entries(loadout.consumables ?? {}).filter(([id]) => carried.has(id)),
   );
   return withEntry(loadout, "consumables", consumables);
+}
+
+/**
+ * How many engines the Ship takes and the fit list they come from: its engine
+ * Slots plus the sizes of all its engine Slot Groups, which in game take one
+ * engine type between them (ADR 0001). Null for a Ship with no engines.
+ * Game Data integrity guarantees they all share one fit list.
+ */
+export function shipEngines(ship: Ship): { count: number; fitList: string } | null {
+  const [first, ...rest] = engineParts(ship);
+  if (!first) return null;
+  return { count: rest.reduce((sum, p) => sum + p.count, first.count), fitList: first.fitList };
+}
+
+/** Fits one engine to all of the Ship's engines, or removes them with null. */
+export function setEngine(loadout: Loadout, equipment: string | null): Loadout {
+  return withEntry(loadout, "engine", equipment ?? undefined);
 }
 
 /** Fits the thruster, or removes it with null. */

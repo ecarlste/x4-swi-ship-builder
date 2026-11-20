@@ -7,10 +7,12 @@ import { formatCredits, formatNumber } from "./format.ts";
 import {
   consumableOptions,
   setConsumable,
+  setEngine,
   setGroup,
   setSlot,
   setSoftware,
   setThruster,
+  shipEngines,
   withoutUncarriedConsumables,
   type ConsumableKind,
   type Loadout,
@@ -31,11 +33,10 @@ const KIND_LABEL: Record<SlotKind, string> = {
   engine: "Engine",
 };
 
-const SLOT_GROUP_KINDS: SlotGroupKind[] = ["turret", "shield", "engine"];
+const SLOT_GROUP_KINDS: SlotGroupKind[] = ["turret", "shield"];
 const GROUP_KIND_LABEL: Record<SlotGroupKind, string> = {
   turret: "Turrets",
   shield: "Shields",
-  engine: "Engines",
 };
 
 
@@ -59,8 +60,9 @@ function keyValue(item: Equipment): string {
 }
 
 /**
- * The editable Loadout table: one row per Slot. Columns: Slot, Equipment,
- * quantity, key value and average price.
+ * The editable Loadout table: one row for all the Ship's engines, which take
+ * one engine type between them (ADR 0001), then one row per other Slot.
+ * Columns: Slot, Equipment, quantity, key value and average price.
  */
 export function LoadoutTable({
   gameData,
@@ -85,6 +87,8 @@ export function LoadoutTable({
   const wasText = (before: string, now: string) => (was && before !== now ? before : undefined);
   const groupText = (entry: { equipment: string; count: number } | undefined) =>
     entry ? `${nameOf(entry.equipment)} ×${entry.count}` : "empty";
+  const engines = shipEngines(ship);
+  const engine = equipment.get(loadout.engine ?? "") ?? null;
   const thruster = equipment.get(loadout.thruster ?? "") ?? null;
   const consumables = consumableOptions(gameData, ship, loadout);
   /** Applies an edit, dropping consumables it leaves the Ship unable to carry. */
@@ -110,7 +114,30 @@ export function LoadoutTable({
         </tr>
       </thead>
       <tbody>
-        {ship.slots.map((slot) => {
+        {engines && (
+          <Row
+            label={
+              <>
+                Engines <span className="dim">{engines.count}×</span>
+              </>
+            }
+            missing={missing.has("engine")}
+            equipment={
+              <EquipmentDropdown
+                label="Engines Equipment"
+                options={options(engines.fitList)}
+                value={engine?.id ?? null}
+                onChange={(id) => change(setEngine(loadout, id))}
+                compare={compareWith(engine)}
+              />
+            }
+            quantity={engine ? formatNumber(engines.count) : ""}
+            keyValue={engine ? keyValue(engine) : ""}
+            price={engine ? formatCredits(engine.price.average * engines.count) : ""}
+            was={wasText(nameOf(was?.engine), nameOf(loadout.engine))}
+          />
+        )}
+        {ship.slots.filter((slot) => slot.kind !== "engine").map((slot) => {
           const fitted = equipment.get(loadout.slots?.[slot.id] ?? "") ?? null;
           return (
             <Row

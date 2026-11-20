@@ -1,5 +1,6 @@
 import type { EquipmentKind, SnapshotData } from "./schema.ts";
 import { slotGroupKindSchema } from "./schema.ts";
+import { engineParts } from "./engines.ts";
 
 /**
  * The reference-integrity pass: every id a snapshot refers to must resolve.
@@ -77,6 +78,12 @@ export function checkIntegrity(data: SnapshotData): string[] {
         const entry = group.kinds[kind];
         if (entry) checkFitList(source, `slot group ${group.id} ${kind}`, entry.fitList, kind);
       }
+    }
+    // In game, all of a Ship's engines take one engine type (ADR 0001), so they must share a fit list.
+    const engineFitLists = new Set(engineParts(ship).map((p) => p.fitList));
+    if (engineFitLists.size > 1) {
+      const lists = [...engineFitLists].sort().map((f) => `"${f}"`).join(", ");
+      errors.push(`${source} engines are on more than one fit list (${lists}), but take one engine type`);
     }
     checkFitList(source, "thrusters", ship.thrusters, "thruster");
     checkFitList(source, "software", ship.software.fitList, "software");
