@@ -34,7 +34,8 @@ const TOOLTIPS: Record<string, string> = {
 
 /**
  * The game's stat rows, grouped as the configuration screen groups them,
- * then the Loadout's total price with its min–max range.
+ * then the Loadout's total price with its min–max range, labelled as an
+ * estimate that leaves out crew (ADR 0003).
  *
  * Given `was`, the stats of the Loadout as it was opened or last saved, each
  * row also gets an unlabelled change column (green up, red down).
@@ -83,6 +84,7 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
             </>
           )}
         </p>
+        <p className="stats-price-note">Estimate · excludes crew</p>
       </section>
     </>
   );

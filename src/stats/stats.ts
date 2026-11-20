@@ -217,9 +217,9 @@ function turningInDegrees(degreesPerSecond: number): number {
 
 /**
  * Ship + Equipment (the engine once per engine) + consumables + software, each at its min, average and max.
- * The game's total is the sum of the same lines (#63).
- * unconfirmed (#70): the game charges the station's per-item prices, not Game
- * Data's, and adds the crew's cost; the builder does neither.
+ * The game's total is the sum of the same lines, confirmed in game by the #63 reference row.
+ * Differs from the game on purpose (ADR 0003): each line is at Game Data's average with
+ * min–max as the range, not the station's price, and crew is left out.
  */
 function price(shipPrice: Price, loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): Price {
   const bought: [string, number][] = [

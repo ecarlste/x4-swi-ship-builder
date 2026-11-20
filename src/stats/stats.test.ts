@@ -458,6 +458,7 @@ describe("mandatory upgrades", () => {
   });
 });
 
+// Game Data's average and min–max, not the station's price, and no crew (ADR 0003).
 describe("price", () => {
   test("totals the Ship, fitted Equipment, group counts, the engine per engine, consumables and software, as average and min–max", () => {
     const at = (average: number) => ({ min: average - 10, average, max: average + 10 });
