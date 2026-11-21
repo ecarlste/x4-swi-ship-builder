@@ -49,8 +49,8 @@ describe("resolveLoadout: what still fits", () => {
 });
 
 /** The repaired Loadout and the repairs, for a Loadout whose Ship is known. */
-function resolved(input: Loadout) {
-  const result = resolveLoadout(gameData, input);
+function resolved(input: Loadout, data = gameData) {
+  const result = resolveLoadout(data, input);
   if (result.status !== "ok") throw new Error("expected the Ship to be known");
   return result;
 }
@@ -335,11 +335,7 @@ describe("resolveLoadout: Crew is replayed marines first (ADR 0004)", () => {
     ...gameData,
     ships: gameData.ships.map((s) => (s.id === "fx_courier" ? { ...s, capacities: { ...s.capacities, crew: 3 } } : s)),
   };
-  const replayed = (crew: Loadout["crew"]) => {
-    const result = resolveLoadout(roomier, loadout({ crew }));
-    if (result.status !== "ok") throw new Error("expected the Ship to be known");
-    return result;
-  };
+  const replayed = (crew: Loadout["crew"]) => resolved(loadout({ crew }), roomier);
 
   test("service crew is cut to what the marines leave", () => {
     const { loadout: repaired, repairs } = replayed({ service: 4, marines: 2 });

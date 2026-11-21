@@ -8,6 +8,9 @@
  * crew capacity is cut to fit, service crew first (ADR 0004). Ids are matched as
  * they are: there are no rename tables. A version change on its own isn't a
  * Repair.
+ *
+ * None of these rules live here: the stored Loadout is replayed through the
+ * Ship's edits in `rules.ts`, and their Repairs are collected.
  */
 import type { GameData } from "../../shared/game-data/validateSnapshot.ts";
 import { indexGameData } from "../gameDataIndex.ts";
@@ -29,17 +32,13 @@ export type Resolution =
       versions: { from: GameDataVersions; to: GameDataVersions };
     };
 
-/**
- * Checks a Loadout against the Game Data, returning the repaired Loadout and
- * every Repair. The stored Loadout is replayed, entry by entry, through the
- * Ship's edits onto an Empty Loadout, so the edits' own rules make the drops
- * and clamps.
- */
+/** Checks a Loadout against the Game Data, returning the repaired Loadout and every Repair. */
 export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution {
   const ship = indexGameData(gameData).ships.get(loadout.ship);
   if (!ship) return { status: "unavailable", ship: loadout.ship };
 
   const rules = loadoutRules(gameData, ship);
+  // The Empty Loadout is stamped with the bundled Game Data's versions, and no edit changes them.
   let repaired = emptyLoadout(gameData, ship);
   const repairs: LoadoutRepair[] = [];
   const replay = (edit: Edit) => {

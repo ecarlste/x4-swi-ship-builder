@@ -1,6 +1,7 @@
 /**
  * The Loadout's rules, bound to one Ship: every fit and capacity rule lives in
  * these edits, so a Loadout built only through them always fits its Ship.
+ * Resolving a stored Loadout replays it through them too (`resolve.ts`).
  *
  * Each edit takes a Loadout and gives back `{ loadout, repairs }`: a count over
  * a limit is clamped and reported as a clamp; Equipment that isn't on the fit
