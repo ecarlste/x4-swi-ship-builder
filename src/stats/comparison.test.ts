@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { compareEquipment } from "./stats.ts";
-import { engine, gameData, gun, launcher, loadout, missile, shield, ship, thruster } from "./testing/fixtures.ts";
+import { engine, gameData, gun, launcher, loadout, missile, shield, ship, thruster } from "../loadout/testing/fixtures.ts";
 import type { Equipment } from "../gameData.ts";
 
 const at = <E extends Equipment>(item: E, average: number): E => ({ ...item, price: { min: average, average, max: average } });

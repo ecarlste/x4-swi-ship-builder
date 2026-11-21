@@ -6,7 +6,7 @@ import { ShipPicker } from "./builder/ShipPicker.tsx";
 import { LoadoutTable } from "./builder/LoadoutTable.tsx";
 import { StatsPanel } from "./builder/StatsPanel.tsx";
 import { SaveDialog, SavedLoadoutsList } from "./builder/SavedLoadouts.tsx";
-import { ChangesNotice } from "./builder/ChangesNotice.tsx";
+import { RepairsNotice } from "./builder/RepairsNotice.tsx";
 import { createSession } from "./builder/session.ts";
 import { useSession } from "./builder/useSession.ts";
 
@@ -119,7 +119,7 @@ export function App() {
           {message.text}
         </p>
       )}
-      {notice && <ChangesNotice {...notice} onDismiss={session.dismissNotice} />}
+      {notice && <RepairsNotice {...notice} onDismiss={session.dismissNotice} />}
       {naming && (
         <SaveDialog
           suggestedName={naming.suggestedName}

@@ -7,7 +7,7 @@ import { gameData } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { memoryStorage } from "../codec/testing/memoryStorage.ts";
 import { createSession } from "./session.ts";
-import { setSlot } from "./loadout.ts";
+import { setSlot } from "../loadout/loadout.ts";
 import type { SavedLoadout } from "../codec/loadout.ts";
 import { shareLinkUrl } from "../codec/shareLink.ts";
 import type { SavedLoadoutEntry } from "../codec/savedLoadouts.ts";
@@ -279,7 +279,7 @@ describe("opening a Saved Loadout", () => {
 
     expect(state().loadout).toMatchObject({ gameData: current, slots: { con_weapon_01: "fx_pulse_s" }, consumables: { fx_flare: 5 } });
     expect(state().notice?.versions).toEqual({ from: older, to: current });
-    expect(state().notice?.changes).toHaveLength(3);
+    expect(state().notice?.repairs).toHaveLength(3);
     expect(state().was).toBeNull();
     expect(storage.raw()).toBe(before);
 
@@ -447,7 +447,7 @@ describe("opening a Share Link", () => {
 
     await session.openShareLink(await fragmentFor(sharedOf(escort)));
 
-    expect(state().notice?.changes).toHaveLength(3);
+    expect(state().notice?.repairs).toHaveLength(3);
     expect(state().loadout?.slots).toEqual({ con_weapon_01: "fx_pulse_s" });
     expect(state().opened).toEqual({ name: "Escort" });
   });
@@ -623,7 +623,7 @@ describe("importing a Loadout File", () => {
 
     session.openSaved(entry(state(), "Escort").loadout);
 
-    expect(state().notice?.changes).toHaveLength(3);
+    expect(state().notice?.repairs).toHaveLength(3);
   });
 });
 

@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import { gunOutput, loadoutStats, type StatRow } from "./stats.ts";
 import {
   gameData,
+  engine,
+  engineSlot,
   gun,
   launcher,
   loadout,
@@ -11,11 +13,11 @@ import {
   shieldGroup,
   shieldSlot,
   ship,
+  thruster,
   turretGroup,
   turretSlot,
   weaponSlot,
-} from "./testing/fixtures.ts";
-import { engine, engineSlot, thruster } from "./testing/fixtures.ts";
+} from "../loadout/testing/fixtures.ts";
 import type { Ship } from "../gameData.ts";
 
 /** The row for one of the game's `UILoadoutStatistics5` fields. */

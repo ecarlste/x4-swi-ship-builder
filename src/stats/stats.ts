@@ -7,7 +7,7 @@
  * decimals, as the screen does.
  */
 import type { CargoType, Equipment, GameData, Price } from "../gameData.ts";
-import { crewCount, shipEngines, type Loadout } from "../builder/loadout.ts";
+import { crewCount, shipEngines, type Loadout } from "../loadout/loadout.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";

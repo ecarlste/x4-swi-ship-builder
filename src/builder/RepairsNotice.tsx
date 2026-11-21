@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { describeChange, type GameDataVersions, type LoadoutChange } from "../codec/resolve.ts";
+import { describeRepair, type GameDataVersions, type LoadoutRepair } from "../loadout/resolve.ts";
 
 const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${v.x4}`;
 
@@ -8,12 +8,12 @@ const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${v.x4}`;
  * Share Link or a Loadout File was repaired against the Game Data: every drop
  * and clamp, plus the version change.
  */
-export function ChangesNotice({
-  changes,
+export function RepairsNotice({
+  repairs,
   versions,
   onDismiss,
 }: {
-  changes: LoadoutChange[];
+  repairs: LoadoutRepair[];
   versions: { from: GameDataVersions; to: GameDataVersions };
   onDismiss: () => void;
 }) {
@@ -21,7 +21,7 @@ export function ChangesNotice({
   const versionChanged = versions.from.swi !== versions.to.swi || versions.from.x4 !== versions.to.x4;
 
   return (
-    <section className="changes-notice" aria-labelledby={headingId}>
+    <section className="repairs-notice" aria-labelledby={headingId}>
       <h2 id={headingId}>This Loadout changed with the Game Data</h2>
       {versionChanged && (
         <p>
@@ -29,8 +29,8 @@ export function ChangesNotice({
         </p>
       )}
       <ul>
-        {changes.map((change, i) => (
-          <li key={i}>{describeChange(change)}</li>
+        {repairs.map((repair, i) => (
+          <li key={i}>{describeRepair(repair)}</li>
         ))}
       </ul>
       <button type="button" onClick={onDismiss}>

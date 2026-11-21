@@ -8,7 +8,8 @@
  * value is left untouched. Storage is never wiped automatically, and entries
  * a write doesn't touch are written back exactly as they were read.
  */
-import { parseSavedLoadout, type Loadout, type SavedLoadout } from "./loadout.ts";
+import type { Loadout } from "../loadout/loadout.ts";
+import { parseSavedLoadout, type SavedLoadout } from "./loadout.ts";
 
 export const SAVED_LOADOUTS_KEY = "swi-builder:saved-loadouts:v1";
 

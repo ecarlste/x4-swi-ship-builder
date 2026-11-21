@@ -1,6 +1,6 @@
 import type { Equipment, GameData } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
-import type { Loadout } from "./loadout.ts";
+import type { Loadout } from "../loadout/loadout.ts";
 import { compareEquipment, type Figure } from "../stats/stats.ts";
 import { licenceText } from "./licence.ts";
 import { formatCredits, formatNumber, formatSigned } from "./format.ts";
