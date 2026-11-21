@@ -52,10 +52,17 @@ const engineSlots = (n: number) => Array.from({ length: n }, (_, i) => engineSlo
 /** A Slot Group with `count` engine Slots. */
 const engineGroup = (id: string, count: number) => ({ id, kinds: { engine: { count, fitList: "fl_any" } } });
 
+/** A Slot of any kind and size, fitting anything. */
+const slot = (kind: Slot["kind"], size: Slot["size"], id: string): Slot => ({ id, kind, size, mandatory: false, fitList: "fl_any" });
+
+/** S Slots of one kind, `con_<kind>_01` onwards: those the screenshots' Loadouts fill, not the Ship's full set. */
+const sSlots = (kind: Slot["kind"], n: number) =>
+  Array.from({ length: n }, (_, i) => slot(kind, "s", `con_${kind}_0${i + 1}`));
+
 const sShip = (id: string, overrides: Partial<Ship>) => ship({ id, size: "s", cargoTypes: ["container"], ...overrides });
 
 const tieFighter = sShip("tie_fighter", {
-  slots: engineSlots(2),
+  slots: [...engineSlots(2), ...sSlots("shield", 1), ...sSlots("weapon", 2)],
   stats: {
     hull: 3500,
     mass: 5,
@@ -75,13 +82,13 @@ const n1Stats = (forwardDrag: number) => ({
 });
 
 const n1 = sShip("n1", {
-  slots: engineSlots(2),
+  slots: [...engineSlots(2), ...sSlots("shield", 2), ...sSlots("weapon", 3)],
   stats: { hull: 4500, radarRange: 35000, ...n1Stats(2.609) },
   capacities: { missiles: 4, drones: 0, deployables: 6, countermeasures: 8, crew: 1, cargo: 300 },
 });
 
 const n1Modified = sShip("ship_mando_s_n1", {
-  slots: engineSlots(1),
+  slots: [...engineSlots(1), ...sSlots("shield", 1), ...sSlots("weapon", 3)],
   stats: { hull: 4650, radarRange: 45000, ...n1Stats(1.3) },
   capacities: { missiles: 6, drones: 0, deployables: 6, countermeasures: 8, crew: 2, cargo: 300 },
 });
@@ -102,9 +109,6 @@ const gozanti = ship({
   },
   capacities: { missiles: 0, drones: 0, deployables: 15, countermeasures: 16, crew: 17, cargo: 9300 },
 });
-
-/** A Slot of any kind and size, fitting anything. */
-const slot = (kind: Slot["kind"], size: Slot["size"], id: string): Slot => ({ id, kind, size, mandatory: false, fitList: "fl_any" });
 
 const gozantiMiner = ship({
   id: "gozanti_civ_miner",
@@ -555,10 +559,19 @@ describe("one engine type across engine Slot Groups, in game on X4 8.00 + SWI 0.
  * don't depend on. Each launcher has its full fit list from Game Data.
  */
 describe("launchers, with the missile the game showed loaded (#63, #65)", () => {
-  const xwing = sShip("t65b_xwing", {});
-  const awing = sShip("rz1awing", {});
-  const vulture = sShip("vulture_droid", {});
-  const ywing = sShip("ywing_btla4", {});
+  /**
+   * An S Ship with its launcher's Slot. Its missile capacity is room for the 4
+   * missiles loaded, not the Ship's own, which these tests don't assert.
+   */
+  const launcherShip = (id: string, slotId: string) =>
+    sShip(id, {
+      slots: [slot("weapon", "s", slotId)],
+      capacities: { ...ship().capacities, missiles: 4 },
+    });
+  const xwing = launcherShip("t65b_xwing", "con_weapon_05");
+  const awing = launcherShip("rz1awing", "con_weapon_03");
+  const vulture = launcherShip("vulture_droid", "con_primaryweapon_05");
+  const ywing = launcherShip("ywing_btla4", "con_weapon_04");
 
   const launchers: Equipment[] = [
     launcher("weapon", "weapon_protonlauncher", "fl_krupx_medium"),

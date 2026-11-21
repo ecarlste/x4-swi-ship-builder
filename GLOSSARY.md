@@ -16,6 +16,10 @@ _Avoid_: database, content
 A ship that can appear in SWI, whether or not the player can buy it.
 _Avoid_: hull, vessel, model
 
+**Chassis**:
+A Ship's own share of the Price, without any Equipment or Crew.
+_Avoid_: hull price, base price
+
 **Ship Type**:
 The game's role for a Ship, such as fighter, bomber, corvette, frigate or carrier, within its size.
 _Avoid_: class, role, category
@@ -36,6 +40,10 @@ _Avoid_: permit, clearance
 Anything that can be fitted to a ship as part of a loadout: weapons, turrets, shields, engines, thrusters, consumables (missiles, drones, deployables) and software.
 _Avoid_: parts, components, wares
 
+**Software Family**:
+Software where each one replaces the one before, such as Long Range Scanner Mk1 and Mk2. A Ship fits at most one of each family, and when a family is mandatory any of them will do.
+_Avoid_: software slot, software group
+
 **Slot**:
 One place on a Ship where one piece of Equipment is fitted.
 _Avoid_: hardpoint, connection, mount
@@ -43,6 +51,10 @@ _Avoid_: hardpoint, connection, mount
 **Slot Group**:
 A named set of Slots on a large Ship, filled together instead of one Slot at a time: for each kind of Equipment it takes (such as turrets or shields), the user picks one type and a count. Engines are the exception: they are never picked per Slot Group.
 _Avoid_: battery, cluster, group slot
+
+**Place**:
+Where a Loadout fits something: the engines, one Slot, one kind of Equipment in a Slot Group, the thruster, one piece of software, one consumable, or one Crew role. Every Place has its share of the Price.
+_Avoid_: row, key, hardpoint, position
 
 **Loadout**:
 A specific choice of equipment and Crew for one ship. A loadout fits one engine type to all of the ship's engine Slots, including those in Slot Groups, or no engines at all. Equipment mods, paint and the Captain are not part of a loadout.
@@ -53,11 +65,11 @@ The service crew and marines a Loadout carries, as two counts that share the Shi
 _Avoid_: personnel, people, workforce
 
 **Captain**:
-The one person who flies a Ship, which every Ship gets free and must have when it's bought. The Captain's seat is on top of the Ship's crew capacity.
+The one person who flies a Ship, which every Ship gets free and must have when it's bought. The Captain's seat is on top of the Ship's crew capacity. The game calls it "Pilot" on S and M Ships and "Captain" on L and XL, and the buy screen keeps it ticked.
 _Avoid_: pilot, commander
 
 **Price**:
-An estimate of what a Loadout costs: the Ship, each piece of Equipment (the engine once per engine) and each member of its Crew, at Game Data's average, with Game Data's min–max as the range. A shipyard charges its own price inside that range (ADR 0003). The Captain is free (ADR 0004).
+An estimate of what a Loadout costs: the Chassis, each piece of Equipment (the engine once per engine) and each member of its Crew, at Game Data's average, with Game Data's min–max as the range. A shipyard charges its own price inside that range (ADR 0003). The Captain is free (ADR 0004).
 _Avoid_: cost, value, purchase price
 
 **Empty Loadout**:

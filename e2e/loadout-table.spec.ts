@@ -38,6 +38,15 @@ test("filling a Slot shows its Equipment, quantity, key value and average price,
   await expect(row(page, /con_weapon_02/).getByRole("combobox")).toHaveText(/— empty —/);
 });
 
+test("the Chassis is the first row: the Ship's own price, read-only, quantity 1", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+
+  await expect(loadoutTable(page).getByRole("rowheader").first()).toHaveText("Chassis");
+  const chassis = row(page, "Chassis");
+  await expect(chassis.getByRole("cell")).toHaveText(["Swiftwing Courier", "1", "", "100,000 Cr"]);
+  await expect(chassis.getByRole("combobox")).toHaveCount(0);
+});
+
 test("a Slot with one compatible item still has a dropdown", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
@@ -182,9 +191,9 @@ test("Slots tagged mandatory and the engines in a Slot Group count as mandatory 
 test("one Engines row fits one engine type to all of the Ship's engines (#50)", async ({ page }) => {
   await openShip(page, "L", "Ironback Hauler");
 
-  // The Hauler's two engines are in a Slot Group; they get one row, first, and no group row.
+  // The Hauler's two engines are in a Slot Group; they get one row, after the Chassis, and no group row.
   const engines = row(page, /^Engines/);
-  await expect(loadoutTable(page).getByRole("rowheader").first()).toHaveText(/^Engines 2×/);
+  await expect(loadoutTable(page).getByRole("rowheader").nth(1)).toHaveText(/^Engines 2×/);
   await expect(row(page, /Engines enginegroup/)).toHaveCount(0);
   await expect(engines.getByRole("spinbutton")).toHaveCount(0);
 
@@ -203,7 +212,7 @@ test("a Slot Group has one row per kind, with an Equipment choice and a count up
   await openShip(page, "L", "Ironback Hauler");
 
   // Rows for every turret and shield kind of every group, after the Slots. Engines have their own row.
-  await expect(loadoutTable(page).getByRole("rowheader").nth(1)).toContainText("con_shield_01");
+  await expect(loadoutTable(page).getByRole("rowheader").nth(2)).toContainText("con_shield_01");
   await expect(row(page, /Turrets group_front/)).toBeVisible();
   await expect(row(page, /Shields group_front/)).toBeVisible();
 

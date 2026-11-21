@@ -145,7 +145,6 @@ export function App() {
                 gameData={gameData}
                 ship={ship}
                 loadout={loadout}
-                missing={new Set(missing.map((m) => m.row))}
                 was={was}
                 onChange={session.edit}
               />

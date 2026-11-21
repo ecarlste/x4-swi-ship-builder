@@ -73,7 +73,7 @@ describe("missiles need a launcher", () => {
   });
   const tubeDropped = {
     type: "dropped",
-    place: { kind: "consumable" },
+    place: { kind: "consumable", equipment: "fx_torpedo" },
     equipment: "fx_torpedo",
     name: "fx_torpedo",
     reason: "doesnt-fit",
@@ -187,7 +187,7 @@ describe("Slot Groups", () => {
     const armed = { ...front("fx_missile_turret", 2), consumables: { fx_dart: 5 } };
     expect(rules.setGroupCount(armed, "group_front", "turret", 0)).toEqual({
       loadout: loadout("fx_ship"),
-      repairs: [{ type: "dropped", place: { kind: "consumable" }, equipment: "fx_dart", name: "fx_dart", reason: "doesnt-fit" }],
+      repairs: [{ type: "dropped", place: { kind: "consumable", equipment: "fx_dart" }, equipment: "fx_dart", name: "fx_dart", reason: "doesnt-fit" }],
     });
     expect(rules.setGroupEquipment(armed, "group_front", "turret", "fx_flak").loadout).toEqual(front("fx_flak", 2));
   });
@@ -233,13 +233,13 @@ describe("the engine, thruster and software", () => {
     });
     expect(rules.setEngine(empty, "fx_gone")).toEqual(unknown({ kind: "engine" }));
     expect(rules.setThruster(empty, "fx_gone")).toEqual(unknown({ kind: "thruster" }));
-    expect(rules.setSoftware(empty, "fx_gone", true)).toEqual(unknown({ kind: "software" }));
+    expect(rules.setSoftware(empty, "fx_gone", true)).toEqual(unknown({ kind: "software", equipment: "fx_gone" }));
   });
 
   test("each refuses Equipment that isn't on its fit list", () => {
     expect(rules.setEngine(empty, "fx_nimble")).toEqual(refused({ kind: "engine" }, "fx_nimble"));
     expect(rules.setThruster(empty, "fx_fusion")).toEqual(refused({ kind: "thruster" }, "fx_fusion"));
-    expect(rules.setSoftware(empty, "fx_scanner", true)).toEqual(refused({ kind: "software" }, "fx_scanner"));
+    expect(rules.setSoftware(empty, "fx_scanner", true)).toEqual(refused({ kind: "software", equipment: "fx_scanner" }, "fx_scanner"));
   });
 
   test("a Ship with no engines takes no engine (its engine Slots aren't Slots here)", () => {
@@ -268,7 +268,7 @@ describe("consumables", () => {
     carrier,
   );
   const withFlares = loadout("fx_ship", { consumables: { fx_flare: 3 } });
-  const place = { kind: "consumable" } as const;
+  const place = (equipment: string) => ({ kind: "consumable", equipment }) as const;
 
   test("items of one kind share the Ship's capacity for it: a count over what the others leave is clamped", () => {
     expect(rules.setConsumable(withFlares, "fx_chaff", 2)).toEqual({
@@ -277,7 +277,7 @@ describe("consumables", () => {
     });
     expect(rules.setConsumable(withFlares, "fx_chaff", 4)).toEqual({
       loadout: loadout("fx_ship", { consumables: { fx_flare: 3, fx_chaff: 2 } }),
-      repairs: [{ type: "clamped", place, equipment: "fx_chaff", name: "fx_chaff", from: 4, to: 2 }],
+      repairs: [{ type: "clamped", place: place("fx_chaff"), equipment: "fx_chaff", name: "fx_chaff", from: 4, to: 2 }],
     });
     // An item's own count doesn't count against it.
     expect(rules.setConsumable(withFlares, "fx_flare", 5).loadout).toEqual(loadout("fx_ship", { consumables: { fx_flare: 5 } }));
@@ -288,16 +288,16 @@ describe("consumables", () => {
   });
 
   test("the limit is the kind's capacity less what the other items take", () => {
-    expect(rules.limit(withFlares, place, "fx_chaff")).toBe(2);
-    expect(rules.limit(withFlares, place, "fx_flare")).toBe(5);
-    expect(rules.limit(withFlares, place, "fx_decoy")).toBe(0);
+    expect(rules.limit(withFlares, place("fx_chaff"))).toBe(2);
+    expect(rules.limit(withFlares, place("fx_flare"))).toBe(5);
+    expect(rules.limit(withFlares, place("fx_decoy"))).toBe(0);
   });
 
   test("refuses an item the Ship can't carry, one with no room left, and unknown Equipment", () => {
     const full = loadout("fx_ship", { consumables: { fx_flare: 5 } });
     const refused = (equipment: string, reason: string) => ({
       loadout: full,
-      repairs: [{ type: "dropped", place, equipment, name: equipment, reason }],
+      repairs: [{ type: "dropped", place: place(equipment), equipment, name: equipment, reason }],
     });
     expect(rules.setConsumable(full, "fx_decoy", 1)).toEqual(refused("fx_decoy", "doesnt-fit"));
     expect(rules.setConsumable(full, "fx_chaff", 1)).toEqual(refused("fx_chaff", "doesnt-fit"));
@@ -309,7 +309,7 @@ describe("consumables", () => {
     const armed = rules.setSlot(withFlares, "con_weapon_01", "fx_dart_launcher").loadout;
     expect(rules.setConsumable(armed, "fx_dart", 12)).toEqual({
       loadout: loadout("fx_ship", { slots: { con_weapon_01: "fx_dart_launcher" }, consumables: { fx_flare: 3, fx_dart: 10 } }),
-      repairs: [{ type: "clamped", place, equipment: "fx_dart", name: "fx_dart", from: 12, to: 10 }],
+      repairs: [{ type: "clamped", place: place("fx_dart"), equipment: "fx_dart", name: "fx_dart", from: 12, to: 10 }],
     });
   });
 
@@ -378,6 +378,17 @@ describe("what each place can take", () => {
     expect(rules.options(empty, { kind: "group", group: "enginegroup", groupKind: "shield" })).toEqual([bubble]);
     expect(rules.options(empty, { kind: "thruster" })).toEqual([nimble]);
     expect(rules.options(empty, { kind: "engine" })).toEqual([bubble, wall, fusion, nimble]);
+  });
+
+  test("a software place takes only its own software, and only from the Ship's fit list", () => {
+    const scanner = priced("software", "fx_scanner", { min: 0, average: 0, max: 0 });
+    const courier = ship({ software: { fitList: "fl_software", mandatory: [] } });
+    const softwareRules = loadoutRules(
+      gameData([courier], [scanner, bubble], [{ id: "fl_software", equipment: ["fx_scanner"] }]),
+      courier,
+    );
+    expect(softwareRules.options(empty, { kind: "software", equipment: "fx_scanner" })).toEqual([scanner]);
+    expect(softwareRules.options(empty, { kind: "software", equipment: "fx_bubble" })).toEqual([]);
   });
 
   test("a place the Ship doesn't have takes nothing", () => {

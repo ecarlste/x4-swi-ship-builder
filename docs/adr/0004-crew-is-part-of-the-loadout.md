@@ -4,7 +4,7 @@ ADR 0003 left crew out of the Loadout and out of Price, because "the count is a 
 
 What the game does, checked at RDY Wharf on X4 8.00 + SWI 0.9.1 HF (#80), and in SWI's `libraries/loadouts.xml`:
 
-- **The Captain is free and mandatory.** A new Ship always gets one, at no charge, in a seat on top of `people@capacity`. That seat is the +1 in the Crew stat (`people@capacity + 1`, confirmed in #77). The Captain isn't part of a Loadout or of Price.
+- **The Captain is free and mandatory.** A new Ship always gets one, at no charge, in a seat on top of `people@capacity`. That seat is the +1 in the Crew stat (`people@capacity + 1`, confirmed in #77). The Captain isn't part of a Loadout or of Price. The buy screen lists it as a checkbox marked Mandatory, named "Pilot" on S and M Ships and "Captain" on L and XL. A purchase is refused without it, whether bought remotely or in person at the dealer, and once ticked it can't be unticked (#96). So it's never a choice, and the builder treats it as always ticked.
 - **Service crew and marines are optional, start at 0, and share `people@capacity`.** The Z-95 Headhunter (`people@capacity` 1) takes 1 service crew *or* 1 marine.
 - **Both are bought as the base game's `crew` ware, at the same price per head** (6,520 at RDY Wharf, inside its 5,000–10,000 range). Price uses its average and min–max, like any other ware.
 - **The game's own loadouts store them as two counts**, `<crew role="service" exact="N"/>` and `<crew role="marine" exact="N"/>`, and never store a captain.
