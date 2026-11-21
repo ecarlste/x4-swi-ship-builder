@@ -14,6 +14,7 @@ import {
   shield,
   shieldSlot,
   ship,
+  software,
   thruster,
   turretGroup,
   weaponSlot,
@@ -402,5 +403,56 @@ describe("what each place can take", () => {
     expect(rules.limit(empty, { kind: "engine" })).toBe(3);
     expect(rules.limit(empty, { kind: "slot", slot: "con_shield_01" })).toBe(1);
     expect(rules.limit(empty, { kind: "thruster" })).toBe(1);
+  });
+});
+
+describe("setSoftware: one of each Software Family", () => {
+  const lrsMk1 = software("fx_lrs_mk1");
+  const lrsMk2 = software("fx_lrs_mk2", "fx_lrs_mk1");
+  const lrsMk3 = software("fx_lrs_mk3", "fx_lrs_mk2");
+  const trading = software("fx_trading");
+  const scout = ship({ software: { fitList: "fl_software", mandatory: [] } });
+  const rules = loadoutRules(
+    gameData([scout], [lrsMk1, lrsMk2, lrsMk3, trading], [
+      { id: "fl_software", equipment: ["fx_lrs_mk1", "fx_lrs_mk2", "fx_lrs_mk3", "fx_trading"] },
+    ]),
+    scout,
+  );
+  const replaced = (id: string) => ({
+    type: "dropped",
+    place: { kind: "software", equipment: id },
+    equipment: id,
+    name: id,
+    reason: "replaced-in-family",
+  });
+
+  test("fitting a ware swaps out the one of its family already fitted, and reports the swap", () => {
+    const edit = rules.setSoftware(loadout("fx_ship", { software: ["fx_lrs_mk1", "fx_trading"] }), "fx_lrs_mk2", true);
+
+    expect(edit).toEqual({
+      loadout: loadout("fx_ship", { software: ["fx_trading", "fx_lrs_mk2"] }),
+      repairs: [replaced("fx_lrs_mk1")],
+    });
+    expect(describeRepair(edit.repairs[0]!)).toBe("fx_lrs_mk1 in software: dropped, a Ship fits one of each Software Family");
+  });
+
+  test("a family is the whole chain of predecessors, so going back down swaps too", () => {
+    expect(rules.setSoftware(loadout("fx_ship", { software: ["fx_lrs_mk3"] }), "fx_lrs_mk1", true)).toEqual({
+      loadout: loadout("fx_ship", { software: ["fx_lrs_mk1"] }),
+      repairs: [replaced("fx_lrs_mk3")],
+    });
+  });
+
+  test("software with no predecessor is a family of its own, so it sits beside the others", () => {
+    expect(rules.setSoftware(loadout("fx_ship", { software: ["fx_lrs_mk2"] }), "fx_trading", true)).toEqual({
+      loadout: loadout("fx_ship", { software: ["fx_lrs_mk2", "fx_trading"] }),
+      repairs: [],
+    });
+  });
+
+  test("ticking the ware already fitted, or unticking one, swaps nothing", () => {
+    const fitted = loadout("fx_ship", { software: ["fx_lrs_mk2"] });
+    expect(rules.setSoftware(fitted, "fx_lrs_mk2", true)).toEqual({ loadout: fitted, repairs: [] });
+    expect(rules.setSoftware(fitted, "fx_lrs_mk1", false)).toEqual({ loadout: fitted, repairs: [] });
   });
 });

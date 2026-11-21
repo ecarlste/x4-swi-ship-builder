@@ -299,6 +299,28 @@ describe("transform: fit lists", () => {
     expect(report()).toContain(`fx_scout: its software list has "fx_not_software", which isn't a software ware`);
   });
 
+  it("gives each software the software it replaces, skipping predecessors left out of the Game Data", () => {
+    const { item, report } = run(
+      wharfWorld()
+        .ship({
+          id: "fx_scout",
+          owners: ["fx_guild"],
+          software: [{ ware: "fx_scanner_mk1", default: true }, { ware: "fx_scanner_mk3" }],
+        })
+        .equipment({ id: "fx_scanner_mk1", kind: "software" })
+        // No Ship lists the Mk2, so it isn't in the Game Data.
+        .equipment({ id: "fx_scanner_mk2", kind: "software", predecessor: "fx_scanner_mk1" })
+        .equipment({ id: "fx_scanner_mk3", kind: "software", predecessor: "fx_scanner_mk2" }),
+    );
+
+    expect(item("fx_scanner_mk1").predecessor).toBeNull();
+    expect(item("fx_scanner_mk2")).toBeUndefined();
+    expect(item("fx_scanner_mk3").predecessor).toBe("fx_scanner_mk1");
+    expect(report()).toContain(
+      "fx_scanner_mk3: its predecessor fx_scanner_mk2 isn't in the Game Data, so its predecessor is fx_scanner_mk1",
+    );
+  });
+
   it("gives every drone, deployable and countermeasure to Ships that can carry them", () => {
     const { ship, fits, item } = run(
       wharfWorld()

@@ -187,5 +187,40 @@ describe("validateSnapshot", () => {
         'ships: fx_courier mandatory software "fx_pulse_s" is not in fit list "fl_software"',
       ]);
     });
+
+    describe("a Software Family's chain of predecessors", () => {
+      const software = (raw: Record<string, any>, id: string) => raw.equipment.find((e: any) => e.id === id);
+
+      it("accepts software whose predecessor is software", () => {
+        const raw = loadFixture() as Record<string, any>;
+        software(raw, "fx_scanner").predecessor = "fx_flightassist";
+
+        expect(validateSnapshot(raw as RawSnapshot).errors).toEqual([]);
+      });
+
+      it("reports a predecessor that is unknown or isn't software", () => {
+        const errors = errorsAfter((raw) => {
+          software(raw, "fx_scanner").predecessor = "fx_gone";
+          software(raw, "fx_flightassist").predecessor = "fx_pulse_s";
+        });
+
+        expect(errors).toEqual([
+          'equipment: fx_flightassist predecessor "fx_pulse_s" is weapon, not software',
+          'equipment: fx_scanner predecessor refers to unknown equipment "fx_gone"',
+        ]);
+      });
+
+      it("reports a chain that comes back to where it started", () => {
+        const errors = errorsAfter((raw) => {
+          software(raw, "fx_scanner").predecessor = "fx_flightassist";
+          software(raw, "fx_flightassist").predecessor = "fx_scanner";
+        });
+
+        expect(errors).toEqual([
+          "equipment: fx_flightassist predecessors go round in a cycle",
+          "equipment: fx_scanner predecessors go round in a cycle",
+        ]);
+      });
+    });
   });
 });

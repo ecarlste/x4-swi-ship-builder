@@ -22,7 +22,13 @@ export type Place =
 export type EquipmentPlace = Exclude<Place, { kind: "crew" }>;
 
 /** Why an entry was dropped. */
-export type DropReason = "unknown-equipment" | "unknown-slot" | "unknown-slot-group" | "doesnt-fit";
+export type DropReason =
+  | "unknown-equipment"
+  | "unknown-slot"
+  | "unknown-slot-group"
+  | "doesnt-fit"
+  /** Software swapped out for another of its Software Family. */
+  | "replaced-in-family";
 
 /**
  * A Repair: one drop of Equipment, or one count clamped to fit. `name` is the
@@ -58,6 +64,7 @@ const DROP_TEXT: Record<DropReason, string> = {
   "unknown-slot": "the Ship no longer has this Slot",
   "unknown-slot-group": "the Ship no longer has this Slot Group",
   "doesnt-fit": "it no longer fits",
+  "replaced-in-family": "a Ship fits one of each Software Family",
 };
 
 /** One line saying what a Repair did, for notices and tooltips. */

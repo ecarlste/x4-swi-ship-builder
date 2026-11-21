@@ -102,6 +102,9 @@ function readCandidates(files: GameFiles): Candidate[] {
   return candidates;
 }
 
+/** A software ware's `<software predecessor>`: the software it replaces, or null. */
+const predecessorOf = (ware: JsonElement) => attr(child(ware, "software"), "predecessor") ?? null;
+
 /** Every tag of `needed` is in `offered`. */
 const allIn = (needed: string[], offered: string[]) => needed.every((t) => offered.includes(t));
 
@@ -121,6 +124,7 @@ const fitsAll = (lists: string[][]) => lists.reduce((a, b) => a.filter((id) => b
  * - **Thruster**: a thruster fits if its type connection's tags, but for
  *   `component` and `thruster`, are all in the ship macro's `<thruster tags>`.
  * - **Software**: the ship macro's `<software>` list; `default="1"` is mandatory.
+ *   Each software ware's `<software predecessor>` chains it into its Software Family.
  * - **Drones, deployables, countermeasures**: all of them, if the Ship can carry any.
  * - **Missiles**: a launcher (a `missilelauncher` or `missileturret` macro)
  *   fires the missiles whose `<missile tags>` are all in its `<ammunition tags>`.
@@ -306,11 +310,34 @@ export function readEquipment(
     return id;
   };
 
-  const equipment = [...included.values()].map((item) =>
-    (item.kind === "weapon" || item.kind === "turret") && launcherMissiles.has(item.id)
-      ? { ...item, missiles: fitList("missile", launcherMissiles.get(item.id)!) }
-      : item,
-  );
+  /**
+   * A Software Family is kept whole when a ware in its chain is left out: the
+   * predecessor is the nearest one up the chain that is in the Game Data.
+   */
+  const includedPredecessor = (id: string, predecessor: string | null): string | null => {
+    const seen = new Set([id]);
+    let at = predecessor;
+    while (at !== null && !included.has(at) && !seen.has(at)) {
+      seen.add(at);
+      const ware = known.get(at)?.ware;
+      at = ware ? predecessorOf(ware) : null;
+    }
+    const kept = at !== null && included.has(at) ? at : null;
+    if (predecessor !== null && kept !== predecessor) {
+      warnings.push(
+        `${id}: its predecessor ${predecessor} isn't in the Game Data, so its predecessor is ${kept ?? "none"}`,
+      );
+    }
+    return kept;
+  };
+
+  const equipment = [...included.values()].map((item) => {
+    if ((item.kind === "weapon" || item.kind === "turret") && launcherMissiles.has(item.id)) {
+      return { ...item, missiles: fitList("missile", launcherMissiles.get(item.id)!) };
+    }
+    if (item.kind === "software") return { ...item, predecessor: includedPredecessor(item.id, item.predecessor) };
+    return item;
+  });
 
   const withFitLists = ships.map((ship): Ship => {
     const fits = shipFits.get(ship.id)!;
@@ -498,7 +525,8 @@ function readItem(
     case "drone":
     case "deployable":
     case "countermeasure":
-    case "software":
       return { kind: c.kind, ...common };
+    case "software":
+      return { kind: "software", ...common, predecessor: predecessorOf(c.ware) };
   }
 }

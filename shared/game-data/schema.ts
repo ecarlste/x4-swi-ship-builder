@@ -266,7 +266,18 @@ export const equipmentSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("drone"), ...tradeableFields }).strict(),
   z.object({ kind: z.literal("deployable"), ...tradeableFields }).strict(),
   z.object({ kind: z.literal("countermeasure"), ...tradeableFields }).strict(),
-  z.object({ kind: z.literal("software"), ...tradeableFields }).strict(),
+  z
+    .object({
+      kind: z.literal("software"),
+      ...tradeableFields,
+      /**
+       * The software this one replaces (`<software predecessor>`), or null. A
+       * chain of predecessors is one Software Family, and a Ship fits at most
+       * one of a family.
+       */
+      predecessor: id.nullable(),
+    })
+    .strict(),
 ]);
 export type Equipment = z.infer<typeof equipmentSchema>;
 export type EquipmentKind = Equipment["kind"];

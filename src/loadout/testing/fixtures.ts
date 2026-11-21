@@ -103,7 +103,16 @@ export function priced(
   id: string,
   price: { min: number; average: number; max: number },
 ): Equipment {
-  return { kind, ...tradeable(id), price };
+  return kind === "software" ? { kind, ...tradeable(id), price, predecessor: null } : { kind, ...tradeable(id), price };
+}
+
+/** Software that replaces `predecessor` in its Software Family, at a price. */
+export function software(
+  id: string,
+  predecessor: string | null = null,
+  price = { min: 0, average: 0, max: 0 },
+): Equipment {
+  return { kind: "software", ...tradeable(id), price, predecessor };
 }
 
 export function gameData(ships: Ship[], equipment: Equipment[] = [], fitLists: FitList[] = []): GameData {

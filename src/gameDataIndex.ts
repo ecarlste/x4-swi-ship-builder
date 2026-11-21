@@ -16,6 +16,12 @@ export interface GameDataIndex {
   fits(fitListId: string, equipmentId: string): boolean;
   /** The Equipment a fit list lists, in its order; empty for an unknown fit list. */
   fitListEquipment(fitListId: string): Equipment[];
+  /**
+   * A piece of software and every one it replaces, newest first: its chain
+   * in its Software Family. The last id is the family's first ware, the same
+   * for every ware of the family. Just the id for anything else.
+   */
+  softwareChain(equipmentId: string): readonly string[];
 }
 
 const indexes = new WeakMap<GameData, GameDataIndex>();
@@ -43,5 +49,15 @@ function buildIndex(gameData: GameData): GameDataIndex {
     licences: byId(gameData.licences),
     fits: (fitListId, equipmentId) => fitListSets.get(fitListId)?.has(equipmentId) ?? false,
     fitListEquipment: (fitListId) => (fitLists.get(fitListId) ?? []).flatMap((id) => equipment.get(id) ?? []),
+    softwareChain: (equipmentId) => {
+      const chain = [equipmentId];
+      // The integrity pass refuses cycles; stopping at a repeat keeps this safe regardless.
+      for (let at = equipment.get(equipmentId); at?.kind === "software" && at.predecessor !== null; ) {
+        if (chain.includes(at.predecessor)) break;
+        chain.push(at.predecessor);
+        at = equipment.get(at.predecessor);
+      }
+      return chain;
+    },
   };
 }

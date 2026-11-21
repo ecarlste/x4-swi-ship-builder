@@ -77,7 +77,9 @@ const wholeCount = (count: number) => (Number.isFinite(count) ? Math.floor(count
 
 /** The Loadout's rules for one Ship. The Ship is indexed once, here. */
 export function loadoutRules(gameData: GameData, ship: Ship) {
-  const { equipment, fits, fitListEquipment } = indexGameData(gameData);
+  const { equipment, fits, fitListEquipment, softwareChain } = indexGameData(gameData);
+  /** A Software Family is named by its first ware. */
+  const familyOf = (id: string) => softwareChain(id).at(-1)!;
   const nameOf = (id: string) => equipment.get(id)?.name ?? id;
   // Engine Slots aren't filled one at a time: the engine is fitted to the whole Ship (ADR 0001).
   const slots = new Map(ship.slots.filter((s) => s.kind !== "engine").map((s) => [s.id, s]));
@@ -86,9 +88,16 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
   const groups = new Map(ship.slotGroups.map((g) => [g.id, g]));
   const groupPart = (groupId: string, kind: SlotGroupKind) => groups.get(groupId)?.kinds[kind];
 
+  const drop = (place: EquipmentPlace, id: string, reason: DropReason): LoadoutRepair => ({
+    type: "dropped",
+    place,
+    equipment: id,
+    name: nameOf(id),
+    reason,
+  });
   const dropped = (loadout: Loadout, place: EquipmentPlace, id: string, reason: DropReason): Edit => ({
     loadout,
-    repairs: [{ type: "dropped", place, equipment: id, name: nameOf(id), reason }],
+    repairs: [drop(place, id, reason)],
   });
 
   /** Why Equipment can't go on this fit list (undefined for a place the Ship doesn't have), or null if it fits. */
@@ -132,7 +141,7 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
     const kept: Record<string, number> = {};
     for (const [id, count] of Object.entries(loadout.consumables ?? {})) {
       if (carried.has(id)) kept[id] = count;
-      else repairs.push({ type: "dropped", place: { kind: "consumable", equipment: id }, equipment: id, name: nameOf(id), reason: "doesnt-fit" });
+      else repairs.push(drop({ kind: "consumable", equipment: id }, id, "doesnt-fit"));
     }
     return { loadout: withEntry(loadout, "consumables", kept), repairs };
   };
@@ -256,15 +265,24 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
       return noRepairs(withEntry(loadout, "thruster", id ?? undefined));
     },
 
-    /** Adds or removes one piece of software. */
+    /**
+     * Adds or removes one piece of software. A Ship fits one of each Software
+     * Family, so fitting one swaps out any other of its family, reported as a
+     * drop.
+     */
     setSoftware(loadout: Loadout, id: string, fitted: boolean): Edit {
-      if (fitted) {
-        const reason = refusal(id, ship.software.fitList, "doesnt-fit");
-        if (reason) return dropped(loadout, { kind: "software", equipment: id }, id, reason);
-      }
-      const software = (loadout.software ?? []).filter((s) => s !== id);
-      if (fitted) software.push(id);
-      return noRepairs(withEntry(loadout, "software", software));
+      const current = loadout.software ?? [];
+      if (!fitted) return noRepairs(withEntry(loadout, "software", current.filter((s) => s !== id)));
+      const reason = refusal(id, ship.software.fitList, "doesnt-fit");
+      if (reason) return dropped(loadout, { kind: "software", equipment: id }, id, reason);
+      if (current.includes(id)) return noRepairs(loadout);
+      const family = familyOf(id);
+      const swapped = current.filter((s) => s !== id && familyOf(s) === family);
+      const software = [...current.filter((s) => !swapped.includes(s)), id];
+      return {
+        loadout: withEntry(loadout, "software", software),
+        repairs: swapped.map((s) => drop({ kind: "software", equipment: s }, s, "replaced-in-family")),
+      };
     },
 
     /**
