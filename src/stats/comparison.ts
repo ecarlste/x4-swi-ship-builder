@@ -10,6 +10,7 @@ import type { Equipment, GameData } from "../gameData.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
 import type { Loadout } from "../loadout/loadout.ts";
 import { gunOutput, launcherMissile, missilesBestFirst, type Gun, type Missile } from "./firepower.ts";
+import { boostRechargeRate } from "./flight.ts";
 import { compareFigure, comparePrice, shownPrice, shownValue, type Verdict } from "./figure.ts";
 
 export interface Figure {
@@ -65,19 +66,28 @@ function outputFigures(gun: Gun, missile: Missile | undefined): RawFigure[] {
   ];
 }
 
-/** A launcher's own missile storage, which adds to the Ship's Missiles; none for any other gun. */
-function storageFigures(gun: Gun): RawFigure[] {
-  return gun.missiles === null ? [] : [{ label: "Missile Storage", unit: "", decimals: 0, value: gun.missileStorage }];
+const isLauncher = (item: Equipment | null): item is Gun =>
+  (item?.kind === "weapon" || item?.kind === "turret") && item.missiles !== null;
+
+/**
+ * A gun's own missile storage, which adds to the Ship's Missiles: shown for a
+ * launcher, and for any gun against a fitted launcher, whose storage it would
+ * give up.
+ */
+function storageFigures(gun: Gun, fitted: Equipment | null): RawFigure[] {
+  return isLauncher(gun) || isLauncher(fitted)
+    ? [{ label: "Missile Storage", unit: "", decimals: 0, value: gun.missileStorage }]
+    : [];
 }
 
-/** An item's own figures, by kind, as the stats panel computes them for this Loadout. */
-function figures(index: GameDataIndex, loadout: Loadout, item: Equipment): RawFigure[] {
+/** An item's own figures, by kind, as the stats panel computes them for this Loadout, against `fitted`. */
+function figures(index: GameDataIndex, loadout: Loadout, item: Equipment, fitted: Equipment | null): RawFigure[] {
   switch (item.kind) {
     case "weapon":
     case "turret":
       return [
         ...outputFigures(item, launcherMissile(item, loadout.consumables ?? {}, index)),
-        ...storageFigures(item),
+        ...storageFigures(item, fitted),
       ];
     case "shield":
       return [
@@ -89,15 +99,18 @@ function figures(index: GameDataIndex, loadout: Loadout, item: Equipment): RawFi
       return [
         // In kN, as the Encyclopedia shows them; Travel Thrust is its Max Travel Thrust (#63).
         { label: "Thrust", unit: "kN", decimals: 0, value: item.thrust.forward },
+        // Boost Speed's and Boost Acceleration's thrusts, before the Ship's drag and mass.
+        // unconfirmed (#114): no game screen checked for either.
         { label: "Boost Thrust", unit: "kN", decimals: 0, value: item.thrust.forward * item.boost.thrust },
+        {
+          label: "Boost Acceleration Thrust",
+          unit: "kN",
+          decimals: 0,
+          value: item.thrust.forward * item.boost.acceleration,
+        },
         // The Stats panel's rows of the same names, which the Ship doesn't change.
         { label: "Boost Capacity", unit: "s", decimals: 1, value: item.boost.duration },
-        {
-          label: "Boost Recharge Rate",
-          unit: "%/s",
-          decimals: 1,
-          value: item.boost.recharge > 0 ? 100 / item.boost.recharge : 0,
-        },
+        { label: "Boost Recharge Rate", unit: "%/s", decimals: 1, value: boostRechargeRate(item) },
         { label: "Travel Thrust", unit: "kN", decimals: 0, value: item.thrust.forward * item.travel.thrust },
         { label: "Travel Charge Time", unit: "s", decimals: 1, value: item.travel.charge, lowerIsBetter: true },
       ];
@@ -122,7 +135,7 @@ export function compareEquipment(
   fitted: Equipment | null,
 ): Comparison {
   const index = indexGameData(gameData);
-  const theirs = fitted ? figures(index, loadout, fitted) : [];
+  const theirs = fitted ? figures(index, loadout, fitted, null) : [];
   const against = (mine: RawFigure[]): Figure[] =>
     mine.map((f) => {
       const shown = shownValue(f.value, f.decimals);
@@ -130,11 +143,11 @@ export function compareEquipment(
       const otherShown = other ? shownValue(other.value, other.decimals) : 0;
       return { label: f.label, unit: f.unit, shown, ...compareFigure(shown, otherShown, f) };
     });
-  const isLauncher = (option.kind === "weapon" || option.kind === "turret") && option.missiles !== null;
+  const launcher = isLauncher(option);
   return {
     // A launcher's output is in its missile rows, so its figures are only its storage.
-    figures: against(isLauncher ? storageFigures(option) : figures(index, loadout, option)),
-    missiles: isLauncher ? missileRows(index, loadout, option, against) : null,
+    figures: against(launcher ? storageFigures(option, fitted) : figures(index, loadout, option, fitted)),
+    missiles: launcher ? missileRows(index, loadout, option, against) : null,
     price: priceDifference(option, fitted),
   };
 }

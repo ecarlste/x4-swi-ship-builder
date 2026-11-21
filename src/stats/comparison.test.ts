@@ -124,7 +124,20 @@ describe("a hovered launcher shows one row per missile (ADR 0002)", () => {
     expect(comparison.figures.map((f) => [f.label, f.shown, f.difference])).toEqual([
       ["Burst Output", 1744, 356],
       ["Sustained Output", 1564, 176],
+      ["Missile Storage", 0, 0],
     ]);
+  });
+
+  test("a gun hovered over a fitted launcher with storage shows the storage it gives up", () => {
+    const rockets = launcher("weapon", "rockets", "fl_krupx_medium", 6);
+    const withRockets = gameData([ship()], [kv22, rockets, ion], [{ id: "fl_krupx_medium", equipment: ["ion"] }]);
+    const comparison = compareEquipment(withRockets, loadout("fx_ship"), kv22, rockets);
+    expect(comparison.figures.at(-1)).toEqual({ label: "Missile Storage", unit: "", shown: 0, difference: -6, verdict: "worse" });
+  });
+
+  test("a gun hovered over a gun shows no Missile Storage", () => {
+    const comparison = compareEquipment(data, loadout("fx_ship"), kv22, kv22);
+    expect(comparison.figures.map((f) => f.label)).toEqual(["Burst Output", "Sustained Output"]);
   });
 });
 
@@ -147,6 +160,8 @@ test("engines show their thrust, boost and travel figures, in the Stats panel's 
   expect(comparison.figures).toEqual([
     { label: "Thrust", unit: "kN", shown: 1500, difference: 1500, verdict: "better" },
     { label: "Boost Thrust", unit: "kN", shown: 6000, difference: 6000, verdict: "better" },
+    // Boost Acceleration's thrust, before the Ship's mass: 1,500 × 2.
+    { label: "Boost Acceleration Thrust", unit: "kN", shown: 3000, difference: 3000, verdict: "better" },
     { label: "Boost Capacity", unit: "s", shown: 10, difference: 10, verdict: "better" },
     // A full recharge in 20 s is 5 % a second, as the Stats panel's row.
     { label: "Boost Recharge Rate", unit: "%/s", shown: 5, difference: 5, verdict: "better" },

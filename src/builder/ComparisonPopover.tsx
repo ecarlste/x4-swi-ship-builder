@@ -8,7 +8,7 @@ import { formatCredits, formatNumber, formatSigned } from "./format.ts";
 /** "+300", "−100" (a true minus sign) or "±0". */
 const signed = (n: number, decimals = 0) => (n === 0 ? "±0" : formatSigned(n, decimals));
 
-/** The decimals `n` needs, up to the 2 of a Recharge Delay. */
+/** The decimals `n` needs, up to 2. */
 function decimalsOf(n: number) {
   const hundredths = Math.round(Math.abs(n) * 100);
   return hundredths % 100 === 0 ? 0 : hundredths % 10 === 0 ? 1 : 2;
