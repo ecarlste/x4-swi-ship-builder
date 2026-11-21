@@ -126,17 +126,17 @@ test("picking another Ship replaces the current one", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Bramble Fighter" })).toHaveCount(0);
 });
 
-test("the Stats panel's Ship block lists each Seller with the Licence it requires", async ({ page }) => {
+test("the Stats panel's Ship block lists each Seller with the Licence it requires, under that Seller's name for it", async ({ page }) => {
   await page.goto("/");
   const shipBlock = page.getByRole("region", { name: "Ship" });
 
-  // A Licence with a reputation shows it.
+  // A Licence with a reputation shows it; each Seller names the licence itself.
   await page.getByRole("combobox", { name: "Size" }).selectOption("L");
   await shipPicker(page).click();
   await page.getByRole("option", { name: "Ironback Hauler" }).click();
   await expect(shipBlock.getByRole("listitem")).toHaveText([
     "Corsair Clans: Fixture Arms Licence (+10)",
-    "Freight Guild: Fixture Arms Licence (+10)",
+    "Freight Guild: Guild Arms Licence (+10)",
   ]);
 
   // A Licence without a reputation shows just its name.

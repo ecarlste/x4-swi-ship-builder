@@ -15,7 +15,6 @@ export function checkIntegrity(data: SnapshotData): string[] {
     ["equipment", data.equipment],
     ["fit-lists", data["fit-lists"]],
     ["factions", data.factions],
-    ["licences", data.licences],
   ] as const;
   for (const [file, rows] of tables) {
     for (const dup of duplicates(rows.map((r) => r.id))) {
@@ -35,7 +34,17 @@ export function checkIntegrity(data: SnapshotData): string[] {
   const fitLists = new Map(data["fit-lists"].map((f) => [f.id, f]));
   const equipment = new Map(data.equipment.map((e) => [e.id, e]));
   const factions = new Set(data.factions.map((f) => f.id));
-  const licences = new Set(data.licences.map((l) => l.id));
+  // A licence is defined per Faction, so a (licence, Faction) pair is its key.
+  const licenceKey = (id: string, faction: string) => `${id} of ${faction}`;
+  for (const dup of duplicates(data.licences.map((l) => licenceKey(l.id, l.faction)))) {
+    errors.push(`licences: duplicate licence "${dup}"`);
+  }
+  for (const licence of data.licences) {
+    if (!factions.has(licence.faction)) {
+      errors.push(`licences: ${licence.id} refers to unknown faction "${licence.faction}"`);
+    }
+  }
+  const licences = new Set(data.licences.map((l) => licenceKey(l.id, l.faction)));
 
   const checkSellersAndLicence = (
     file: string,
@@ -46,8 +55,11 @@ export function checkIntegrity(data: SnapshotData): string[] {
         errors.push(`${file}: ${item.id} seller refers to unknown faction "${seller}"`);
       }
     }
-    if (item.licence !== null && !licences.has(item.licence)) {
-      errors.push(`${file}: ${item.id} licence refers to unknown licence "${item.licence}"`);
+    if (item.licence === null) return;
+    for (const seller of item.sellers) {
+      if (!licences.has(licenceKey(item.licence, seller))) {
+        errors.push(`${file}: ${item.id} licence refers to unknown licence "${licenceKey(item.licence, seller)}"`);
+      }
     }
   };
 

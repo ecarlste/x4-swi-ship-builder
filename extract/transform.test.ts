@@ -204,16 +204,17 @@ describe("transform: Factions and Licences", () => {
     ]);
   });
 
-  it("lists the Licences Ships need, with the reputation when every Seller asks for the same one", () => {
-    const { readJson, ship, report } = run(world());
+  it("lists each Seller's own Licences, under the name and reputation that Seller gives them", () => {
+    const { readJson, ship } = run(world());
 
     expect(readJson("licences.json")).toEqual([
-      { id: "capitalship", name: "Capital Ship Licence", reputation: 20 },
-      { id: "generaluseship", name: "General Use Ship Licence", reputation: -10 },
-      { id: "militaryship", name: "Military Ship Licence", reputation: null },
+      { id: "capitalship", faction: "fx_guild", name: "Guild Capital Licence", reputation: 20 },
+      { id: "capitalship", faction: "fx_navy", name: "Navy Capital Licence", reputation: 20 },
+      { id: "generaluseship", faction: "fx_guild", name: "Guild Civilian Licence", reputation: -10 },
+      { id: "militaryship", faction: "fx_guild", name: "Guild Military Licence", reputation: 10 },
+      { id: "militaryship", faction: "fx_navy", name: "Navy Military Licence", reputation: -10 },
     ]);
     expect(ship("fx_free").licence).toBeNull();
-    expect(report()).toContain("Licence militaryship needs a different reputation per Seller, so none is given: 10 (fx_guild); -10 (fx_navy)");
   });
 
   it("fails when a Seller isn't defined in libraries/factions.xml", () => {
@@ -305,7 +306,7 @@ describe("transform: Ships", () => {
   it("writes a buildable Ship with its ware, macro and component data", () => {
     const { ship } = run(
       new FixtureWorld()
-        .faction({ id: "fx_guild", name: "Freight Guild" })
+        .faction({ id: "fx_guild", name: "Freight Guild", licences: [{ type: "generaluseship", name: "Guild Ship Licence" }] })
         .station({ faction: "fx_guild", builds: ["ship_s ship_m"] })
         .ship({
           id: "fx_fighter",
@@ -332,7 +333,7 @@ describe("transform: Ships", () => {
     expect(ship("fx_fighter")).toEqual({
       id: "fx_fighter",
       name: "Fixture Fighter",
-      nameId: "{900,2}",
+      nameId: "{900,3}",
       price: { min: 80, average: 100, max: 120 },
       licence: "generaluseship",
       sellers: ["fx_guild"],

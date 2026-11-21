@@ -1,4 +1,6 @@
 [
-  { "id": "fx_militaryequipment", "name": "Fixture Arms Licence", "reputation": 10 },
-  { "id": "fx_shiplicence", "name": "Fixture Ship Licence", "reputation": null }
+  { "id": "fx_militaryequipment", "faction": "fx_corsairs", "name": "Fixture Arms Licence", "reputation": 10 },
+  { "id": "fx_militaryequipment", "faction": "fx_guild", "name": "Guild Arms Licence", "reputation": 10 },
+  { "id": "fx_shiplicence", "faction": "fx_corsairs", "name": "Fixture Ship Licence", "reputation": null },
+  { "id": "fx_shiplicence", "faction": "fx_guild", "name": "Fixture Ship Licence", "reputation": null }
 ]

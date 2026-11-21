@@ -25,4 +25,15 @@ describe.skipIf(!hasSnapshot)("Game Data check: game-data/current", () => {
 
     expect(validateSnapshot(raw).errors).toEqual([]);
   });
+
+  // Checked against the game's buy screen on 2026-11-21 (#112): each Seller names its own copy of a licence type.
+  it("names the X-wing XJ-3/5's Licence as the Rebel Alliance's buy screen does", () => {
+    const read = (file: string) => JSON.parse(readFileSync(join(current, `${file}.json`), "utf8"));
+    const xwing = read("ships").find((s: { id: string }) => s.id === "t65xj3_xwing");
+    const licence = read("licences").find(
+      (l: { id: string; faction: string }) => l.id === xwing.licence && l.faction === "rebelalliance",
+    );
+
+    expect(licence?.name).toBe("Rebellion Advanced Ships Access");
+  });
 });

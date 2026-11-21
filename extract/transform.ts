@@ -69,7 +69,7 @@ export function transform({ cacheDir, gameDataDir, pipelineCommit, now = new Dat
 
   const factions = readFactions(files, text, [...fitted.ships, ...equipment]);
   const ships = disambiguateNames(fitted.ships, factions).sort(byId);
-  const licences = readLicences(files, [...ships, ...equipment], warnings);
+  const licences = readLicences(files, text, [...ships, ...equipment]);
   const crewPrice = readWarePrice(files, "crew");
 
   const content = {
@@ -220,45 +220,40 @@ function readWarePrice(files: GameFiles, id: string): Price {
   return { min: read("min"), average: read("average"), max: read("max") };
 }
 
-/** Display names for the licence types, which the game only names per Faction. */
-const LICENCE_NAMES: Record<string, string> = {
-  generaluseship: "General Use Ship Licence",
-  militaryship: "Military Ship Licence",
-  capitalship: "Capital Ship Licence",
-  generaluseequipment: "General Use Equipment Licence",
-  militaryequipment: "Military Equipment Licence",
-  capitalequipment: "Capital Equipment Licence",
-};
-
 /**
- * The Licences Ships and Equipment need. Each Faction defines its own copy of a licence
- * type, with its own name and `minrelation`, in libraries/factions.xml. The
- * reputation is given only when every Seller that defines the licence asks
- * for the same one; otherwise it is null, and listed as a warning.
+ * The Licences Ships and Equipment need, one per Seller and licence type:
+ * each Faction defines its own copy of a licence type in
+ * libraries/factions.xml, with its own name (the Rebel Alliance's
+ * `capitalship` is "Rebellion Advanced Ships Access") and `minrelation`.
+ * A Seller that doesn't define a licence its wares need fails extraction.
  */
-function readLicences(files: GameFiles, ships: (Ship | Equipment)[], warnings: string[]): Licence[] {
+function readLicences(files: GameFiles, text: TextResolver, items: (Ship | Equipment)[]): Licence[] {
   const factions = new Map(
     children(files.requireFile("libraries/factions.xml"), "faction").map((f) => [attr(f, "id"), f]),
   );
-  const types = [...new Set(ships.flatMap((s) => (s.licence === null ? [] : [s.licence])))].sort();
-  return types.map((type) => {
-    const sellers = [...new Set(ships.filter((s) => s.licence === type).flatMap((s) => s.sellers))].sort();
-    const thresholds = new Map<number, string[]>();
-    for (const seller of sellers) {
-      const definition = children(child(factions.get(seller), "licences"), "licence").find((l) => attr(l, "type") === type);
-      const relation = numberAttr(definition, "minrelation", `faction ${seller} licence ${type}`);
-      if (relation === undefined) continue;
-      const reputation = relationToReputation(relation);
-      thresholds.set(reputation, [...(thresholds.get(reputation) ?? []), seller]);
-    }
-    let reputation: number | null = null;
-    if (thresholds.size === 1) reputation = [...thresholds.keys()][0]!;
-    else if (thresholds.size > 1) {
-      const byValue = [...thresholds].map(([rep, fs]) => `${rep} (${fs.join(", ")})`).join("; ");
-      warnings.push(`Licence ${type} needs a different reputation per Seller, so none is given: ${byValue}`);
-    }
-    return { id: type, name: LICENCE_NAMES[type] ?? type, reputation };
-  });
+  const needed = new Map<string, { id: string; faction: string }>();
+  for (const item of items) {
+    if (item.licence === null) continue;
+    for (const faction of item.sellers) needed.set(`${item.licence} ${faction}`, { id: item.licence, faction });
+  }
+  return [...needed]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([, { id, faction }]) => {
+      const where = `faction ${faction} licence ${id}`;
+      const definition = children(child(factions.get(faction), "licences"), "licence").find(
+        (l) => attr(l, "type") === id && attr(l, "name") !== undefined,
+      );
+      if (!definition) {
+        throw new ExtractError(`Faction "${faction}" sells wares that need licence "${id}" but libraries/factions.xml doesn't define it for that Faction`);
+      }
+      const relation = numberAttr(definition, "minrelation", where);
+      return {
+        id,
+        faction,
+        name: text.resolve(attr(definition, "name")!, where),
+        reputation: relation === undefined ? null : relationToReputation(relation),
+      };
+    });
 }
 
 /**

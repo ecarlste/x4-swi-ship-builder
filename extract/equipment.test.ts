@@ -27,7 +27,7 @@ function run(world: FixtureWorld) {
 /** A Faction with a wharf (S/M), and an S fighter with two weapon Slots and an engine. */
 function wharfWorld(): FixtureWorld {
   return new FixtureWorld()
-    .faction({ id: "fx_guild", name: "Freight Guild" })
+    .faction({ id: "fx_guild", name: "Freight Guild", licences: [{ type: "militaryequipment", name: "Guild Arms Licence" }] })
     .station({ faction: "fx_guild", builds: ["ship_s ship_m"] })
     .ship({
       id: "fx_fighter",
@@ -133,7 +133,7 @@ describe("transform: the Equipment Seller rule", () => {
       .faction({ id: "fx_guild", name: "Freight Guild" })
       .faction({ id: "fx_navy", name: "Fixture Navy" })
       .faction({ id: "fx_rebels", name: "Rebel Cells" })
-      .faction({ id: "fx_dockers", name: "Dock Union" })
+      .faction({ id: "fx_dockers", name: "Dock Union", licences: [{ type: "militaryequipment", name: "Dock Arms Licence" }] })
       .station({ faction: "fx_guild", builds: ["ship_s ship_m"] })
       .station({ faction: "fx_navy", builds: ["ship_l"] })
       .station({ faction: "fx_dockers", builds: [], equips: ["ship_s ship_m ship_l"], tags: "equipmentdock" })
@@ -195,7 +195,12 @@ describe("transform: the Equipment Seller rule", () => {
     );
 
     expect(readJson("factions.json").map((f: { id: string }) => f.id)).toEqual(["fx_dockers", "fx_guild", "fx_navy"]);
-    expect(readJson("licences.json")).toContainEqual({ id: "militaryequipment", name: "Military Equipment Licence", reputation: null });
+    expect(readJson("licences.json")).toContainEqual({
+      id: "militaryequipment",
+      faction: "fx_dockers",
+      name: "Dock Arms Licence",
+      reputation: null,
+    });
   });
 });
 
