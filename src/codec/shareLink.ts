@@ -44,14 +44,19 @@ export async function shareLinkUrl(base: string, loadout: SharedLoadout): Promis
   return link;
 }
 
+/** The encoded Loadout in a URL fragment (`location.hash`), or null when it doesn't carry a Share Link. */
+const encodedIn = (hash: string) => new URLSearchParams(hash.replace(/^#/, "")).get(FRAGMENT_KEY);
+
+/** Whether a URL fragment (`location.hash`) carries a Share Link, sound or not. */
+export const carriesShareLink = (hash: string) => encodedIn(hash) !== null;
+
 /**
  * Reads the Loadout from a URL fragment (`location.hash`). Null when the
  * fragment doesn't carry a Share Link; otherwise the validated Loadout, or an
  * error for a bad or tampered link or a newer `format`.
  */
 export async function readShareLink(hash: string): Promise<ParseResult<SharedLoadout> | null> {
-  const params = new URLSearchParams(hash.replace(/^#/, ""));
-  const encoded = params.get(FRAGMENT_KEY);
+  const encoded = encodedIn(hash);
   if (encoded === null) return null;
 
   let value: unknown;

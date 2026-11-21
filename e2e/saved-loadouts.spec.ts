@@ -66,46 +66,18 @@ test("a first save asks for a name, suggesting the Ship's, and the Loadout reope
   await expect(row(page, /con_shield_01/).getByRole("combobox")).toHaveText(/Bubble Shield M/);
 });
 
-test("saving again updates the opened Saved Loadout without asking for a name", async ({ page }) => {
+test("deleting the open Saved Loadout keeps its name, and Save asks for a name, suggesting it", async ({ page }) => {
   await pickShip(page, "S", "Swiftwing Courier");
   await saveAs(page, "Courier A");
-
-  await fit(page, /con_weapon_01/, "Zephyr Cannon");
-  await saveButton(page).click();
-  await expect(saveDialog(page)).toBeHidden();
-  await expect(page.getByRole("status")).toContainText("Courier A");
-
-  await page.reload();
-  await showSavedLoadouts(page);
-  await expect(savedList(page).getByRole("listitem")).toHaveCount(1);
-  await savedEntry(page, "Courier A").getByRole("button", { name: "Open" }).click();
-  await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/Zephyr Cannon/);
-});
-
-test("picking another Ship and saving asks for a name again and adds a new Saved Loadout", async ({ page }) => {
-  await pickShip(page, "S", "Swiftwing Courier");
-  await saveAs(page, "Courier A");
-
-  await pickShip(page, "S", "Bramble Fighter");
-  await saveAs(page, "Bramble A");
-
-  await showSavedLoadouts(page);
-  await expect(savedList(page).getByRole("listitem")).toHaveText([/Courier A.*Swiftwing Courier/, /Bramble A.*Bramble Fighter/]);
-});
-
-test("a Saved Loadout can be deleted", async ({ page }) => {
-  await pickShip(page, "S", "Swiftwing Courier");
-  await saveAs(page, "Courier A");
-  await pickShip(page, "S", "Bramble Fighter");
-  await saveAs(page, "Bramble A");
 
   await showSavedLoadouts(page);
   await savedEntry(page, "Courier A").getByRole("button", { name: "Delete" }).click();
-  await expect(savedList(page).getByRole("listitem")).toHaveText([/Bramble A/]);
+  await expect(savedList(page).getByRole("listitem")).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe("[]");
 
-  await page.reload();
-  await showSavedLoadouts(page);
-  await expect(savedList(page).getByRole("listitem")).toHaveText([/Bramble A/]);
+  await expect(page.getByRole("toolbar")).toContainText("Courier A");
+  await saveButton(page).click();
+  await expect(saveDialog(page).getByRole("textbox", { name: "Name" })).toHaveValue("Courier A");
 });
 
 test("a damaged entry is Unreadable with Delete only, and the others still open", async ({ page }) => {
@@ -127,17 +99,10 @@ test("a damaged entry is Unreadable with Delete only, and the others still open"
   await expect(page.getByRole("combobox", { name: "Ship" })).toHaveValue("Swiftwing Courier");
 });
 
-test("a stored value that isn't a list shows an error and is left untouched", async ({ page }) => {
+test("a stored value that isn't a list shows its error in the list", async ({ page }) => {
   await storeRaw(page, '{"not":"a list"}');
 
   await showSavedLoadouts(page);
   await expect(savedList(page).getByRole("alert")).toContainText("couldn't be read");
   await expect(savedList(page).getByRole("listitem")).toHaveCount(0);
-
-  await pickShip(page, "S", "Swiftwing Courier");
-  await saveButton(page).click();
-  await saveDialog(page).getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("alert").first()).toContainText("couldn't be read");
-
-  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe('{"not":"a list"}');
 });

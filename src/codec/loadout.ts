@@ -102,3 +102,21 @@ export function parseSavedLoadout(value: unknown): ParseResult<SavedLoadout> {
 export function parseSharedLoadout(value: unknown): ParseResult<SharedLoadout> {
   return parseWith(sharedLoadoutSchema, value);
 }
+
+/** A Loadout split from the name it was opened under, with the id of the Saved Loadout it is, if it is one. */
+export interface Opening<Named> {
+  loadout: Loadout;
+  named: Named;
+}
+
+/** A Saved Loadout as the Loadout it holds, and its id and name. */
+export function openingOfSaved(saved: SavedLoadout): Opening<{ id: string; name: string }> {
+  const { id, name, createdAt: _createdAt, updatedAt: _updatedAt, ...loadout } = saved;
+  return { loadout, named: { id, name } };
+}
+
+/** A shared Loadout as the Loadout it carries, and the name it was shared under, if it had one. */
+export function openingOfShared(shared: SharedLoadout): Opening<{ name: string } | null> {
+  const { name, ...loadout } = shared;
+  return { loadout, named: name === undefined ? null : { name } };
+}

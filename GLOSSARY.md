@@ -64,6 +64,10 @@ _Avoid_: cost, value, purchase price
 The loadout every ship starts with in the builder: no equipment at all, not even software, and no Crew. Like a shipyard, it starts with only the Captain.
 _Avoid_: default loadout, base loadout, template
 
+**Loaded Loadout**:
+The Loadout as it was last opened or saved, which the builder compares the current Loadout against to show what changed. A freshly picked Ship has none.
+_Avoid_: original, baseline, snapshot
+
 **Saved Loadout**:
 A loadout the user has kept so they can open it again later.
 _Avoid_: favourite, bookmark

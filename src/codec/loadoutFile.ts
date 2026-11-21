@@ -37,9 +37,6 @@ const isNewer = (value: unknown) =>
  * or the file is rejected.
  */
 export function parseLoadoutFile(text: string): { ok: true; loadouts: SavedLoadout[] } | { ok: false; error: string } {
-  if (new TextEncoder().encode(text).byteLength > MAX_LOADOUT_FILE_BYTES) {
-    return { ok: false, error: OVERSIZE_FILE_ERROR };
-  }
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -64,13 +61,17 @@ export function exportLoadoutFile(loadouts: SavedLoadout[]): string {
   return JSON.stringify({ app: LOADOUT_FILE_APP, format: LOADOUT_FORMAT, loadouts }, null, 2);
 }
 
-/** Imports a Loadout File's text, adding its Loadouts after the stored ones. */
-export function importLoadoutFile(
+/**
+ * Imports a picked Loadout File, adding its Loadouts after the stored ones.
+ * A file over the size cap is rejected by its size, before it's read.
+ */
+export async function importLoadoutFile(
   storage: LoadoutStorage,
-  text: string,
+  file: Blob,
   options: { newId?: () => string } = {},
-): { ok: true; added: SavedLoadout[] } | { ok: false; error: string } {
-  const parsed = parseLoadoutFile(text);
+): Promise<{ ok: true; added: SavedLoadout[] } | { ok: false; error: string }> {
+  if (file.size > MAX_LOADOUT_FILE_BYTES) return { ok: false, error: OVERSIZE_FILE_ERROR };
+  const parsed = parseLoadoutFile(await file.text());
   if (!parsed.ok) return parsed;
   return addSavedLoadouts(storage, parsed.loadouts, options);
 }

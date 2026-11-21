@@ -1,18 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { exportLoadoutFile, importLoadoutFile } from "./loadoutFile.ts";
-import { SAVED_LOADOUTS_KEY, readSavedLoadouts, type LoadoutStorage } from "./savedLoadouts.ts";
-
-/** An in-memory stand-in for localStorage. */
-function memoryStorage(initial?: unknown): LoadoutStorage & { raw(): string | null } {
-  let value: string | null = initial === undefined ? null : typeof initial === "string" ? initial : JSON.stringify(initial);
-  return {
-    getItem: (key) => (key === SAVED_LOADOUTS_KEY ? value : null),
-    setItem: (key, v) => {
-      if (key === SAVED_LOADOUTS_KEY) value = v;
-    },
-    raw: () => value,
-  };
-}
+import { memoryStorage } from "./testing/memoryStorage.ts";
+import { MAX_LOADOUT_FILE_BYTES, exportLoadoutFile, importLoadoutFile } from "./loadoutFile.ts";
+import { readSavedLoadouts, type LoadoutStorage } from "./savedLoadouts.ts";
 
 const escort = {
   format: 1 as const,
@@ -49,6 +38,9 @@ const ids = (...list: string[]) => {
 const listed = (storage: LoadoutStorage) =>
   readSavedLoadouts(storage).entries.map((e) => (e.status === "ok" ? e.loadout : e));
 
+/** A picked file holding this text. */
+const blob = (text: string) => new Blob([text], { type: "application/json" });
+
 const file = (over: Record<string, unknown> = {}) =>
   JSON.stringify({ app: "x4-swi-ship-builder", format: 1, loadouts: [escort], ...over });
 
@@ -61,28 +53,28 @@ describe("exporting a Loadout File", () => {
 });
 
 describe("importing a Loadout File", () => {
-  test("round trip: an exported file imported into an empty browser adds every Loadout unchanged", () => {
+  test("round trip: an exported file imported into an empty browser adds every Loadout unchanged", async () => {
     const storage = memoryStorage();
 
-    const result = importLoadoutFile(storage, exportLoadoutFile([escort, gone]));
+    const result = await importLoadoutFile(storage, blob(exportLoadoutFile([escort, gone])));
 
     expect(result).toEqual({ ok: true, added: [escort, gone] });
     expect(listed(storage)).toEqual([escort, gone]);
   });
 
-  test("only adds: stored Saved Loadouts, Unreadable ones included, are kept exactly as they were", () => {
+  test("only adds: stored Saved Loadouts, Unreadable ones included, are kept exactly as they were", async () => {
     const storage = memoryStorage([gone, { name: "broken" }]);
 
-    importLoadoutFile(storage, file());
+    await importLoadoutFile(storage, blob(file()));
 
     expect(JSON.parse(storage.raw()!)).toEqual([gone, { name: "broken" }, escort]);
   });
 
-  test("a Loadout whose id clashes with a stored one gets a new id, and both are kept", () => {
+  test("a Loadout whose id clashes with a stored one gets a new id, and both are kept", async () => {
     const storage = memoryStorage([escort]);
     const renamed = { ...escort, name: "Escort (theirs)" };
 
-    const result = importLoadoutFile(storage, file({ loadouts: [renamed] }), {
+    const result = await importLoadoutFile(storage, blob(file({ loadouts: [renamed] })), {
       newId: ids("99999999-8888-4777-8666-555555555555"),
     });
 
@@ -91,10 +83,10 @@ describe("importing a Loadout File", () => {
     expect(listed(storage)).toEqual([escort, theirs]);
   });
 
-  test("Loadouts sharing an id within one file each get their own", () => {
+  test("Loadouts sharing an id within one file each get their own", async () => {
     const storage = memoryStorage();
 
-    importLoadoutFile(storage, file({ loadouts: [escort, escort] }), {
+    await importLoadoutFile(storage, blob(file({ loadouts: [escort, escort] })), {
       newId: ids("99999999-8888-4777-8666-555555555555"),
     });
 
@@ -108,10 +100,10 @@ describe("importing a Loadout File", () => {
 describe("Loadout Files and Crew (ADR 0004)", () => {
   const boarding = { ...escort, crew: { service: 2, marines: 3 } };
 
-  test("an exported Loadout's Crew comes back unchanged on import", () => {
+  test("an exported Loadout's Crew comes back unchanged on import", async () => {
     const storage = memoryStorage();
 
-    const result = importLoadoutFile(storage, exportLoadoutFile([boarding, gone]));
+    const result = await importLoadoutFile(storage, blob(exportLoadoutFile([boarding, gone])));
 
     expect(result).toEqual({ ok: true, added: [boarding, gone] });
     expect(listed(storage)).toEqual([boarding, gone]);
@@ -122,16 +114,16 @@ describe("Loadout Files and Crew (ADR 0004)", () => {
     expect(JSON.parse(exportLoadoutFile([boarding]))).toMatchObject({ app: "x4-swi-ship-builder", format: 1 });
   });
 
-  test("a file from before Crew imports, with no Crew", () => {
+  test("a file from before Crew imports, with no Crew", async () => {
     const storage = memoryStorage();
 
-    expect(importLoadoutFile(storage, file())).toEqual({ ok: true, added: [escort] });
+    expect(await importLoadoutFile(storage, blob(file()))).toEqual({ ok: true, added: [escort] });
   });
 
-  test("a Crew count that isn't a positive integer fails the whole file", () => {
+  test("a Crew count that isn't a positive integer fails the whole file", async () => {
     for (const crew of [{ service: 0 }, { marines: -2 }, { service: 0.5 }]) {
       const storage = memoryStorage();
-      expect(importLoadoutFile(storage, file({ loadouts: [escort, { ...boarding, crew }] }))).toEqual({
+      expect(await importLoadoutFile(storage, blob(file({ loadouts: [escort, { ...boarding, crew }] })))).toEqual({
         ok: false,
         error: expect.stringMatching(/isn't a Loadout File/),
       });
@@ -141,45 +133,56 @@ describe("Loadout Files and Crew (ADR 0004)", () => {
 });
 
 describe("rejecting a Loadout File in full", () => {
-  const rejects = (text: string, error: RegExp | string) => {
+  const rejects = async (text: string, error: RegExp | string) => {
     const storage = memoryStorage([gone]);
     const before = storage.raw();
 
-    const result = importLoadoutFile(storage, text);
+    const result = await importLoadoutFile(storage, blob(text));
 
     expect(result).toEqual({ ok: false, error: expect.stringMatching(error) });
     expect(storage.raw()).toBe(before);
   };
 
-  test("text that isn't JSON", () => {
-    rejects("not json at all", /isn't a Loadout File/);
+  test("text that isn't JSON", async () => {
+    await rejects("not json at all", /isn't a Loadout File/);
   });
 
-  test("JSON that isn't this app's envelope", () => {
-    rejects(JSON.stringify([escort]), /isn't a Loadout File/);
-    rejects(file({ app: "some-other-builder" }), /isn't a Loadout File/);
-    rejects(file({ loadouts: "none" }), /isn't a Loadout File/);
+  test("JSON that isn't this app's envelope", async () => {
+    await rejects(JSON.stringify([escort]), /isn't a Loadout File/);
+    await rejects(file({ app: "some-other-builder" }), /isn't a Loadout File/);
+    await rejects(file({ loadouts: "none" }), /isn't a Loadout File/);
   });
 
-  test("one bad Loadout fails the whole file, and the good ones aren't added either", () => {
-    rejects(file({ loadouts: [escort, { ...gone, name: "" }] }), /isn't a Loadout File/);
-    rejects(file({ loadouts: [escort, { ...gone, id: "not-a-uuid" }] }), /isn't a Loadout File/);
+  test("one bad Loadout fails the whole file, and the good ones aren't added either", async () => {
+    await rejects(file({ loadouts: [escort, { ...gone, name: "" }] }), /isn't a Loadout File/);
+    await rejects(file({ loadouts: [escort, { ...gone, id: "not-a-uuid" }] }), /isn't a Loadout File/);
   });
 
-  test("a newer file format, or a newer Loadout format inside it", () => {
-    rejects(file({ format: 2 }), "This Loadout File was made by a newer version of the builder.");
-    rejects(file({ loadouts: [escort, { ...gone, format: 2 }] }), "This Loadout File was made by a newer version of the builder.");
+  test("a newer file format, or a newer Loadout format inside it", async () => {
+    await rejects(file({ format: 2 }), "This Loadout File was made by a newer version of the builder.");
+    await rejects(file({ loadouts: [escort, { ...gone, format: 2 }] }), "This Loadout File was made by a newer version of the builder.");
   });
 
-  test("a file over 5 MB", () => {
+  test("a file over 5 MB", async () => {
     const padding = "x".repeat(5 * 1024 * 1024);
-    rejects(file({ loadouts: [{ ...escort, name: padding }] }), /over 5 MB/);
+    await rejects(file({ loadouts: [{ ...escort, name: padding }] }), /over 5 MB/);
   });
 
-  test("a stored value that isn't a list is left untouched", () => {
+  test("a file over 5 MB is rejected by its size, without being read", async () => {
+    const storage = memoryStorage([gone]);
+    const unread = {
+      size: MAX_LOADOUT_FILE_BYTES + 1,
+      text: () => Promise.reject(new Error("read a file over the cap")),
+    } as unknown as Blob;
+
+    expect(await importLoadoutFile(storage, unread)).toEqual({ ok: false, error: expect.stringMatching(/over 5 MB/) });
+    expect(listed(storage)).toEqual([gone]);
+  });
+
+  test("a stored value that isn't a list is left untouched", async () => {
     const storage = memoryStorage('{"not":"a list"}');
 
-    const result = importLoadoutFile(storage, file());
+    const result = await importLoadoutFile(storage, blob(file()));
 
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/couldn't be read/) });
     expect(storage.raw()).toBe('{"not":"a list"}');
@@ -187,12 +190,12 @@ describe("rejecting a Loadout File in full", () => {
 });
 
 describe("the size cap", () => {
-  test("a file of exactly 5 MB is accepted", () => {
+  test("a file of exactly 5 MB is accepted", async () => {
     const base = file({ loadouts: [{ ...escort, name: "" }] });
     const name = "x".repeat(5 * 1024 * 1024 - base.length);
     const storage = memoryStorage();
 
-    const result = importLoadoutFile(storage, file({ loadouts: [{ ...escort, name }] }));
+    const result = await importLoadoutFile(storage, blob(file({ loadouts: [{ ...escort, name }] })));
 
     expect(result.ok).toBe(true);
   });

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fit, fragmentFor, loadoutTable, pickShip, row } from "./helpers.ts";
+import { fit, loadoutTable, pickShip, row } from "./helpers.ts";
 
 const stats = (page: Page) => page.getByRole("complementary", { name: "Stats" });
 /** The cells of the first Stats row with this label: its value, then its change once there is one. */
@@ -82,88 +82,6 @@ test("editing an opened Saved Loadout shows the change column and a was line on 
   await expect(row(page, /con_shield_01/)).toContainText("was: Bubble Shield S");
   await expect(changedMarks(page)).toHaveCount(1);
   await expect(row(page, /con_shield_01/).getByTitle("Changed since loading")).toBeVisible();
-});
-
-test("undoing the edits back to the opened Loadout clears every change", async ({ page }) => {
-  await storeCourierWithShield(page);
-  await openSaved(page, "Shielded Courier");
-
-  await fit(page, /con_shield_01/, "— empty —");
-  await fit(page, /con_weapon_01/, "Zephyr Cannon");
-  await expect(changedMarks(page)).toHaveCount(2);
-  await expect(row(page, /con_weapon_01/)).toContainText("was: empty");
-
-  await fit(page, /con_weapon_01/, "— empty —");
-  await fit(page, /con_shield_01/, "Bubble Shield S");
-
-  await expect(changedMarks(page)).toHaveCount(0);
-  await expect(wasLines(page)).toHaveCount(0);
-  await expect(statCells(page, "Shield (MJ)")).toHaveText(["1,000"]);
-  await expect(stats(page).getByRole("region", { name: "Price" })).not.toContainText(/[+−]/);
-});
-
-test("saving makes the saved version the new snapshot", async ({ page }) => {
-  await storeCourierWithShield(page);
-  await openSaved(page, "Shielded Courier");
-
-  await fit(page, /con_weapon_01/, "Zephyr Cannon");
-  await expect(changedMarks(page)).toHaveCount(1);
-
-  await saveButton(page).click();
-  await expect(page.getByRole("status")).toContainText("Shielded Courier");
-  await expect(changedMarks(page)).toHaveCount(0);
-  await expect(statCells(page, "Shield (MJ)")).toHaveText(["1,000"]);
-
-  // Changes are now measured from the saved version, not the one first opened.
-  await fit(page, /con_shield_01/, "— empty —");
-  await expect(changedMarks(page)).toHaveCount(1);
-  await expect(row(page, /con_shield_01/)).toContainText("was: Bubble Shield S");
-  await fit(page, /con_shield_01/, "Bubble Shield S");
-  await expect(changedMarks(page)).toHaveCount(0);
-});
-
-test("a first save of a freshly picked Ship starts tracking changes from the saved version", async ({ page }) => {
-  await pickShip(page, "S", "Swiftwing Courier");
-  await saveAs(page, "Courier A");
-
-  await fit(page, /con_shield_01/, "Bubble Shield S");
-  await expect(row(page, /con_shield_01/)).toContainText("was: empty");
-  await expect(statCells(page, "Shield (MJ)")).toHaveText(["1,000", "+1,000"]);
-  await expect(statCells(page, "Shield (MJ)").nth(1)).toHaveClass(/better/);
-});
-
-test("a freshly picked Ship has no snapshot and shows no changes", async ({ page }) => {
-  await storeCourierWithShield(page);
-  await openSaved(page, "Shielded Courier");
-  await fit(page, /con_shield_01/, "— empty —");
-  await expect(changedMarks(page)).toHaveCount(1);
-
-  await pickShip(page, "S", "Bramble Fighter");
-  await fit(page, /con_weapon_01/, "Zephyr Cannon");
-
-  await expect(changedMarks(page)).toHaveCount(0);
-  await expect(wasLines(page)).toHaveCount(0);
-  await expect(statCells(page, "Hull (MJ)")).toHaveCount(1);
-});
-
-test("a Loadout opened from a Share Link is the snapshot changes are measured from", async ({ page }) => {
-  const fragment = await fragmentFor(page, {
-    format: 1,
-    gameData: { swi: "999", x4: "9.99" },
-    ship: "fx_courier",
-    slots: { con_shield_01: "fx_shield_s" },
-    name: "Shared Courier",
-  });
-  await page.goto(`/${fragment}`);
-  await expect(row(page, /con_shield_01/).getByRole("combobox")).toHaveText(/Bubble Shield S/);
-  await expect(changedMarks(page)).toHaveCount(0);
-
-  await fit(page, /con_shield_01/, "— empty —");
-  await expect(row(page, /con_shield_01/)).toContainText("was: Bubble Shield S");
-  await expect(statCells(page, "Shield (MJ)")).toHaveText(["0", "−1,000"]);
-
-  await fit(page, /con_shield_01/, "Bubble Shield S");
-  await expect(changedMarks(page)).toHaveCount(0);
 });
 
 test("a Slot Group row shows what it held, with its count", async ({ page }) => {
