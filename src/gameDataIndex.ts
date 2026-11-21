@@ -11,7 +11,8 @@ export interface GameDataIndex {
   /** Fit list id → the Equipment ids it lists. */
   fitLists: ReadonlyMap<string, readonly string[]>;
   factions: ReadonlyMap<string, Faction>;
-  licences: ReadonlyMap<string, Licence>;
+  /** The Licence a Seller asks for under a licence type, in that Seller's own name; undefined if it defines none. */
+  licence(licenceId: string, sellerId: string): Licence | undefined;
   /** Whether the fit list lists this Equipment id; false for an unknown fit list. */
   fits(fitListId: string, equipmentId: string): boolean;
   /** The Equipment a fit list lists, in its order; empty for an unknown fit list. */
@@ -41,12 +42,13 @@ function buildIndex(gameData: GameData): GameDataIndex {
   const equipment = byId(gameData.equipment);
   const fitLists = new Map(gameData.fitLists.map((f) => [f.id, f.equipment]));
   const fitListSets = new Map(gameData.fitLists.map((f) => [f.id, new Set(f.equipment)]));
+  const licences = new Map(gameData.licences.map((l) => [`${l.id} ${l.faction}`, l]));
   return {
     ships: byId(gameData.ships),
     equipment,
     fitLists,
     factions: byId(gameData.factions),
-    licences: byId(gameData.licences),
+    licence: (licenceId, sellerId) => licences.get(`${licenceId} ${sellerId}`),
     fits: (fitListId, equipmentId) => fitListSets.get(fitListId)?.has(equipmentId) ?? false,
     fitListEquipment: (fitListId) => (fitLists.get(fitListId) ?? []).flatMap((id) => equipment.get(id) ?? []),
     softwareChain: (equipmentId) => {

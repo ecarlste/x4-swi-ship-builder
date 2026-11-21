@@ -290,9 +290,13 @@ export type FitList = z.infer<typeof fitListSchema>;
 export const factionSchema = z.object({ id, name: z.string().min(1) }).strict();
 export type Faction = z.infer<typeof factionSchema>;
 
+/** A Faction's own copy of a licence type: each Faction names it, and sets its reputation, itself. */
 export const licenceSchema = z
   .object({
+    /** The licence type a ware's `licence` names, e.g. "capitalship". */
     id,
+    /** The Faction that defines this copy. */
+    faction: id,
     name: z.string().min(1),
     /** Reputation the licence needs, if extraction can read it. */
     reputation: z.number().nullable(),

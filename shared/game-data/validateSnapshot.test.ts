@@ -112,12 +112,29 @@ describe("validateSnapshot", () => {
       expect(errors).toEqual(
         expect.arrayContaining([
           'ships: fx_courier seller refers to unknown faction "fx_nobody"',
-          'ships: fx_courier licence refers to unknown licence "fx_no_licence"',
+          'ships: fx_courier licence refers to unknown licence "fx_no_licence of fx_nobody"',
           'equipment: fx_flare seller refers to unknown faction "fx_nobody"',
-          'equipment: fx_flare licence refers to unknown licence "fx_no_licence"',
+          'equipment: fx_flare licence refers to unknown licence "fx_no_licence of fx_guild"',
+          'equipment: fx_flare licence refers to unknown licence "fx_no_licence of fx_nobody"',
         ]),
       );
-      expect(errors).toHaveLength(4);
+      expect(errors).toHaveLength(5);
+    });
+
+    it("reports a Seller that doesn't define the Licence its Ship needs, and a Licence defined twice by one Faction", () => {
+      const errors = errorsAfter((raw) => {
+        raw.licences = raw.licences.filter((l: any) => !(l.id === "fx_shiplicence" && l.faction === "fx_guild"));
+        raw.licences.push({ ...raw.licences[0] });
+      });
+
+      expect(errors).toEqual(
+        expect.arrayContaining([
+          'licences: duplicate licence "fx_militaryequipment of fx_corsairs"',
+          'ships: fx_needle licence refers to unknown licence "fx_shiplicence of fx_guild"',
+          'ships: fx_lancer_guild licence refers to unknown licence "fx_shiplicence of fx_guild"',
+        ]),
+      );
+      expect(errors).toHaveLength(3);
     });
 
     it("reports duplicate ids within a table and within a Ship", () => {
