@@ -9,7 +9,7 @@ import { loadoutStats, type LoadoutStats } from "../stats/stats.ts";
 import { openingOfSaved, openingOfShared, type SavedLoadout } from "../codec/loadout.ts";
 import { carriesShareLink, readShareLink, shareLinkUrl } from "../codec/shareLink.ts";
 import { exportLoadoutFile, importLoadoutFile } from "../codec/loadoutFile.ts";
-import { resolveLoadout, type Resolution } from "../codec/resolve.ts";
+import { resolveLoadout, type Resolution } from "../loadout/resolve.ts";
 import {
   deleteSavedLoadout,
   readSavedLoadouts,
@@ -20,7 +20,7 @@ import {
   type SavedLoadoutList,
 } from "../codec/savedLoadouts.ts";
 import { changedSince } from "./changes.ts";
-import { emptyLoadout, type Loadout } from "./loadout.ts";
+import { emptyLoadout, type Loadout } from "../loadout/loadout.ts";
 
 /** A status line, or an error, shown under the toolbar. */
 export type Message = { kind: "status" | "error"; text: string };
@@ -29,7 +29,7 @@ const status = (text: string): Message => ({ kind: "status", text });
 const error = (text: string): Message => ({ kind: "error", text });
 
 /** What resolving the opened Loadout against the Game Data dropped or clamped, until dismissed. */
-export type ResolutionNotice = Pick<Extract<Resolution, { status: "ok" }>, "changes" | "versions">;
+export type ResolutionNotice = Pick<Extract<Resolution, { status: "ok" }>, "repairs" | "versions">;
 
 export interface SessionState {
   /** The one in-app Loadout. Picking a Ship opens it as an Empty Loadout. */
@@ -143,7 +143,7 @@ export function createSession({ gameData, storage, clipboard, download }: Sessio
       opened: named,
       showSaved: false,
       message: null,
-      notice: resolved.changes.length > 0 ? { changes: resolved.changes, versions: resolved.versions } : null,
+      notice: resolved.repairs.length > 0 ? { repairs: resolved.repairs, versions: resolved.versions } : null,
     });
   };
 

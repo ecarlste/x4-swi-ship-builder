@@ -1,6 +1,6 @@
 import type { GameData, Ship } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
-import { shipEngines, type Loadout } from "../builder/loadout.ts";
+import { shipEngines, type Loadout } from "../loadout/loadout.ts";
 
 /** A mandatory upgrade the Loadout lacks: which row it is, and how to name it. */
 export interface MissingUpgrade {

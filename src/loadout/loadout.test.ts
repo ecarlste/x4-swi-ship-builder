@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { engineSlot, loadout, ship } from "../stats/testing/fixtures.ts";
+import { engineSlot, loadout, ship } from "./testing/fixtures.ts";
 import { crewCount, setCrew, setEngine, shipEngines } from "./loadout.ts";
 
 describe("shipEngines", () => {

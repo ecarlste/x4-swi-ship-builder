@@ -406,12 +406,12 @@ input {
   color: #5c6475;
 }
 
-.saved-loadout-changes {
+.saved-loadout-repairs {
   color: #f5c26b;
   cursor: help;
 }
 
-.changes-notice {
+.repairs-notice {
   margin: 8px 16px;
   padding: 8px 12px;
   border: 1px solid #6b5420;
@@ -420,17 +420,17 @@ input {
   font-size: 13px;
 }
 
-.changes-notice h2 {
+.repairs-notice h2 {
   margin: 0 0 6px;
   font-size: 15px;
   color: #f5c26b;
 }
 
-.changes-notice p {
+.repairs-notice p {
   margin: 0 0 6px;
 }
 
-.changes-notice ul {
+.repairs-notice ul {
   margin: 0 0 8px;
   padding-left: 20px;
 }

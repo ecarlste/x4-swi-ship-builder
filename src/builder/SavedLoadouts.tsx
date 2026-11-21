@@ -2,13 +2,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { GameData } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import type { SavedLoadoutEntry, SavedLoadoutList } from "../codec/savedLoadouts.ts";
-import { describeChange, resolveLoadout } from "../codec/resolve.ts";
+import { describeRepair, resolveLoadout } from "../loadout/resolve.ts";
 
 /**
  * The Saved Loadouts list: each one's name and Ship name, with Open, Export
- * and Delete. Each entry is checked against the Game Data: one that will
- * change on opening is marked ⚠ with a count and a tooltip naming the
- * changes; one whose Ship is gone is Unavailable, with Export and Delete only.
+ * and Delete. Each entry is checked against the Game Data: one that opens
+ * with Repairs is marked ⚠ with a count and a tooltip naming the
+ * Repairs; one whose Ship is gone is Unavailable, with Export and Delete only.
  * An Unreadable entry offers Delete only. A version change alone isn't shown.
  */
 export function SavedLoadoutsList({
@@ -71,14 +71,14 @@ export function SavedLoadoutsList({
               </li>
             );
           }
-          const changes = resolved.changes.length;
+          const repairs = resolved.repairs.length;
           return (
             <li key={`ok-${entry.loadout.id}-${entry.index}`}>
               <span className="saved-loadout-name">{entry.loadout.name}</span>{" "}
               <span className="saved-loadout-ship">{shipName(entry.loadout.ship)}</span>
-              {changes > 0 && (
-                <span className="saved-loadout-changes" title={resolved.changes.map(describeChange).join("\n")}>
-                  ⚠ {changes} {changes === 1 ? "item no longer fits" : "items no longer fit"}
+              {repairs > 0 && (
+                <span className="saved-loadout-repairs" title={resolved.repairs.map(describeRepair).join("\n")}>
+                  ⚠ {repairs} {repairs === 1 ? "item no longer fits" : "items no longer fit"}
                 </span>
               )}
               <span className="saved-loadout-actions">

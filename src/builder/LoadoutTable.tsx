@@ -22,7 +22,7 @@ import {
   type ConsumableKind,
   type Loadout,
   type SlotGroupKind,
-} from "./loadout.ts";
+} from "../loadout/loadout.ts";
 
 const CONSUMABLE_LABEL: Record<ConsumableKind, string> = {
   missile: "Missiles",

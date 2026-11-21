@@ -25,7 +25,7 @@ import {
   shield,
   ship,
   thruster,
-} from "./testing/fixtures.ts";
+} from "../loadout/testing/fixtures.ts";
 import type { Equipment, Ship, Slot } from "../gameData.ts";
 
 /** The shown value of each named row. */

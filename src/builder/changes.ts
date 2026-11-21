@@ -3,7 +3,7 @@
  * copy of the Loadout it opened or last saved, and shows differences
  * only while the current Loadout differs from it.
  */
-import type { Loadout } from "./loadout.ts";
+import type { Loadout } from "../loadout/loadout.ts";
 
 /** A key-order-independent form of a Loadout; software is a set, so its order doesn't count. */
 function canonical(value: unknown): unknown {

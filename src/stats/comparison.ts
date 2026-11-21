@@ -6,7 +6,7 @@
  */
 import type { Equipment, GameData } from "../gameData.ts";
 import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
-import type { Loadout } from "../builder/loadout.ts";
+import type { Loadout } from "../loadout/loadout.ts";
 import { gunOutput, launcherMissile, missilesBestFirst, type Gun, type Missile } from "./firepower.ts";
 import { compareFigure, comparePrice, shownPrice, shownValue, type Verdict } from "./figure.ts";
 

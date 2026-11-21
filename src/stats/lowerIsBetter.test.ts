@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { loadoutStats } from "./stats.ts";
-import { gameData, loadout, ship } from "./testing/fixtures.ts";
+import { gameData, loadout, ship } from "../loadout/testing/fixtures.ts";
 
 describe("stat rows where lower is better", () => {
   test("are the recharge delay and travel charge time rows, and no others", () => {

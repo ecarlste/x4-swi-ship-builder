@@ -1,14 +1,57 @@
 /**
- * Edits to the Loadout being built, in the sparse shape the Loadout codec
- * serializes (spec #25, decided in #9): keyed by game ids, with empty entries
- * left out, so an Empty Loadout is `{ format, gameData, ship }`.
+ * The Loadout: the one zod schema for a Loadout, which the codec checks every
+ * Loadout read from an untrusted place against (spec #25, decided in #9 and
+ * #24), and the edits to the Loadout being built.
+ *
+ * A Loadout is sparse and keyed by Game Data ids, with empty entries left out, so
+ * an Empty Loadout is `{ format, gameData, ship }`. `format` is bumped only
+ * when the serialization changes.
  */
+import { z } from "zod";
 import type { Equipment, GameData, Ship } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { engineParts } from "../../shared/game-data/engines.ts";
-import { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
 
-export { LOADOUT_FORMAT, type Loadout, type SlotGroupKind } from "../codec/loadout.ts";
+export const LOADOUT_FORMAT = 1;
+
+const id = z.string().min(1);
+const positiveCount = z.number().int().positive();
+
+const groupEntrySchema = z.object({ equipment: id, count: positiveCount });
+
+/** The kinds a Loadout fits per Slot Group. Engines aren't one: the engine is fitted to the whole Ship (ADR 0001). */
+export const slotGroupKindSchema = z.enum(["turret", "shield"]);
+export type SlotGroupKind = z.infer<typeof slotGroupKindSchema>;
+
+export const loadoutSchema = z.object({
+  format: z.literal(LOADOUT_FORMAT),
+  gameData: z.object({ swi: id, x4: id }),
+  /** The Ship id. */
+  ship: id,
+  /** Slot id → Equipment id. */
+  slots: z.record(id, id).optional(),
+  /** Slot Group id → kind → the Equipment fitted and how many of the Slot Group's Slots it fills. */
+  groups: z.record(id, z.partialRecord(slotGroupKindSchema, groupEntrySchema)).optional(),
+  /** The engine's Equipment id, fitted to all of the Ship's engine Slots and engine Slot Groups. */
+  engine: id.optional(),
+  /** The thruster's Equipment id. */
+  thruster: id.optional(),
+  /** The software's Equipment ids. */
+  software: z.array(id).optional(),
+  /** A consumable's Equipment id → count. */
+  consumables: z.record(id, positiveCount).optional(),
+  /**
+   * The Crew: service crew and marines, sharing the Ship's crew capacity, which
+   * resolving checks. No Captain: every Ship gets one free (ADR 0004). With
+   * both counts at 0 it is left out, so an empty one is rejected.
+   */
+  crew: z
+    .strictObject({ service: positiveCount.optional(), marines: positiveCount.optional() })
+    .refine((crew) => crew.service !== undefined || crew.marines !== undefined, "Crew needs service crew or marines")
+    .optional(),
+});
+
+export type Loadout = z.infer<typeof loadoutSchema>;
 
 /** A freshly picked Ship, with nothing fitted. */
 export function emptyLoadout(gameData: GameData, ship: Ship): Loadout {

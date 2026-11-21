@@ -42,7 +42,7 @@ A diff that adds or changes how a stat row is computed (`src/stats/`), or how ex
 - marks the formula `unconfirmed (#N)` in a comment, where `#N` is an open ticket to check it in game, **or**
 - differs from the game on purpose, with a comment citing the ADR in `docs/adr/` that records the game's rule, the builder's and why (such as ADR 0002, a launcher's loaded missiles). Its tests cite the ADR, not a game screen.
 
-Fixture inputs in `src/stats/testing/` that were chosen to produce an expected number, rather than copied from Game Data, are marked the same way.
+Fixture inputs in `src/loadout/testing/` that were chosen to produce an expected number, rather than copied from Game Data, are marked the same way.
 
 **Why:** a stat test can't tell a formula that's right from one written to match its own fixture. Only the game decides. #39 checked formulas that had shipped untested in game and found three wrong (launcher storage, a missile's `barrelamount`, the engine class's boost default). #53 fixed them.
 

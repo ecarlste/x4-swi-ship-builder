@@ -1,9 +1,9 @@
 /**
- * Hand-made Game Data for stats engine tests. Names are made up; numbers are
+ * Hand-made Game Data and Loadouts for Loadout and stats engine tests. Names are made up; numbers are
  * copied from the in-game reference cases (#12, #22) as plain values.
  */
 import type { Equipment, FitList, GameData, Ship, Slot, SlotGroup } from "../../gameData.ts";
-import { LOADOUT_FORMAT, type Loadout } from "../../builder/loadout.ts";
+import { LOADOUT_FORMAT, type Loadout } from "../loadout.ts";
 
 const tradeable = (id: string) => ({
   id,

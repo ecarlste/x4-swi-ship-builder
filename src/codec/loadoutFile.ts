@@ -8,7 +8,8 @@
  * rejected in full and nothing from it is stored.
  */
 import { z } from "zod";
-import { LOADOUT_FORMAT, savedLoadoutSchema, type SavedLoadout } from "./loadout.ts";
+import { LOADOUT_FORMAT } from "../loadout/loadout.ts";
+import { savedLoadoutSchema, type SavedLoadout } from "./loadout.ts";
 import { addSavedLoadouts, type LoadoutStorage } from "./savedLoadouts.ts";
 
 export const LOADOUT_FILE_APP = "x4-swi-ship-builder";
