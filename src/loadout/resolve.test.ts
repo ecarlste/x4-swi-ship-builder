@@ -314,8 +314,8 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, repairs } = resolved(loadout({ crew: { service: 2, marines: 3 } }));
     expect(repaired.crew).toEqual({ marines: 1 });
     expect(repairs).toEqual([
-      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 2, to: 0 },
       { type: "clamped", place: { kind: "crew", role: "marines" }, name: "Marines", from: 3, to: 1 },
+      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 2, to: 0 },
     ]);
   });
 
@@ -323,8 +323,38 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_needle", crew: { service: 1, marines: 2 } }));
     expect(repaired).not.toHaveProperty("crew");
     expect(repairs).toEqual([
-      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 1, to: 0 },
       { type: "clamped", place: { kind: "crew", role: "marines" }, name: "Marines", from: 2, to: 0 },
+      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 1, to: 0 },
+    ]);
+  });
+});
+
+describe("resolveLoadout: Crew is replayed marines first (ADR 0004)", () => {
+  // The Swiftwing Courier, holding 3 in this Game Data.
+  const roomier = {
+    ...gameData,
+    ships: gameData.ships.map((s) => (s.id === "fx_courier" ? { ...s, capacities: { ...s.capacities, crew: 3 } } : s)),
+  };
+  const replayed = (crew: Loadout["crew"]) => {
+    const result = resolveLoadout(roomier, loadout({ crew }));
+    if (result.status !== "ok") throw new Error("expected the Ship to be known");
+    return result;
+  };
+
+  test("service crew is cut to what the marines leave", () => {
+    const { loadout: repaired, repairs } = replayed({ service: 4, marines: 2 });
+    expect(repaired.crew).toEqual({ service: 1, marines: 2 });
+    expect(repairs).toEqual([
+      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 4, to: 1 },
+    ]);
+  });
+
+  test("marines over capacity are cut to it, then the service crew to 0", () => {
+    const { loadout: repaired, repairs } = replayed({ marines: 5, service: 2 });
+    expect(repaired.crew).toEqual({ marines: 3 });
+    expect(repairs).toEqual([
+      { type: "clamped", place: { kind: "crew", role: "marines" }, name: "Marines", from: 5, to: 3 },
+      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 2, to: 0 },
     ]);
   });
 });
@@ -350,8 +380,8 @@ describe("describeRepair", () => {
   test("names the Crew role and how far it was cut", () => {
     const { repairs } = resolved(loadout({ crew: { service: 2, marines: 4 } }));
     expect(repairs.map(describeRepair)).toEqual([
-      "Service crew in crew: count cut from 2 to 0",
       "Marines in crew: count cut from 4 to 1",
+      "Service crew in crew: count cut from 2 to 0",
     ]);
   });
 });
