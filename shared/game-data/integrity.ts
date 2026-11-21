@@ -23,6 +23,15 @@ export function checkIntegrity(data: SnapshotData): string[] {
     }
   }
 
+  // The game's colour markup (\033#AARRGGBB#, \033X) must be stripped at extraction (#111).
+  for (const [file, rows] of tables) {
+    for (const row of rows) {
+      if ("name" in row && row.name.includes("\\033")) {
+        errors.push(`${file}: ${row.id} name "${row.name}" still has the game's colour markup`);
+      }
+    }
+  }
+
   const fitLists = new Map(data["fit-lists"].map((f) => [f.id, f]));
   const equipment = new Map(data.equipment.map((e) => [e.id, e]));
   const factions = new Set(data.factions.map((f) => f.id));
