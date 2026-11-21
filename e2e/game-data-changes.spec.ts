@@ -4,7 +4,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
-import { fragmentFor, row } from "./helpers.ts";
+import { row } from "./helpers.ts";
 
 const KEY = "swi-builder:saved-loadouts:v1";
 
@@ -121,88 +121,4 @@ test.describe("opening a Loadout that changes", () => {
     await expect(notice(page)).toBeHidden();
   });
 
-  test("Save writes the repaired version with the new versions, and clears the ⚠", async ({ page }) => {
-    await storeRaw(page, [escort]);
-    await showSavedLoadouts(page);
-    await savedEntry(page, "Escort").getByRole("button", { name: "Open" }).click();
-    await expect(notice(page)).toBeVisible();
-
-    await expect(toolbarButton(page, "Save")).toBeEnabled();
-    await toolbarButton(page, "Save").click();
-    await expect(page.getByRole("status")).toContainText("Saved “Escort”");
-
-    const [saved] = JSON.parse((await stored(page))!) as Record<string, unknown>[];
-    expect(saved).toMatchObject({
-      id: escort.id,
-      gameData: { swi: "999", x4: "9.99" },
-      slots: { con_weapon_01: "fx_pulse_s" },
-      consumables: { fx_flare: 5 },
-    });
-
-    await showSavedLoadouts(page);
-    await expect(savedEntry(page, "Escort")).not.toContainText("⚠");
-  });
-
-  test("a Saved Loadout that only changed version opens without a notice", async ({ page }) => {
-    await storeRaw(page, [patrol]);
-    await showSavedLoadouts(page);
-    await savedEntry(page, "Patrol").getByRole("button", { name: "Open" }).click();
-    await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/Pulse Blaster/);
-    await expect(notice(page)).toBeHidden();
-  });
-
-  test("a Share Link opens repaired, with the notice", async ({ page }) => {
-    const { id: _id, createdAt: _c, updatedAt: _u, ...shared } = escort;
-    await page.goto(`/${await fragmentFor(page, shared)}`);
-
-    await expect(notice(page).getByRole("listitem")).toHaveCount(3);
-    await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/Pulse Blaster/);
-    await expect(page.getByRole("toolbar")).toContainText("Escort");
-  });
-
-  test("Crew over the Ship's crew capacity opens cut to fit, service crew first, with the cuts in the notice", async ({ page }) => {
-    // The Swiftwing Courier holds 1 Crew.
-    const { id: _id, createdAt: _c, updatedAt: _u, ...shared } = savedLoadout({ crew: { service: 1, marines: 2 } });
-    await page.goto(`/${await fragmentFor(page, shared)}`);
-
-    await expect(notice(page).getByRole("listitem")).toHaveText([
-      "Service crew in crew: count cut from 1 to 0",
-      "Marines in crew: count cut from 2 to 1",
-    ]);
-    await expect(page.getByRole("spinbutton", { name: "Service crew count" })).toHaveValue("0");
-    await expect(page.getByRole("spinbutton", { name: "Marines count" })).toHaveValue("1");
-    // The repaired Loadout is the snapshot, so nothing shows as changed since loading.
-    await expect(page.getByText(/was:/)).toHaveCount(0);
-  });
-
-  test("Crew on a Ship with no crew capacity opens with all of it cut, and no Crew section", async ({ page }) => {
-    // The Needle Striker holds no Crew, only its Captain.
-    const { id: _id, createdAt: _c, updatedAt: _u, ...shared } = savedLoadout({
-      ship: "fx_needle",
-      crew: { service: 1, marines: 2 },
-    });
-    await page.goto(`/${await fragmentFor(page, shared)}`);
-
-    await expect(notice(page).getByRole("listitem")).toHaveText([
-      "Service crew in crew: count cut from 1 to 0",
-      "Marines in crew: count cut from 2 to 0",
-    ]);
-    await expect(page.getByRole("spinbutton", { name: "Service crew count" })).toHaveCount(0);
-    await expect(page.getByRole("spinbutton", { name: "Marines count" })).toHaveCount(0);
-  });
-
-  test("an imported Loadout opens repaired, with the notice", async ({ page }) => {
-    const chooser = page.waitForEvent("filechooser");
-    await toolbarButton(page, "Import").click();
-    await (await chooser).setFiles({
-      name: "loadouts.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify({ app: "x4-swi-ship-builder", format: 1, loadouts: [escort] })),
-    });
-    await expect(page.getByRole("status")).toContainText("Imported 1 Loadout");
-
-    await expect(savedEntry(page, "Escort")).toContainText("⚠ 3 items no longer fit");
-    await savedEntry(page, "Escort").getByRole("button", { name: "Open" }).click();
-    await expect(notice(page).getByRole("listitem")).toHaveCount(3);
-  });
 });

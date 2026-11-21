@@ -1,23 +1,11 @@
 import { describe, expect, test } from "vitest";
+import { memoryStorage } from "./testing/memoryStorage.ts";
 import {
   SAVED_LOADOUTS_KEY,
   deleteSavedLoadout,
   readSavedLoadouts,
   saveLoadout,
-  type LoadoutStorage,
 } from "./savedLoadouts.ts";
-
-/** An in-memory stand-in for localStorage. */
-function memoryStorage(initial?: unknown): LoadoutStorage & { raw(): string | null } {
-  let value: string | null = initial === undefined ? null : typeof initial === "string" ? initial : JSON.stringify(initial);
-  return {
-    getItem: (key) => (key === SAVED_LOADOUTS_KEY ? value : null),
-    setItem: (key, v) => {
-      if (key === SAVED_LOADOUTS_KEY) value = v;
-    },
-    raw: () => value,
-  };
-}
 
 const loadout = { format: 1 as const, gameData: { swi: "091", x4: "8.00" }, ship: "ship_xwing" };
 
