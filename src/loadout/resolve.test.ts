@@ -5,7 +5,8 @@
 import { describe, expect, test } from "vitest";
 import { gameData } from "../gameData.ts";
 import type { Loadout } from "./loadout.ts";
-import { describeRepair, resolveLoadout } from "./resolve.ts";
+import { describeRepair } from "./repairs.ts";
+import { resolveLoadout } from "./resolve.ts";
 
 const current = { swi: "999", x4: "9.99" };
 const older = { swi: "091", x4: "8.00" };
@@ -257,7 +258,7 @@ describe("resolveLoadout: consumables", () => {
 
     const withoutLauncher = resolved(loadout({ slots: { con_weapon_09: "fx_launcher_s" }, consumables: { fx_dart: 2 } }));
     expect(withoutLauncher.loadout).not.toHaveProperty("consumables");
-    expect(withoutLauncher.repairs.map((r) => ("equipment" in r ? r.equipment : r.role))).toEqual(["fx_launcher_s", "fx_dart"]);
+    expect(withoutLauncher.repairs.map((r) => ("equipment" in r ? r.equipment : r.name))).toEqual(["fx_launcher_s", "fx_dart"]);
   });
 
   test("counts above the Ship's capacity for a kind are clamped, in the order they were stored", () => {
@@ -304,7 +305,7 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_hauler", crew: { service: 15, marines: 10 } }));
     expect(repaired.crew).toEqual({ service: 10, marines: 10 });
     expect(repairs).toEqual([
-      { type: "crew-cut", role: "service", from: 15, to: 10 },
+      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 15, to: 10 },
     ]);
   });
 
@@ -313,8 +314,8 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, repairs } = resolved(loadout({ crew: { service: 2, marines: 3 } }));
     expect(repaired.crew).toEqual({ marines: 1 });
     expect(repairs).toEqual([
-      { type: "crew-cut", role: "service", from: 2, to: 0 },
-      { type: "crew-cut", role: "marines", from: 3, to: 1 },
+      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 2, to: 0 },
+      { type: "clamped", place: { kind: "crew", role: "marines" }, name: "Marines", from: 3, to: 1 },
     ]);
   });
 
@@ -322,8 +323,8 @@ describe("resolveLoadout: Crew", () => {
     const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_needle", crew: { service: 1, marines: 2 } }));
     expect(repaired).not.toHaveProperty("crew");
     expect(repairs).toEqual([
-      { type: "crew-cut", role: "service", from: 1, to: 0 },
-      { type: "crew-cut", role: "marines", from: 2, to: 0 },
+      { type: "clamped", place: { kind: "crew", role: "service" }, name: "Service crew", from: 1, to: 0 },
+      { type: "clamped", place: { kind: "crew", role: "marines" }, name: "Marines", from: 2, to: 0 },
     ]);
   });
 });

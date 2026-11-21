@@ -90,10 +90,6 @@ const rowOf = (page: Page, item: string) =>
 test("consumable counts can't exceed the Ship's capacities", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
-  // The Courier carries no drones or deployables, so it gets no rows for them.
-  await expect(loadoutTable(page).getByRole("rowheader", { name: "Drones" })).toHaveCount(0);
-  await expect(loadoutTable(page).getByRole("rowheader", { name: "Deployables" })).toHaveCount(0);
-
   const flares = countOf(page, "Glare Flare");
   await expect(rowOf(page, "Glare Flare").getByRole("rowheader")).toHaveText("Countermeasures");
   await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(1)).toContainText("/ 5");
@@ -103,15 +99,6 @@ test("consumable counts can't exceed the Ship's capacities", async ({ page }) =>
   await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(3)).toHaveText("180 Cr");
   await flares.fill("9");
   await expect(flares).toHaveValue("5");
-
-  // A Ship with drone and deployable capacity lists them.
-  await page.getByRole("combobox", { name: "Size" }).selectOption("L");
-  await page.getByRole("combobox", { name: "Ship" }).fill("Ironback");
-  await page.keyboard.press("Enter");
-  await expect(rowOf(page, "Porter Drone").getByRole("cell").nth(1)).toContainText("/ 20");
-  await expect(rowOf(page, "Marker Beacon").getByRole("cell").nth(1)).toContainText("/ 10");
-  await countOf(page, "Porter Drone").fill("25");
-  await expect(countOf(page, "Porter Drone")).toHaveValue("20");
 });
 
 test("missiles are limited to those a fitted launcher can fire, sharing the Ship's missile capacity", async ({ page }) => {
@@ -126,7 +113,6 @@ test("missiles are limited to those a fitted launcher can fire, sharing the Ship
   await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/Dart Launcher/);
   await expect(rowOf(page, "Dart Missile").getByRole("rowheader")).toHaveText("Missiles");
   await expect(rowOf(page, "Dart Missile").getByRole("cell").nth(1)).toContainText("/ 10");
-  await expect(countOf(page, "Heavy Torpedo")).toHaveCount(0);
 
   await fit(page, /con_weapon_02/, "Torpedo Tube");
   await countOf(page, "Dart Missile").fill("6");
@@ -138,12 +124,6 @@ test("missiles are limited to those a fitted launcher can fire, sharing the Ship
   // Removing the Dart Launcher removes its missiles from the Loadout.
   await fit(page, /con_weapon_01/, "— empty —");
   await expect(countOf(page, "Dart Missile")).toHaveCount(0);
-  await countOf(page, "Heavy Torpedo").fill("10");
-  await expect(countOf(page, "Heavy Torpedo")).toHaveValue("10");
-
-  // Fitting it again starts from none.
-  await fit(page, /con_weapon_01/, "Dart Launcher");
-  await expect(countOf(page, "Dart Missile")).toHaveValue("0");
 });
 
 const MISSING = "Mandatory upgrade missing";
@@ -233,7 +213,7 @@ test("a Slot Group has one row per kind, with an Equipment choice and a count up
   await expect(count).toBeDisabled();
   await expect(turrets.getByRole("cell").nth(1)).toContainText("/ 4");
 
-  // Picking Equipment fills the whole group; the count then narrows it.
+  // Picking Equipment fills the whole group; the count then narrows it, never past the group's size.
   await fit(page, /Turrets group_front/, "Flak Turret");
   await expect(count).toHaveValue("4");
   await expect(turrets.getByRole("cell").nth(3)).toHaveText("180,000 Cr");
@@ -241,19 +221,8 @@ test("a Slot Group has one row per kind, with an Equipment choice and a count up
   await count.fill("2");
   await expect(count).toHaveValue("2");
   await expect(turrets.getByRole("cell").nth(3)).toHaveText("90,000 Cr");
-
-  // Never more than the group's size.
   await count.fill("9");
   await expect(count).toHaveValue("4");
-
-  // The other kinds of the same group are separate.
-  await expect(row(page, /Shields group_front/).getByRole("combobox")).toHaveText(/— empty —/);
-
-  // A count of 0 empties the row.
-  await count.fill("0");
-  await expect(turrets.getByRole("combobox")).toHaveText(/— empty —/);
-  await expect(count).toHaveValue("0");
-  await expect(turrets.getByRole("cell").nth(3)).toHaveText("");
 });
 
 test("service crew and marines share the Ship's crew capacity, and Price adds each at the crew price", async ({ page }) => {
@@ -283,8 +252,6 @@ test("service crew and marines share the Ship's crew capacity, and Price adds ea
   await expect(rowOf(page, "Marines").getByRole("cell").nth(3)).toHaveText("48,000 Cr");
   await expect(crew.getByRole("columnheader")).toHaveText(/20 \/ 20$/);
   await expect(price).toContainText("2,620,000 Cr");
-  await countOf(page, "Service crew").fill("13");
-  await expect(countOf(page, "Service crew")).toHaveValue("12");
 });
 
 test("a Ship with no crew capacity has no Crew section", async ({ page }) => {

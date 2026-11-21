@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { GameData } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import type { SavedLoadoutEntry, SavedLoadoutList } from "../codec/savedLoadouts.ts";
-import { describeRepair, resolveLoadout } from "../loadout/resolve.ts";
+import { describeRepair } from "../loadout/repairs.ts";
+import { resolveLoadout } from "../loadout/resolve.ts";
 
 /**
  * The Saved Loadouts list: each one's name and Ship name, with Open, Export
