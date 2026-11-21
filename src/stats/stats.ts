@@ -13,6 +13,7 @@ import { indexGameData } from "../gameDataIndex.ts";
 import { missingUpgrades, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
 import { shownValue } from "./figure.ts";
+import { boostRechargeRate } from "./flight.ts";
 
 export type { MissingUpgrade } from "./mandatory.ts";
 /** Per-Equipment figures for a weapon or turret, e.g. for the comparison popover. */
@@ -153,7 +154,6 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   const acceleration = (thrust() / mass) * accFactors.forward;
   const travelSpeed = thrust((e) => e.travel.thrust) / drag.forward;
   const travelAttack = ofEngine((e) => e.travel.attack);
-  const boostRecharge = ofEngine((e) => e.boost.recharge);
   add("ForwardSpeed", "Speed", "m/s", 0, "flight", thrust() / drag.forward);
   add("ForwardAcceleration", "Acceleration", "m/s²", 0, "flight", acceleration);
   add("BoostSpeed", "Boost Speed", "m/s", 0, "flight", thrust((e) => e.boost.thrust) / drag.forward);
@@ -166,8 +166,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
     (thrust((e) => e.boost.acceleration) / mass) * accFactors.forward,
   );
   add("BoostMaxDuration", "Boost Capacity", "s", 1, "flight", ofEngine((e) => e.boost.duration));
-  // `boost@recharge` is the seconds for a full recharge.
-  add("BoostRechargeRate", "Boost Recharge Rate", "%/s", 1, "flight", boostRecharge > 0 ? 100 / boostRecharge : 0);
+  add("BoostRechargeRate", "Boost Recharge Rate", "%/s", 1, "flight", ofEngine(boostRechargeRate));
   add("TravelSpeed", "Travel Speed", "m/s", 0, "flight", travelSpeed);
   // `travel@attack="0"` leaves acceleration unchanged (#12); otherwise it is the
   // seconds to reach travel speed (#39: the TIE Fighter's 2,560 / 10 = 256).
