@@ -84,8 +84,10 @@ describe("a hovered launcher shows one row per missile (ADR 0002)", () => {
       ["Burst Output", "MW", "worse"],
       ["Sustained Output", "MW", "worse"],
     ]);
-    // The launcher's figures are all in its missile rows.
-    expect(comparison.figures).toEqual([]);
+    // Its output is all in its missile rows; its own figures are what it adds to the Ship.
+    expect(comparison.figures).toEqual([
+      { label: "Missile Storage", unit: "", shown: 0, difference: 0, verdict: "same" },
+    ]);
   });
 
   test("with no compatible missile loaded, No missile is marked loaded", () => {
@@ -107,6 +109,15 @@ describe("a hovered launcher shows one row per missile (ADR 0002)", () => {
     ]);
   });
 
+  test("a launcher's own missile storage, which adds to the Ship's Missiles, is compared with the fitted launcher's", () => {
+    const rockets = launcher("weapon", "rockets", "fl_krupx_medium", 6);
+    const withRockets = gameData([ship()], [krupx, rockets, ion], [{ id: "fl_krupx_medium", equipment: ["ion"] }]);
+    const comparison = compareEquipment(withRockets, loadout("fx_ship"), krupx, rockets);
+    expect(comparison.figures).toEqual([
+      { label: "Missile Storage", unit: "", shown: 0, difference: -6, verdict: "worse" },
+    ]);
+  });
+
   test("a gun hovered over a fitted launcher keeps one pair, against the launcher's loaded missile", () => {
     const comparison = compareEquipment(data, loadout("fx_ship", { consumables: { ion: 5, proton: 5 } }), kv22, krupx);
     expect(comparison.missiles).toBeNull();
@@ -117,23 +128,48 @@ describe("a hovered launcher shows one row per missile (ADR 0002)", () => {
   });
 });
 
-test("shields show capacity and recharge rate", () => {
+test("shields show capacity, recharge rate and recharge delay; a shorter delay is better", () => {
   const small = shield("small", 1000, 100, 2);
-  const medium = shield("medium", 5000, 300, 4);
+  const medium = shield("medium", 5000, 300, 4.5);
   const comparison = compareEquipment(gameData([ship()], [small, medium]), loadout("fx_ship"), small, medium);
   expect(comparison.figures).toEqual([
     { label: "Shield Capacity", unit: "MJ", shown: 1000, difference: -4000, verdict: "worse" },
     { label: "Recharge Rate", unit: "MW", shown: 100, difference: -200, verdict: "worse" },
+    { label: "Recharge Delay", unit: "s", shown: 2, difference: -2.5, verdict: "better" },
   ]);
+  const slower = compareEquipment(gameData([ship()], [small, medium]), loadout("fx_ship"), medium, small);
+  expect(slower.figures.at(-1)).toEqual({ label: "Recharge Delay", unit: "s", shown: 4.5, difference: 2.5, verdict: "worse" });
 });
 
-test("engines show forward thrust and travel thrust", () => {
+test("engines show their thrust, boost and travel figures, in the Stats panel's order", () => {
   const sprint = engine("sprint", 1500, { thrust: 4, acceleration: 2, duration: 10, recharge: 20 }, { thrust: 10, charge: 5, attack: 0 });
   const comparison = compareEquipment(gameData([ship()], [sprint]), loadout("fx_ship"), sprint, null);
   expect(comparison.figures).toEqual([
     { label: "Thrust", unit: "kN", shown: 1500, difference: 1500, verdict: "better" },
+    { label: "Boost Thrust", unit: "kN", shown: 6000, difference: 6000, verdict: "better" },
+    { label: "Boost Capacity", unit: "s", shown: 10, difference: 10, verdict: "better" },
+    // A full recharge in 20 s is 5 % a second, as the Stats panel's row.
+    { label: "Boost Recharge Rate", unit: "%/s", shown: 5, difference: 5, verdict: "better" },
     { label: "Travel Thrust", unit: "kN", shown: 15000, difference: 15000, verdict: "better" },
+    // Charging longer than an empty Slot's 0 s is worse.
+    { label: "Travel Charge Time", unit: "s", shown: 5, difference: 5, verdict: "worse" },
   ]);
+});
+
+test("against a fitted engine, a shorter travel charge time is better", () => {
+  const boost = { thrust: 2, acceleration: 2, duration: 10, recharge: 30 };
+  const quick = engine("quick", 1000, boost, { thrust: 10, charge: 3.5, attack: 0 });
+  const slow = engine("slow", 1000, boost, { thrust: 10, charge: 8, attack: 0 });
+  const comparison = compareEquipment(gameData([ship()], [quick, slow]), loadout("fx_ship"), quick, slow);
+  expect(comparison.figures.find((f) => f.label === "Travel Charge Time")).toEqual({
+    label: "Travel Charge Time",
+    unit: "s",
+    shown: 3.5,
+    difference: -4.5,
+    verdict: "better",
+  });
+  // A full recharge in 30 s is 3.3 % a second, rounded down like the Stats panel.
+  expect(comparison.figures.find((f) => f.label === "Boost Recharge Rate")?.shown).toBe(3.3);
 });
 
 /**
@@ -150,18 +186,22 @@ describe("engines' Travel Thrust matches the Encyclopedia (#63)", () => {
   ])("%s (%s): Thrust %d kN × travel@thrust %s = Max Travel Thrust %d kN", (_name, id, forward, travel, encyclopedia) => {
     const item = engine(id, forward, boost, { thrust: travel, charge: 1, attack: 0 });
     const comparison = compareEquipment(gameData([ship()], [item]), loadout("fx_ship"), item, null);
-    expect(comparison.figures.map((f) => [f.label, f.unit, f.shown])).toEqual([
+    const thrusts = comparison.figures.filter((f) => f.label === "Thrust" || f.label === "Travel Thrust");
+    expect(thrusts.map((f) => [f.label, f.unit, f.shown])).toEqual([
       ["Thrust", "kN", forward],
       ["Travel Thrust", "kN", encyclopedia],
     ]);
   });
 });
 
-test("thrusters show their yaw, pitch and roll torque", () => {
+// Strafe Speed and Strafe Acceleration are both the strafe thrust over one of
+// the Ship's own figures, so one Strafe Thrust compares them both.
+test("thrusters show their strafe thrust, then their yaw, pitch and roll torque", () => {
   const nimble = thruster("nimble", { strafe: 400, pitch: 3, yaw: 3, roll: 2.5 });
   const steady = thruster("steady", { strafe: 8000, pitch: 60, yaw: 60, roll: 45 });
   const comparison = compareEquipment(gameData([ship()], [nimble, steady]), loadout("fx_ship"), steady, nimble);
   expect(comparison.figures).toEqual([
+    { label: "Strafe Thrust", unit: "kN", shown: 8000, difference: 7600, verdict: "better" },
     { label: "Yaw Torque", unit: "", shown: 60, difference: 57, verdict: "better" },
     { label: "Pitch Torque", unit: "", shown: 60, difference: 57, verdict: "better" },
     { label: "Roll Torque", unit: "", shown: 45, difference: 42.5, verdict: "better" },
