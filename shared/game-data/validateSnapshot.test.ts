@@ -222,5 +222,17 @@ describe("validateSnapshot", () => {
         ]);
       });
     });
+
+    it("reports a name that still carries the game's colour markup", () => {
+      const errors = errorsAfter((raw) => {
+        raw.equipment.find((e: any) => e.id === "fx_flare").name = "\\033#FF00FF00#G\\033X";
+        raw.ships[0].name = "Courier \\033X";
+      });
+
+      expect(errors).toEqual([
+        `ships: fx_courier name "Courier \\033X" still has the game's colour markup`,
+        `equipment: fx_flare name "\\033#FF00FF00#G\\033X" still has the game's colour markup`,
+      ]);
+    });
   });
 });

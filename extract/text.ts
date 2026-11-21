@@ -6,7 +6,12 @@ import { attr, children, type GameFiles } from "./gameFiles.ts";
  * `t/0001-l044.xml`. Follows the game's text rules: a `{page,id}` inside a
  * text is replaced by that text, an unescaped `(...)` is a comment and is
  * dropped, and `\(`, `\)`, `\{`, `\}` and `\\` stand for the character itself.
+ * Colour markup (`\033#AARRGGBB#` starts a colour, `\033X` ends it) is dropped
+ * and the text inside it kept, as a coloured letter can be all that tells two
+ * wares apart.
  */
+const COLOUR_MARKUP = /^\\033(?:#[0-9A-Fa-f]{8}#|X)/;
+
 export class TextResolver {
   private readonly texts = new Map<string, string>();
 
@@ -32,7 +37,10 @@ export class TextResolver {
     let comment = 0;
     for (let i = 0; i < text.length; i++) {
       const c = text[i]!;
-      if (c === "\\" && i + 1 < text.length && "(){}\\".includes(text[i + 1]!)) {
+      const colour = c === "\\" ? COLOUR_MARKUP.exec(text.slice(i)) : null;
+      if (colour) {
+        i += colour[0].length - 1;
+      } else if (c === "\\" && i + 1 < text.length && "(){}\\".includes(text[i + 1]!)) {
         if (comment === 0) out += text[i + 1];
         i++;
       } else if (c === "(") {

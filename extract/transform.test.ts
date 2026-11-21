@@ -254,6 +254,20 @@ describe("transform: display names", () => {
     expect(ship("fx_venator")).toMatchObject({ name: "Venator-class Star Destroyer (Clone Era)", nameId: "{950,2}" });
   });
 
+  it("drops the game's colour markup from names and keeps the text inside it", () => {
+    const { ship } = run(
+      oneShipWorld()
+        .text("950", "3", "\\033#FFFF0000#R\\033X")
+        .text("950", "4", "\\033#989db6ec#L-s7.2 laser cannon\\033X \\033#FF00FF00#G\\033X")
+        .text("950", "5", "RH3 Quad Laser Cannon Turret {950,3}")
+        .ship({ id: "fx_laser", owners: ["fx_guild"], nameRef: "{950,4}" })
+        .ship({ id: "fx_turret", owners: ["fx_guild"], nameRef: "{950,5}" }),
+    );
+
+    expect(ship("fx_laser").name).toBe("L-s7.2 laser cannon G");
+    expect(ship("fx_turret").name).toBe("RH3 Quad Laser Cannon Turret R");
+  });
+
   it("fails when a name's text id isn't in the English text", () => {
     expect(() => run(oneShipWorld().ship({ id: "fx_nameless", owners: ["fx_guild"], nameRef: "{950,9}" }))).toThrow(
       /ware fx_nameless: text \{950,9\} isn't in t\/0001-l044\.xml/,
