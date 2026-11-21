@@ -5,7 +5,8 @@
  * A Ship that isn't in the Game Data makes the Loadout Unavailable. Unknown
  * Equipment, Slots or Slot Groups, and Equipment that no longer fits, are
  * dropped; a count above the new capacity is clamped. Crew over the Ship's
- * crew capacity is cut to fit, service crew first (ADR 0004). Ids are matched as
+ * crew capacity is cut to fit, service crew first (ADR 0004). Of two pieces
+ * of software in one Software Family, the newer is kept. Ids are matched as
  * they are: there are no rename tables. A version change on its own isn't a
  * Repair.
  *
@@ -34,7 +35,8 @@ export type Resolution =
 
 /** Checks a Loadout against the Game Data, returning the repaired Loadout and every Repair. */
 export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution {
-  const ship = indexGameData(gameData).ships.get(loadout.ship);
+  const { ships, softwareChain } = indexGameData(gameData);
+  const ship = ships.get(loadout.ship);
   if (!ship) return { status: "unavailable", ship: loadout.ship };
 
   const rules = loadoutRules(gameData, ship);
@@ -56,7 +58,12 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
   }
   if (loadout.engine) replay(rules.setEngine(repaired, loadout.engine));
   if (loadout.thruster) replay(rules.setThruster(repaired, loadout.thruster));
-  for (const id of loadout.software ?? []) replay(rules.setSoftware(repaired, id, true));
+  // Older software goes in first, so of two in one Software Family the newer one is kept.
+  const software = [...(loadout.software ?? [])].sort((a, b) => softwareChain(a).length - softwareChain(b).length);
+  for (const id of software) replay(rules.setSoftware(repaired, id, true));
+  // That order is only the replay's: what is kept stays in the order it was stored.
+  const kept = new Set(repaired.software);
+  if (kept.size > 0) repaired = { ...repaired, software: [...new Set(loadout.software)].filter((id) => kept.has(id)) };
   // Consumables of one kind share its capacity in the order they were stored.
   for (const [id, count] of Object.entries(loadout.consumables ?? {})) replay(rules.setConsumable(repaired, id, count));
   // Marines go in first, so any cut to fit the crew capacity lands on service crew first (ADR 0004).

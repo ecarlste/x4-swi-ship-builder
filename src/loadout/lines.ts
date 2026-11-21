@@ -32,7 +32,11 @@ export interface Line {
   count: number;
   /** What the line costs: its price times its count (ADR 0003). Empty Places and Equipment not in the Game Data cost 0. */
   price: Price;
-  /** Whether the Place is mandatory and empty. Nothing is blocked by it; the builder only points it out. */
+  /**
+   * Whether the Place is mandatory and empty; for mandatory software, whether
+   * nothing of its Software Family at or above it is fitted. Nothing is
+   * blocked by it; the builder only points it out.
+   */
   missing: boolean;
   /**
    * What the Loaded Loadout held here (null for nothing), given only when a
@@ -123,11 +127,13 @@ const sameHeld = (a: Held | null, b: Held | null) => a?.equipment === b?.equipme
  * something else says what, in `was`.
  */
 export function loadoutLines(gameData: GameData, ship: Ship, loadout: Loadout, loaded: Loadout | null = null): Line[] {
-  const { equipment } = indexGameData(gameData);
+  const { equipment, softwareChain } = indexGameData(gameData);
+  // In game any ware of a mandatory family at or above the Ship's default will do, so the mark stays on the default's line.
+  const familyFitted = (id: string) => (loadout.software ?? []).some((s) => softwareChain(s).includes(id));
   const line = (place: Place): Line => {
     const held = heldAt(ship, loadout, place);
     const count = held?.count ?? 0;
-    const missing = !held && mandatory(ship, place);
+    const missing = mandatory(ship, place) && !(place.kind === "software" ? familyFitted(place.equipment) : held);
     const item = held?.equipment ? (equipment.get(held.equipment) ?? null) : null;
     const price = place.kind === "crew" ? times(gameData.crewPrice, count) : item ? times(item.price, count) : FREE;
     const line: Line = { place, equipment: item, count, price, missing };

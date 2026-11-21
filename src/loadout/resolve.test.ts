@@ -7,6 +7,7 @@ import { gameData } from "../gameData.ts";
 import type { Loadout } from "./loadout.ts";
 import { describeRepair } from "./repairs.ts";
 import { resolveLoadout } from "./resolve.ts";
+import { gameData as fixtureGameData, ship, software } from "./testing/fixtures.ts";
 
 const current = { swi: "999", x4: "9.99" };
 const older = { swi: "091", x4: "8.00" };
@@ -233,6 +234,39 @@ describe("resolveLoadout: thruster and software", () => {
         reason: "doesnt-fit",
       },
     ]);
+  });
+});
+
+describe("resolveLoadout: one of each Software Family", () => {
+  const scout = ship({ id: "fx_scout", software: { fitList: "fl_software", mandatory: [] } });
+  const families = fixtureGameData(
+    [scout],
+    [software("fx_lrs_mk1"), software("fx_lrs_mk2", "fx_lrs_mk1"), software("fx_trading")],
+    [{ id: "fl_software", equipment: ["fx_lrs_mk1", "fx_lrs_mk2", "fx_trading"] }],
+  );
+  const dropped = {
+    type: "dropped",
+    place: { kind: "software", equipment: "fx_lrs_mk1" },
+    equipment: "fx_lrs_mk1",
+    name: "fx_lrs_mk1",
+    reason: "replaced-in-family",
+  };
+
+  test.each([
+    ["older first", ["fx_lrs_mk1", "fx_trading", "fx_lrs_mk2"], ["fx_trading", "fx_lrs_mk2"]],
+    ["newer first", ["fx_lrs_mk2", "fx_trading", "fx_lrs_mk1"], ["fx_lrs_mk2", "fx_trading"]],
+  ])("two of a family (%s) keep the newer one, in the order stored, and the other is a Repair", (_order, stored, kept) => {
+    const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_scout", software: stored }), families);
+
+    expect(repaired.software).toEqual(kept);
+    expect(repairs).toEqual([dropped]);
+    expect(describeRepair(repairs[0]!)).toBe("fx_lrs_mk1 in software: dropped, a Ship fits one of each Software Family");
+  });
+
+  test("software that still fits comes back in the order it was stored", () => {
+    const stored = loadout({ ship: "fx_scout", gameData: { swi: "091", x4: "8.00" }, software: ["fx_lrs_mk2", "fx_trading"] });
+
+    expect(resolved(stored, families)).toMatchObject({ loadout: stored, repairs: [] });
   });
 });
 

@@ -120,6 +120,30 @@ export function checkIntegrity(data: SnapshotData): string[] {
     checkSellersAndLicence("equipment", item);
   }
 
+  // A Software Family is a chain of predecessors: each one must be software, and the chain must end.
+  for (const item of data.equipment) {
+    if (item.kind !== "software" || item.predecessor === null) continue;
+    const predecessor = equipment.get(item.predecessor);
+    if (!predecessor) {
+      errors.push(`equipment: ${item.id} predecessor refers to unknown equipment "${item.predecessor}"`);
+      continue;
+    }
+    if (predecessor.kind !== "software") {
+      errors.push(`equipment: ${item.id} predecessor "${item.predecessor}" is ${predecessor.kind}, not software`);
+      continue;
+    }
+    // Each link is checked on its own ware, so the walk only looks for a way back.
+    const seen = new Set([item.id]);
+    for (let at = equipment.get(item.predecessor); at?.kind === "software"; ) {
+      if (seen.has(at.id)) {
+        errors.push(`equipment: ${item.id} predecessors go round in a cycle`);
+        break;
+      }
+      seen.add(at.id);
+      at = at.predecessor === null ? undefined : equipment.get(at.predecessor);
+    }
+  }
+
   for (const list of data["fit-lists"]) {
     for (const itemId of list.equipment) {
       if (!equipment.has(itemId)) {

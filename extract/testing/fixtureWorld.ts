@@ -194,6 +194,7 @@ export class FixtureWorld {
           (isSoftware ? "" : `<component ref="${macroName}" amount="1"/>`) +
           (e.licence ? `<restriction licence="${e.licence}"/>` : "") +
           (e.owners ?? []).map((o) => `<owner faction="${o}"/>`).join("") +
+          (e.predecessor ? `<software predecessor="${e.predecessor}"/>` : "") +
           `</ware>`,
       );
       if (isSoftware) continue;
@@ -324,6 +325,8 @@ export interface EquipmentSpec {
   bullet?: string;
   /** Tags of the component's type connection, e.g. "component weapon small"; none if not given. */
   connection?: string;
+  /** Software only: the ware's `<software predecessor>`, the software it replaces. */
+  predecessor?: string;
 }
 
 const EQUIPMENT_TAGS: Record<FixtureEquipmentKind, string> = {

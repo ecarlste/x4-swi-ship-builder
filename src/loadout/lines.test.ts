@@ -2,7 +2,19 @@
  * The Loadout's lines, through `loadoutLines`, against hand-made Game Data.
  */
 import { describe, expect, test } from "vitest";
-import { engine, engineSlot, gameData, loadout, priced, shield, shieldGroup, shieldSlot, ship, thruster } from "./testing/fixtures.ts";
+import {
+  engine,
+  engineSlot,
+  gameData,
+  loadout,
+  priced,
+  shield,
+  shieldGroup,
+  shieldSlot,
+  ship,
+  software,
+  thruster,
+} from "./testing/fixtures.ts";
 import { loadoutLines } from "./lines.ts";
 
 const at = (average: number) => ({ min: average - 10, average, max: average + 10 });
@@ -102,6 +114,34 @@ describe("loadoutLines", () => {
       { kind: "software", equipment: "fx_assist" },
     ]);
     expect(missing({ ...fitted, thruster: "fx_nimble", software: ["fx_assist"] })).toEqual([]);
+  });
+
+  describe("mandatory software is judged by its Software Family", () => {
+    const families = (mandatory: string[]) => {
+      const trader = ship({ software: { fitList: "fl_software", mandatory } });
+      const data = gameData(
+        [trader],
+        [software("fx_lrs_mk1"), software("fx_lrs_mk2", "fx_lrs_mk1"), software("fx_trading")],
+        [{ id: "fl_software", equipment: ["fx_lrs_mk1", "fx_lrs_mk2", "fx_trading"] }],
+      );
+      return (fittedSoftware: string[]) =>
+        loadoutLines(data, trader, loadout("fx_ship", { software: fittedSoftware }))
+          .filter((line) => line.missing && line.place?.kind === "software")
+          .map((line) => line.place);
+    };
+    const lrsMk1 = { kind: "software", equipment: "fx_lrs_mk1" };
+    const trading = { kind: "software", equipment: "fx_trading" };
+
+    test("any ware of the family at or above the Ship's default will do; the mark stays on the default's line", () => {
+      const missing = families(["fx_lrs_mk1", "fx_trading"]);
+      expect(missing([])).toEqual([lrsMk1, trading]);
+      expect(missing(["fx_lrs_mk2"])).toEqual([trading]);
+      expect(missing(["fx_lrs_mk1", "fx_trading"])).toEqual([]);
+    });
+
+    test("a ware below the Ship's default doesn't", () => {
+      expect(families(["fx_lrs_mk2"])(["fx_lrs_mk1"])).toEqual([{ kind: "software", equipment: "fx_lrs_mk2" }]);
+    });
   });
 
   test("a Ship with no engines isn't missing any", () => {
