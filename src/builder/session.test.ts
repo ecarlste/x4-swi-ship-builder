@@ -7,7 +7,8 @@ import { gameData } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { memoryStorage } from "../codec/testing/memoryStorage.ts";
 import { createSession } from "./session.ts";
-import { setSlot } from "../loadout/loadout.ts";
+import { loadoutRules } from "../loadout/rules.ts";
+import type { Loadout } from "../loadout/loadout.ts";
 import type { SavedLoadout } from "../codec/loadout.ts";
 import { shareLinkUrl } from "../codec/shareLink.ts";
 import type { SavedLoadoutEntry } from "../codec/savedLoadouts.ts";
@@ -40,6 +41,9 @@ const escort = savedLoadout({
 const relic = savedLoadout({ id: "22222222-3333-4444-8555-666666666666", name: "Relic", ship: "fx_ship_gone" });
 
 const ship = (id: string) => indexGameData(gameData).ships.get(id)!;
+/** Fits Equipment to one of the Courier's Slots, as the Loadout table would. */
+const setSlot = (loadout: Loadout, slot: string, equipment: string | null) =>
+  loadoutRules(gameData, ship("fx_courier")).setSlot(loadout, slot, equipment).loadout;
 
 const APP = "https://builder.example/";
 

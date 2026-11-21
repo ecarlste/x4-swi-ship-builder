@@ -1,5 +1,6 @@
 import { useId } from "react";
-import { describeRepair, type GameDataVersions, type LoadoutRepair } from "../loadout/resolve.ts";
+import { describeRepair, type LoadoutRepair } from "../loadout/repairs.ts";
+import type { GameDataVersions } from "../loadout/resolve.ts";
 
 const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${v.x4}`;
 

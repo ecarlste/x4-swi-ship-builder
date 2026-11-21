@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { shotDamage } from "../stats/firepower.ts";
@@ -9,20 +9,11 @@ import {
   CREW_ROLE_NAMES,
   CREW_ROLES,
   crewCount,
-  consumableOptions,
-  setConsumable,
-  setCrew,
-  setEngine,
-  setGroup,
-  setSlot,
-  setSoftware,
-  setThruster,
-  shipEngines,
-  withoutUncarriedConsumables,
   type ConsumableKind,
   type Loadout,
   type SlotGroupKind,
 } from "../loadout/loadout.ts";
+import { loadoutRules, type Edit, type LoadoutRules } from "../loadout/rules.ts";
 
 const CONSUMABLE_LABEL: Record<ConsumableKind, string> = {
   missile: "Missiles",
@@ -69,6 +60,10 @@ function keyValue(item: Equipment): string {
  * one engine type between them (ADR 0001), then one row per other Slot.
  * After the Equipment, a Crew section for a Ship with crew capacity.
  * Columns: Slot, Equipment, quantity, key value and average price.
+ *
+ * Every edit, option and limit comes from the Ship's `loadoutRules`. The
+ * Repairs of the table's own edits aren't shown: the controls offer only what
+ * fits, and removing a launcher drops its missiles silently.
  */
 export function LoadoutTable({
   gameData,
@@ -87,18 +82,19 @@ export function LoadoutTable({
   was?: Loadout | null;
   onChange: (loadout: Loadout) => void;
 }) {
-  const { equipment, fitListEquipment: options } = indexGameData(gameData);
+  const { equipment } = indexGameData(gameData);
+  const rules = useMemo(() => loadoutRules(gameData, ship), [gameData, ship]);
   const nameOf = (id: string | undefined) => (id ? (equipment.get(id)?.name ?? id) : "empty");
   /** The row's "was: …" text when it differs from the loaded Loadout, else undefined. */
   const wasText = (before: string, now: string) => (was && before !== now ? before : undefined);
   const groupText = (entry: { equipment: string; count: number } | undefined) =>
     entry ? `${nameOf(entry.equipment)} ×${entry.count}` : "empty";
-  const engines = shipEngines(ship);
+  const engineCount = rules.limit(loadout, { kind: "engine" });
   const engine = equipment.get(loadout.engine ?? "") ?? null;
   const thruster = equipment.get(loadout.thruster ?? "") ?? null;
-  const consumables = consumableOptions(gameData, ship, loadout);
-  /** Applies an edit, dropping consumables it leaves the Ship unable to carry. */
-  const change = (next: Loadout) => onChange(withoutUncarriedConsumables(gameData, ship, next));
+  const consumables = rules.consumables(loadout);
+  /** Applies an edit, discarding its Repairs. */
+  const change = (edit: Edit) => onChange(edit.loadout);
   /** The comparison popover of a hovered option against what is fitted (one unit for Slot Groups). */
   const compareWith = (fitted: Equipment | null) => (option: Equipment) => (
     <ComparisonPopover gameData={gameData} loadout={loadout} option={option} fitted={fitted} />
@@ -120,26 +116,26 @@ export function LoadoutTable({
         </tr>
       </thead>
       <tbody>
-        {engines && (
+        {engineCount > 0 && (
           <Row
             label={
               <>
-                Engines <span className="dim">{engines.count}×</span>
+                Engines <span className="dim">{engineCount}×</span>
               </>
             }
             missing={missing.has("engine")}
             equipment={
               <EquipmentDropdown
                 label="Engines Equipment"
-                options={options(engines.fitList)}
+                options={rules.options(loadout, { kind: "engine" })}
                 value={engine?.id ?? null}
-                onChange={(id) => change(setEngine(loadout, id))}
+                onChange={(id) => change(rules.setEngine(loadout, id))}
                 compare={compareWith(engine)}
               />
             }
-            quantity={engine ? formatNumber(engines.count) : ""}
+            quantity={engine ? formatNumber(engineCount) : ""}
             keyValue={engine ? keyValue(engine) : ""}
-            price={engine ? formatCredits(engine.price.average * engines.count) : ""}
+            price={engine ? formatCredits(engine.price.average * engineCount) : ""}
             was={wasText(nameOf(was?.engine), nameOf(loadout.engine))}
           />
         )}
@@ -157,9 +153,9 @@ export function LoadoutTable({
               equipment={
                 <EquipmentDropdown
                   label={`${slot.id} Equipment`}
-                  options={options(slot.fitList)}
+                  options={rules.options(loadout, { kind: "slot", slot: slot.id })}
                   value={fitted?.id ?? null}
-                  onChange={(id) => change(setSlot(loadout, slot.id, id))}
+                  onChange={(id) => change(rules.setSlot(loadout, slot.id, id))}
                   compare={compareWith(fitted)}
                 />
               }
@@ -172,8 +168,9 @@ export function LoadoutTable({
         })}
         {ship.slotGroups.flatMap((group) =>
           SLOT_GROUP_KINDS.flatMap((kind) => {
-            const part = group.kinds[kind];
-            if (!part) return [];
+            if (!group.kinds[kind]) return [];
+            const place = { kind: "group", group: group.id, groupKind: kind } as const;
+            const size = rules.limit(loadout, place);
             const entry = loadout.groups?.[group.id]?.[kind];
             const fitted = equipment.get(entry?.equipment ?? "") ?? null;
             const count = fitted ? (entry?.count ?? 0) : 0;
@@ -190,24 +187,20 @@ export function LoadoutTable({
                 equipment={
                   <EquipmentDropdown
                     label={`${label} Equipment`}
-                    options={options(part.fitList)}
+                    options={rules.options(loadout, place)}
                     value={fitted?.id ?? null}
                     compare={compareWith(fitted)}
-                    onChange={(id) =>
-                      change(
-                        setGroup(loadout, group.id, kind, id ? { equipment: id, count: count || part.count } : null),
-                      )
-                    }
+                    onChange={(id) => change(rules.setGroupEquipment(loadout, group.id, kind, id))}
                   />
                 }
                 quantity={
                   <CountInput
                     label={`${label} count`}
                     value={count}
-                    max={part.count}
-                    limit={part.count}
+                    max={size}
+                    limit={size}
                     disabled={!fitted}
-                    onChange={(n) => fitted && change(setGroup(loadout, group.id, kind, { equipment: fitted.id, count: n }))}
+                    onChange={(n) => change(rules.setGroupCount(loadout, group.id, kind, n))}
                   />
                 }
                 keyValue={fitted ? keyValue(fitted) : ""}
@@ -223,9 +216,9 @@ export function LoadoutTable({
           equipment={
             <EquipmentDropdown
               label="Thruster Equipment"
-              options={options(ship.thrusters)}
+              options={rules.options(loadout, { kind: "thruster" })}
               value={thruster?.id ?? null}
-              onChange={(id) => change(setThruster(loadout, id))}
+              onChange={(id) => change(rules.setThruster(loadout, id))}
               compare={compareWith(thruster)}
             />
           }
@@ -234,9 +227,8 @@ export function LoadoutTable({
           price={thruster ? formatCredits(thruster.price.average) : ""}
           was={wasText(nameOf(was?.thruster), nameOf(loadout.thruster))}
         />
-        {consumables.flatMap((group) => {
-          const used = group.items.reduce((sum, item) => sum + (loadout.consumables?.[item.id] ?? 0), 0);
-          return group.items.map((item) => {
+        {consumables.flatMap((group) =>
+          group.items.map((item) => {
             const count = loadout.consumables?.[item.id] ?? 0;
             return (
               <Row
@@ -249,8 +241,8 @@ export function LoadoutTable({
                     value={count}
                     max={group.capacity}
                     // Every item of a kind shares the Ship's capacity for it.
-                    limit={group.capacity - (used - count)}
-                    onChange={(n) => change(setConsumable(loadout, item.id, n))}
+                    limit={rules.limit(loadout, { kind: "consumable" }, item.id)}
+                    onChange={(n) => change(rules.setConsumable(loadout, item.id, n))}
                   />
                 }
                 keyValue={count > 0 ? keyValue(item) : ""}
@@ -258,9 +250,9 @@ export function LoadoutTable({
                 was={wasText(formatNumber(was?.consumables?.[item.id] ?? 0), formatNumber(count))}
               />
             );
-          });
-        })}
-        {options(ship.software.fitList).map((item) => {
+          }),
+        )}
+        {rules.options(loadout, { kind: "software" }).map((item) => {
           const fitted = loadout.software?.includes(item.id) ?? false;
           return (
             <Row
@@ -272,7 +264,7 @@ export function LoadoutTable({
                   <input
                     type="checkbox"
                     checked={fitted}
-                    onChange={(e) => change(setSoftware(loadout, item.id, e.target.checked))}
+                    onChange={(e) => change(rules.setSoftware(loadout, item.id, e.target.checked))}
                   />{" "}
                   {item.name}
                 </label>
@@ -290,6 +282,7 @@ export function LoadoutTable({
       </tbody>
       {ship.capacities.crew > 0 && (
         <CrewSection
+          rules={rules}
           capacity={ship.capacities.crew}
           crewPrice={gameData.crewPrice.average}
           loadout={loadout}
@@ -307,17 +300,19 @@ export function LoadoutTable({
  * (ADR 0004).
  */
 function CrewSection({
+  rules,
   capacity,
   crewPrice,
   loadout,
   was,
   onChange,
 }: {
+  rules: LoadoutRules;
   capacity: number;
   crewPrice: number;
   loadout: Loadout;
   was: Loadout | null;
-  onChange: (loadout: Loadout) => void;
+  onChange: (edit: Edit) => void;
 }) {
   const headingId = useId();
   const used = crewCount(loadout);
@@ -345,8 +340,8 @@ function CrewSection({
                 label={`${label} count`}
                 value={count}
                 // Service crew and marines share the Ship's crew capacity, which the header shows.
-                limit={capacity - (used - count)}
-                onChange={(n) => onChange(setCrew(loadout, role, n))}
+                limit={rules.limit(loadout, { kind: "crew", role })}
+                onChange={(n) => onChange(rules.setCrew(loadout, role, n))}
               />
             }
             keyValue=""
@@ -360,8 +355,9 @@ function CrewSection({
 }
 
 /**
- * A count, shown as "count / max" when given a max. Typed values are clamped
- * to 0..limit; limit is lower than max when other items share the capacity.
+ * A count, shown as "count / max" when given a max. The input stops at
+ * limit, which is lower than max when other items share the capacity; the
+ * edit itself clamps a typed value over it.
  */
 function CountInput({
   label,
@@ -390,7 +386,7 @@ function CountInput({
         disabled={disabled}
         onChange={(e) => {
           const n = Math.floor(Number(e.target.value));
-          onChange(Number.isFinite(n) ? Math.max(0, Math.min(limit, n)) : 0);
+          onChange(Number.isFinite(n) ? Math.max(0, n) : 0);
         }}
       />
       {max !== undefined && <> / {formatNumber(max)}</>}
