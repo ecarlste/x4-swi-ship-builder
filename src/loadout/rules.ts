@@ -132,7 +132,7 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
     const kept: Record<string, number> = {};
     for (const [id, count] of Object.entries(loadout.consumables ?? {})) {
       if (carried.has(id)) kept[id] = count;
-      else repairs.push({ type: "dropped", place: { kind: "consumable" }, equipment: id, name: nameOf(id), reason: "doesnt-fit" });
+      else repairs.push({ type: "dropped", place: { kind: "consumable", equipment: id }, equipment: id, name: nameOf(id), reason: "doesnt-fit" });
     }
     return { loadout: withEntry(loadout, "consumables", kept), repairs };
   };
@@ -152,12 +152,8 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
   return {
     consumables,
 
-    /**
-     * The most a place can take, which for a place sharing a capacity is what
-     * the others leave. A consumable's limit is per item, so it takes the
-     * item's id.
-     */
-    limit(loadout: Loadout, place: Place, id?: string): number {
+    /** The most a place can take, which for a place sharing a capacity is what the others leave. */
+    limit(loadout: Loadout, place: Place): number {
       switch (place.kind) {
         case "slot":
           return slots.has(place.slot) ? 1 : 0;
@@ -169,15 +165,17 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
         case "software":
           return 1;
         case "consumable":
-          return id === undefined ? 0 : consumableLimit(loadout, id);
+          return consumableLimit(loadout, place.equipment);
         case "crew":
           return crewLimit(loadout, place.role);
       }
     },
 
     /**
-     * The Equipment a place can take, in its fit list's order; consumables
-     * are those the Loadout can carry now, and the Crew takes none.
+     * The Equipment a place can take, in its fit list's order. A software or
+     * consumable place takes only its own item: software when it's on the
+     * Ship's fit list, a consumable when the Loadout can carry it now. The
+     * Crew takes none.
      */
     options(loadout: Loadout, place: Place): Equipment[] {
       const listed = (fitList: string | undefined) => (fitList === undefined ? [] : fitListEquipment(fitList));
@@ -191,9 +189,9 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
         case "thruster":
           return listed(ship.thrusters);
         case "software":
-          return listed(ship.software.fitList);
+          return listed(ship.software.fitList).filter((e) => e.id === place.equipment);
         case "consumable":
-          return consumables(loadout).flatMap((o) => o.items);
+          return consumables(loadout).flatMap((o) => o.items.filter((e) => e.id === place.equipment));
         case "crew":
           return [];
       }
@@ -218,7 +216,7 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
       const count = wholeCount(typed);
       const rest = withoutKey(loadout.consumables, id);
       if (count <= 0) return noRepairs(withEntry(loadout, "consumables", rest));
-      const place: EquipmentPlace = { kind: "consumable" };
+      const place: EquipmentPlace = { kind: "consumable", equipment: id };
       if (!equipment.has(id)) return dropped(loadout, place, id, "unknown-equipment");
       const limit = consumableLimit(loadout, id);
       if (limit === 0) return dropped(loadout, place, id, "doesnt-fit");
@@ -262,7 +260,7 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
     setSoftware(loadout: Loadout, id: string, fitted: boolean): Edit {
       if (fitted) {
         const reason = refusal(id, ship.software.fitList, "doesnt-fit");
-        if (reason) return dropped(loadout, { kind: "software" }, id, reason);
+        if (reason) return dropped(loadout, { kind: "software", equipment: id }, id, reason);
       }
       const software = (loadout.software ?? []).filter((s) => s !== id);
       if (fitted) software.push(id);

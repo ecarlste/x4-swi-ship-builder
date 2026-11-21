@@ -19,6 +19,7 @@ import {
   weaponSlot,
 } from "../loadout/testing/fixtures.ts";
 import type { Ship } from "../gameData.ts";
+import { loadoutLines } from "../loadout/lines.ts";
 
 /** The row for one of the game's `UILoadoutStatistics5` fields. */
 function row(rows: StatRow[], id: string): StatRow {
@@ -146,7 +147,11 @@ describe("survivability", () => {
 
 describe("firepower", () => {
   // T-65B X-wing (#12): four KX5 lasers and two Krupx launchers with MG7-A torpedoes.
-  const xwing = ship({ slots: [1, 2, 3, 4, 5, 6].map((n) => weaponSlot(`con_weapon_0${n}`)) });
+  // Its missile capacity is room for the 6 torpedoes loaded, which no test here asserts.
+  const xwing = ship({
+    slots: [1, 2, 3, 4, 5, 6].map((n) => weaponSlot(`con_weapon_0${n}`)),
+    capacities: { ...ship().capacities, missiles: 6 },
+  });
   const kx5 = gun("weapon", "kx5", {
     damage: { value: 193, noShield: 135, hull: 0 },
     fireRate: 2.4,
@@ -274,7 +279,12 @@ describe("firepower", () => {
 // Inputs are the 091_x4-800 Game Data's.
 describe("a launcher fires its best loaded missile (ADR 0002)", () => {
   // Gozanti C-ROC Corsair: a Krupx Medium Warhead Launcher and a KV22 (1,744 / 1,564).
-  const corsair = ship({ id: "gozanti_croc_raider", slots: [weaponSlot("con_weapon_01"), weaponSlot("con_weapon_02")] });
+  const corsair = ship({
+    id: "gozanti_croc_raider",
+    slots: [weaponSlot("con_weapon_01"), weaponSlot("con_weapon_02")],
+    // The Corsair's own missile capacity, as in reference.test.ts.
+    capacities: { ...ship().capacities, missiles: 30 },
+  });
   const kv22 = gun("weapon", "weapon_kv22_m_laser", {
     damage: { value: 1428, noShield: 462, hull: 0 },
     fireRate: 1.2,
@@ -452,10 +462,10 @@ describe("mandatory upgrades", () => {
     );
     const stats = loadoutStats(data, loadout("fx_ship"));
     expect(stats.missing).toEqual([
-      { row: "engine", label: "Engines" },
-      { row: "slot:con_shield_01", label: "Shield con_shield_01" },
-      { row: "thruster", label: "Thruster" },
-      { row: "software:assist", label: "assist" },
+      { place: { kind: "engine" }, label: "Engines" },
+      { place: { kind: "slot", slot: "con_shield_01" }, label: "Shield con_shield_01" },
+      { place: { kind: "thruster" }, label: "Thruster" },
+      { place: { kind: "software", equipment: "assist" }, label: "assist" },
     ]);
   });
 });
@@ -468,6 +478,8 @@ describe("price", () => {
       price: at(1_000_000),
       slots: [shieldSlot("con_shield_01"), engineSlot("con_engine_01"), engineSlot("con_engine_02")],
       slotGroups: [shieldGroup("front", 3)],
+      // Room for the 8 flares loaded.
+      capacities: { ...ship().capacities, countermeasures: 10 },
     });
     const data = gameData(
       [cruiser],
@@ -479,18 +491,22 @@ describe("price", () => {
         priced("countermeasure", "flare", at(20)),
       ],
     );
-    const stats = loadoutStats(
-      data,
-      loadout("fx_ship", {
-        slots: { con_shield_01: "big" },
-        groups: { front: { shield: { equipment: "small", count: 3 } } },
-        engine: "drive",
-        software: ["scanner"],
-        consumables: { flare: 8 },
-      }),
-    );
+    const stored = loadout("fx_ship", {
+      slots: { con_shield_01: "big" },
+      groups: { front: { shield: { equipment: "small", count: 3 } } },
+      engine: "drive",
+      software: ["scanner"],
+      consumables: { flare: 8 },
+    });
+    const stats = loadoutStats(data, stored);
     // 1,000,000 + 5,000 + 3 × 700 + 2 × 2,000 + 300 + 8 × 20; each of the 16 items is ±10.
     expect(stats.price).toEqual({ min: 1_011_400, average: 1_011_560, max: 1_011_720 });
+    // The Price is the sum of the Loadout's lines, its Chassis included.
+    const lines = loadoutLines(data, cruiser, stored);
+    expect(lines[0]).toMatchObject({ place: null, price: at(1_000_000) });
+    for (const end of ["min", "average", "max"] as const) {
+      expect(lines.reduce((sum, l) => sum + l.price[end], 0)).toBe(stats.price[end]);
+    }
   });
 
   /** A Ship with room for 10 Crew. */

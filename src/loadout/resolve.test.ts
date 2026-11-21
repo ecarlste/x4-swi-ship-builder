@@ -224,10 +224,10 @@ describe("resolveLoadout: thruster and software", () => {
         name: "Steady Thruster L",
         reason: "doesnt-fit",
       },
-      { type: "dropped", place: { kind: "software" }, equipment: "fx_gone", name: "fx_gone", reason: "unknown-equipment" },
+      { type: "dropped", place: { kind: "software", equipment: "fx_gone" }, equipment: "fx_gone", name: "fx_gone", reason: "unknown-equipment" },
       {
         type: "dropped",
-        place: { kind: "software" },
+        place: { kind: "software", equipment: "fx_shield_s" },
         equipment: "fx_shield_s",
         name: "Bubble Shield S",
         reason: "doesnt-fit",
@@ -248,12 +248,12 @@ describe("resolveLoadout: consumables", () => {
     expect(repairs).toEqual([
       {
         type: "dropped",
-        place: { kind: "consumable" },
+        place: { kind: "consumable", equipment: "fx_cargo_drone" },
         equipment: "fx_cargo_drone",
         name: "Porter Drone",
         reason: "doesnt-fit",
       },
-      { type: "dropped", place: { kind: "consumable" }, equipment: "fx_gone", name: "fx_gone", reason: "unknown-equipment" },
+      { type: "dropped", place: { kind: "consumable", equipment: "fx_gone" }, equipment: "fx_gone", name: "fx_gone", reason: "unknown-equipment" },
     ]);
 
     const withoutLauncher = resolved(loadout({ slots: { con_weapon_09: "fx_launcher_s" }, consumables: { fx_dart: 2 } }));
@@ -270,8 +270,8 @@ describe("resolveLoadout: consumables", () => {
     );
     expect(repaired.consumables).toEqual({ fx_dart: 8, fx_torpedo: 2, fx_flare: 5 });
     expect(repairs).toEqual([
-      { type: "clamped", place: { kind: "consumable" }, equipment: "fx_torpedo", name: "Heavy Torpedo", from: 4, to: 2 },
-      { type: "clamped", place: { kind: "consumable" }, equipment: "fx_flare", name: "Glare Flare", from: 7, to: 5 },
+      { type: "clamped", place: { kind: "consumable", equipment: "fx_torpedo" }, equipment: "fx_torpedo", name: "Heavy Torpedo", from: 4, to: 2 },
+      { type: "clamped", place: { kind: "consumable", equipment: "fx_flare" }, equipment: "fx_flare", name: "Glare Flare", from: 7, to: 5 },
     ]);
   });
 
@@ -283,7 +283,7 @@ describe("resolveLoadout: consumables", () => {
     expect(repairs).toEqual([
       {
         type: "dropped",
-        place: { kind: "consumable" },
+        place: { kind: "consumable", equipment: "fx_torpedo" },
         equipment: "fx_torpedo",
         name: "Heavy Torpedo",
         reason: "doesnt-fit",

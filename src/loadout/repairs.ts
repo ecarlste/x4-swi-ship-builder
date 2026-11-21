@@ -4,14 +4,18 @@
  */
 import type { CrewRole, SlotGroupKind } from "./loadout.ts";
 
-/** A place in a Loadout: where an edit goes, what a query is about, and where a Repair was made. */
+/**
+ * A Place in a Loadout: where an edit goes, what a query is about, where a
+ * Repair was made, and what a line of the Loadout is for. Software and
+ * consumables name their Equipment, so one Place is one line.
+ */
 export type Place =
   | { kind: "slot"; slot: string }
   | { kind: "group"; group: string; groupKind: SlotGroupKind }
   | { kind: "engine" }
   | { kind: "thruster" }
-  | { kind: "software" }
-  | { kind: "consumable" }
+  | { kind: "software"; equipment: string }
+  | { kind: "consumable"; equipment: string }
   | { kind: "crew"; role: CrewRole };
 
 /** A place Equipment is fitted to: every place but the Crew. */

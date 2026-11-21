@@ -113,7 +113,7 @@ export function createSession({ gameData, storage, clipboard, download }: Sessio
     if (next.loadout !== state.loadout || next.loaded !== state.loaded) {
       next.ship = shipOf(next.loadout);
       next.stats = next.loadout && next.ship ? loadoutStats(gameData, next.loadout) : null;
-      next.was = changedSince(next.loaded, next.loadout);
+      next.was = changedSince(gameData, next.loaded, next.loadout);
       next.wasStats = next.was ? loadoutStats(gameData, next.was) : null;
     }
     const suggestedName = next.opened?.name ?? next.ship?.name;

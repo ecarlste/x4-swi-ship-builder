@@ -7,9 +7,10 @@
  * decimals, as the screen does.
  */
 import type { CargoType, Equipment, GameData, Price } from "../gameData.ts";
-import { crewCount, shipEngines, type Loadout } from "../loadout/loadout.ts";
-import { indexGameData, type GameDataIndex } from "../gameDataIndex.ts";
-import { missingMandatory, type MissingUpgrade } from "./mandatory.ts";
+import type { Loadout } from "../loadout/loadout.ts";
+import { loadoutLines, type Line } from "../loadout/lines.ts";
+import { indexGameData } from "../gameDataIndex.ts";
+import { missingUpgrades, type MissingUpgrade } from "./mandatory.ts";
 import { gunOutput, launcherMissile } from "./firepower.ts";
 import { shownValue } from "./figure.ts";
 
@@ -37,7 +38,7 @@ export interface StatRow {
 
 export interface LoadoutStats {
   rows: StatRow[];
-  /** The Loadout's total price: the average is the headline, min–max the range. */
+  /** The Loadout's total price, the sum of its lines: the average is the headline, min–max the range. */
   price: Price;
   /** The mandatory upgrades the Loadout lacks, in Loadout table order. */
   missing: MissingUpgrade[];
@@ -61,13 +62,16 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   const index = indexGameData(gameData);
   const ship = index.ships.get(loadout.ship);
   if (!ship) throw new Error(`Unknown Ship ${loadout.ship}`);
-  const { equipment } = index;
-  const ofKind = <K extends Equipment["kind"]>(id: string, kind: K) => {
-    const item = equipment.get(id);
-    return item?.kind === kind ? (item as Extract<Equipment, { kind: K }>) : undefined;
-  };
+  const lines = loadoutLines(gameData, ship, loadout);
+  /** The lines at Places of these kinds holding Equipment of this kind, with their Equipment narrowed. */
+  const fitted = <K extends Equipment["kind"]>(places: NonNullable<Line["place"]>["kind"][], kind: K) =>
+    lines.flatMap((line) =>
+      line.place && places.includes(line.place.kind) && line.equipment?.kind === kind && line.count > 0
+        ? [{ item: line.equipment as Extract<Equipment, { kind: K }>, count: line.count }]
+        : [],
+    );
 
-  const shields = Object.values(loadout.slots ?? {}).flatMap((id) => ofKind(id, "shield") ?? []);
+  const shields = fitted(["slot"], "shield").map(({ item }) => item);
 
   const rows: StatRow[] = [];
   const add = (id: string, label: string, unit: string, decimals: number, group: string, value: number) =>
@@ -89,13 +93,11 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   // Each Slot Group with a shield fitted counts once: the sum of its own
   // generators. Empty groups are left out of the average (#22, #63).
-  const groupShields = Object.values(loadout.groups ?? {}).flatMap((kinds) => {
-    const entry = kinds.shield;
-    const item = entry && ofKind(entry.equipment, "shield");
-    return item && entry.count > 0
-      ? [{ capacity: item.capacity * entry.count, rate: item.rechargeRate * entry.count, delay: item.rechargeDelay }]
-      : [];
-  });
+  const groupShields = fitted(["group"], "shield").map(({ item, count }) => ({
+    capacity: item.capacity * count,
+    rate: item.rechargeRate * count,
+    delay: item.rechargeDelay,
+  }));
   // Only L/XL Ships have shield Slot Groups, so only they get these rows (story 31).
   const capShip = ship.size === "l" || ship.size === "xl";
   if (capShip) {
@@ -106,17 +108,15 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   add("RadarRange", "Radar Range", "km", 0, "combat", ship.stats.radarRange / 1000);
 
   /** Every fitted weapon and turret: weapons only fit Slots; Slot Group turrets count once per count. */
-  const fittedGuns = [
-    ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
-    ...Object.values(loadout.groups ?? {}).flatMap((kinds): [string, number][] =>
-      kinds.turret ? [[kinds.turret.equipment, kinds.turret.count]] : [],
-    ),
-  ].flatMap(([id, count]) => {
-    const item = ofKind(id, "weapon") ?? ofKind(id, "turret");
-    return item ? [{ item, count }] : [];
-  });
+  const fittedGuns: { item: Extract<Equipment, { kind: "weapon" | "turret" }>; count: number }[] = [
+    ...fitted(["slot", "group"], "weapon"),
+    ...fitted(["slot", "group"], "turret"),
+  ];
+  const carried = Object.fromEntries(
+    lines.flatMap((l) => (l.place?.kind === "consumable" && l.count > 0 ? [[l.place.equipment, l.count]] : [])),
+  );
   const output = (gun: Extract<Equipment, { kind: "weapon" | "turret" }>) =>
-    gunOutput(gun, launcherMissile(gun, loadout.consumables ?? {}, index));
+    gunOutput(gun, launcherMissile(gun, carried, index));
   const forward = fittedGuns.flatMap(({ item }) => (item.kind === "weapon" ? [output(item)] : []));
   add("BurstDPS", "Burst Weapon Output", "MW", 0, "combat", sum(forward.map((o) => o.burst)));
   add("SustainedDPS", "Sustained Weapon Output", "MW", 0, "combat", sum(forward.map((o) => o.sustained)));
@@ -139,8 +139,10 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   }
 
   // Flight (#12, #39). One engine type fills all of the Ship's engines (#50, ADR 0001).
-  const fittedEngine = loadout.engine ? ofKind(loadout.engine, "engine") : undefined;
-  const engineCount = fittedEngine ? (shipEngines(ship)?.count ?? 0) : 0;
+  // The engine line's count is the Ship's engine count.
+  const [engineLine] = fitted(["engine"], "engine");
+  const fittedEngine = engineLine?.item;
+  const engineCount = engineLine?.count ?? 0;
   const { drag, mass, accFactors, maxRotationSpeed } = ship.stats;
   type Engine = Extract<Equipment, { kind: "engine" }>;
   /** Σ engine forward thrust: the engine's thrust, scaled by `factor`, times the engine count. */
@@ -179,7 +181,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   );
   add("TravelChargeTime", "Travel Charge Time", "s", 1, "flight", ofEngine((e) => e.travel.charge));
 
-  const thrusterItem = loadout.thruster ? ofKind(loadout.thruster, "thruster") : undefined;
+  const thrusterItem = fitted(["thruster"], "thruster")[0]?.item;
   const strafe = thrusterItem?.thrust.strafe ?? 0;
   add("HorizontalStrafeSpeed", "Strafe Speed", "m/s", 1, "flight", strafe / drag.horizontal);
   add("HorizontalStrafeAcceleration", "Strafe Acceleration", "m/s²", 1, "flight", (strafe / mass) * accFactors.horizontal);
@@ -203,15 +205,7 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
   add("DeployableCapacity", "Deployables", "", 0, "crew", ship.capacities.deployables);
   add("CountermeasureCapacity", "Countermeasures", "", 0, "crew", ship.capacities.countermeasures);
 
-  return {
-    rows,
-    price: totalPrice([
-      [ship.price, 1],
-      ...equipmentBought(loadout, engineCount, index),
-      [gameData.crewPrice, crewCount(loadout)],
-    ]),
-    missing: missingMandatory(gameData, ship, loadout),
-  };
+  return { rows, price: totalPrice(lines), missing: missingUpgrades(gameData, ship, lines) };
 }
 
 /**
@@ -224,39 +218,20 @@ function turningInDegrees(degreesPerSecond: number): number {
 }
 
 /**
- * Ship + Equipment (the engine once per engine) + consumables + software + Crew, each at its min, average and max.
- * The game's total is the sum of the same lines, confirmed in game by the #63 reference row.
- * Each member of the Crew is bought at the crew price; the Captain is free (ADR 0004).
- * Differs from the game on purpose (ADR 0003): each line is at Game Data's average with
- * min–max as the range, not the station's price.
+ * The sum of the Loadout's lines: the Chassis, its Equipment (the engine once
+ * per engine) and its Crew, each at its min, average and max. The game's total
+ * is the sum of the same lines, confirmed in game by the #63 reference row.
+ * Each member of the Crew is bought at the crew price; the Captain is free
+ * (ADR 0004). Differs from the game on purpose (ADR 0003): each line is at
+ * Game Data's average with min–max as the range, not the station's price.
  */
-function totalPrice(lines: [Price, number][]): Price {
-  return lines.reduce(addTimes, { min: 0, average: 0, max: 0 });
-}
-
-/** A running total plus a price bought `count` times. */
-function addTimes(total: Price, [price, count]: [Price, number]): Price {
-  return {
-    min: total.min + price.min * count,
-    average: total.average + price.average * count,
-    max: total.max + price.max * count,
-  };
-}
-
-/** The Loadout's Equipment as price lines, the engine once per engine; Equipment not in Game Data costs nothing. */
-function equipmentBought(loadout: Loadout, engineCount: number, { equipment }: GameDataIndex): [Price, number][] {
-  const bought: [string, number][] = [
-    ...Object.values(loadout.slots ?? {}).map((id): [string, number] => [id, 1]),
-    ...Object.values(loadout.groups ?? {}).flatMap((kinds) =>
-      Object.values(kinds).map((e): [string, number] => [e.equipment, e.count]),
-    ),
-    ...(loadout.engine ? [[loadout.engine, engineCount] as [string, number]] : []),
-    ...(loadout.thruster ? [[loadout.thruster, 1] as [string, number]] : []),
-    ...(loadout.software ?? []).map((id): [string, number] => [id, 1]),
-    ...Object.entries(loadout.consumables ?? {}),
-  ];
-  return bought.flatMap(([id, count]): [Price, number][] => {
-    const item = equipment.get(id);
-    return item ? [[item.price, count]] : [];
-  });
+function totalPrice(lines: Line[]): Price {
+  return lines.reduce(
+    (total, { price }) => ({
+      min: total.min + price.min,
+      average: total.average + price.average,
+      max: total.max + price.max,
+    }),
+    { min: 0, average: 0, max: 0 },
+  );
 }
