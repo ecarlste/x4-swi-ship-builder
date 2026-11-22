@@ -12,6 +12,10 @@ _Avoid_: the mod, Star Wars mod
 The ships and equipment the app knows about, always extracted by script from an SWI release and never entered by hand.
 _Avoid_: database, content
 
+**Snapshot**:
+One extraction of Game Data from one SWI and X4 release, made by one version of the extraction and identified by when it was made and the commit it was made from.
+_Avoid_: build, dataset, data version
+
 **Ship**:
 A ship that can appear in SWI, whether or not the player can buy it.
 _Avoid_: hull, vessel, model
@@ -41,7 +45,7 @@ Anything that can be fitted to a ship as part of a loadout: weapons, turrets, sh
 _Avoid_: parts, components, wares
 
 **Software Family**:
-Software where each one replaces the one before, such as Long Range Scanner Mk1 and Mk2. A Ship fits at most one of each family, and when a family is mandatory any of them will do.
+Software where each one replaces the one before, such as Long Range Scanner Mk1 and Mk2, under the name the game gives the family, such as Object Scanner Software. A Ship fits at most one of each family. When a family is mandatory for a Ship, its Loadouts always fit exactly one of it, and any one will do.
 _Avoid_: software slot, software group
 
 **Slot**:
@@ -65,7 +69,7 @@ The service crew and marines a Loadout carries, as two counts that share the Shi
 _Avoid_: personnel, people, workforce
 
 **Captain**:
-The one person who flies a Ship, which every Ship gets free and must have when it's bought. The Captain's seat is on top of the Ship's crew capacity. The game calls it "Pilot" on S and M Ships and "Captain" on L and XL, and the buy screen keeps it ticked.
+The one person who flies a Ship, which every Ship gets free and must have when it's bought. The Captain's seat is on top of the Ship's crew capacity. The game calls it "Pilot" on S and M Ships and "Captain" on L and XL, and the buy screen keeps it ticked. The game's Crew figure counts the Captain's seat.
 _Avoid_: pilot, commander
 
 **Price**:
@@ -73,7 +77,7 @@ An estimate of what a Loadout costs: the Chassis, each piece of Equipment (the e
 _Avoid_: cost, value, purchase price
 
 **Empty Loadout**:
-The loadout every ship starts with in the builder: no equipment at all, not even software, and no Crew. Like a shipyard, it starts with only the Captain.
+The loadout every ship starts with in the builder: no equipment and no Crew, except the cheapest software the Ship can fit from each of its mandatory Software Families (ADR 0006). Like a shipyard, it starts with only the Captain.
 _Avoid_: default loadout, base loadout, template
 
 **Loaded Loadout**:
@@ -81,7 +85,7 @@ The Loadout as it was last opened or saved, which the builder compares the curre
 _Avoid_: original, baseline, snapshot
 
 **Repair**:
-A drop or clamp that makes a Loadout fit its Ship and the Game Data, such as missiles dropped when no launcher carries them, or Crew cut to the Ship's crew capacity.
+An addition, drop or clamp that makes a Loadout fit its Ship and the Game Data, such as mandatory software added when its family has none fitted, missiles dropped when no launcher carries them, or Crew cut to the Ship's crew capacity.
 _Avoid_: change, fix, correction
 
 **Changes since loading**:
