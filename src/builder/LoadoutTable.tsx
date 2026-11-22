@@ -6,10 +6,10 @@ import { DotIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentSelect } from "./EquipmentSelect.tsx";
+import { TooltipMark } from "./TooltipMark.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
 import { CREW_ROLE_NAMES, crewCount, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
 import { loadoutLines, type Held, type Line } from "../loadout/lines.ts";
@@ -28,6 +28,9 @@ const KIND_LABEL: Record<SlotKind, string> = {
   shield: "Shield",
   engine: "Engine",
 };
+
+const MISSING = "Mandatory upgrade missing";
+const CHANGED = "Changed since loading";
 
 const GROUP_KIND_LABEL: Record<SlotGroupKind, string> = {
   turret: "Turrets",
@@ -255,20 +258,20 @@ export function LoadoutTable({
   return (
     <Table aria-label="Loadout">
       <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead scope="col" className="text-xs text-muted-foreground">
+        <TableRow className="text-xs hover:bg-transparent [&>th]:text-muted-foreground">
+          <TableHead scope="col">
             Slot
           </TableHead>
-          <TableHead scope="col" className="text-xs text-muted-foreground">
+          <TableHead scope="col">
             Equipment
           </TableHead>
-          <TableHead scope="col" className="text-right text-xs text-muted-foreground">
+          <TableHead scope="col" className="text-right">
             Qty
           </TableHead>
-          <TableHead scope="col" className="text-xs text-muted-foreground">
+          <TableHead scope="col">
             Key value
           </TableHead>
-          <TableHead scope="col" className="text-right text-xs text-muted-foreground">
+          <TableHead scope="col" className="text-right">
             Price (avg)
           </TableHead>
         </TableRow>
@@ -406,17 +409,17 @@ function Row({
         {missing && (
           <>
             {" "}
-            <Mark text="Mandatory upgrade missing" className="font-bold text-warning">
+            <TooltipMark explanation={MISSING} label={MISSING} className="font-bold text-warning">
               *
-            </Mark>
+            </TooltipMark>
           </>
         )}
         {was !== undefined && (
           <>
             {" "}
-            <Mark text="Changed since loading" className="text-warning">
+            <TooltipMark explanation={CHANGED} label={CHANGED} className="text-warning">
               <DotIcon aria-hidden="true" className="size-4" strokeWidth={6} />
-            </Mark>
+            </TooltipMark>
           </>
         )}
       </TableHead>
@@ -428,31 +431,5 @@ function Row({
       <TableCell className="text-muted-foreground">{keyValue}</TableCell>
       <TableCell className="text-right">{price}</TableCell>
     </TableRow>
-  );
-}
-
-/**
- * A mark on a row header, explained by a Tooltip that opens on hover or focus. The mark is
- * focusable, so the explanation can be read without a mouse.
- */
-function Mark({ text, className, children }: { text: string; className?: string; children: ReactNode }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        aria-label={text}
-        className={cn(
-          "inline-flex items-center rounded-sm align-middle outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-          className,
-        )}
-      >
-        {/* The explanation stays the mark's title, as v1 had it. The pointer passes through to the
-            trigger, so the browser doesn't show the title beside the Tooltip. */}
-        <span title={text} className="pointer-events-none inline-flex">
-          {children}
-        </span>
-      </TooltipTrigger>
-      {/* Base UI gives the popup no role of its own. */}
-      <TooltipContent role="tooltip">{text}</TooltipContent>
-    </Tooltip>
   );
 }

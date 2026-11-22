@@ -1,8 +1,10 @@
-import { useId } from "react";
-import { cn } from "@/lib/utils";
+import { useId, useState } from "react";
+import { cn } from "cn";
+import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { compareFigure, comparePrice, type LoadoutStats, type StatRow } from "../stats/stats.ts";
 import { formatCredits, formatNumber, formatSigned } from "./format.ts";
 import { PANEL_HEADING, verdictClass } from "./styles.ts";
+import { TooltipMark } from "./TooltipMark.tsx";
 
 /** The value as the game prints it: already rounded down, with its decimals and thousands separators. */
 const formatted = (row: StatRow) => formatNumber(row.shown, row.decimals);
@@ -53,24 +55,17 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
       <h2 id={headingId} className={cn(PANEL_HEADING, "mt-4")}>
         Stats
       </h2>
-      <table className="mt-1 w-full border-collapse text-sm tabular-nums" aria-labelledby={headingId}>
+      <Table className="mt-1 tabular-nums" aria-labelledby={headingId}>
         {groups.map((group) => (
-          <tbody key={group} className="[&+tbody>tr:first-child>*]:pt-2.5">
+          <TableBody key={group} className="[&+tbody>tr:first-child>*]:pt-2.5">
             {stats.rows
               .filter((r) => r.group === group)
               .map((r) => (
-                <tr key={r.id} title={TOOLTIPS[r.id]}>
-                  <th scope="row" className={cn("text-left font-normal", SUB_ROWS.has(r.id) && "pl-4")}>
-                    {r.label}
-                    {r.unit && ` (${r.unit})`}
-                  </th>
-                  <td className="text-right">{formatted(r)}</td>
-                  {was && <ChangeCell row={r} was={wasShown.get(r.id) ?? r.shown} />}
-                </tr>
+                <StatTableRow key={r.id} row={r} was={was ? (wasShown.get(r.id) ?? r.shown) : null} />
               ))}
-          </tbody>
+          </TableBody>
         ))}
-      </table>
+      </Table>
       <section className="mt-4" aria-labelledby={priceId}>
         <h2 id={priceId} className={PANEL_HEADING}>
           Price
@@ -95,7 +90,40 @@ export function StatsPanel({ stats, was = null }: { stats: LoadoutStats; was?: L
   );
 }
 
+/** A stats table cell: as tight as the game's list. */
+const CELL = "h-auto p-px";
+
+/**
+ * A stat row, with its change since `was` when given. A row the game explains on mouse-over has its
+ * label as a mark whose Tooltip gives the explanation; the row keeps it as its title too, as v1 had
+ * it, except while the Tooltip shows it.
+ */
+function StatTableRow({ row, was }: { row: StatRow; was: number | null }) {
+  const [explaining, setExplaining] = useState(false);
+  const explanation = TOOLTIPS[row.id];
+  const label = `${row.label}${row.unit ? ` (${row.unit})` : ""}`;
+  return (
+    <TableRow title={explaining ? undefined : explanation} className="border-0 hover:bg-transparent">
+      <TableHead scope="row" className={cn(CELL, "font-normal whitespace-normal", SUB_ROWS.has(row.id) && "pl-4")}>
+        {explanation ? (
+          <TooltipMark explanation={explanation} titled={false} onOpenChange={setExplaining}>
+            {label}
+          </TooltipMark>
+        ) : (
+          label
+        )}
+      </TableHead>
+      <TableCell className={cn(CELL, "text-right")}>{formatted(row)}</TableCell>
+      {was !== null && <ChangeCell row={row} was={was} />}
+    </TableRow>
+  );
+}
+
 function ChangeCell({ row, was }: { row: StatRow; was: number }) {
   const { difference, verdict } = compareFigure(row.shown, was, row);
-  return <td className={cn("pl-2 text-right text-xs", verdictClass(verdict))}>{signed(difference, row.decimals)}</td>;
+  return (
+    <TableCell className={cn(CELL, "pl-2 text-right text-xs", verdictClass(verdict))}>
+      {signed(difference, row.decimals)}
+    </TableCell>
+  );
 }
