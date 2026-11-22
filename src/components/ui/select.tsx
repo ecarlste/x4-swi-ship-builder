@@ -44,11 +44,14 @@ function SelectTrigger({
       {...props}
     >
       {children}
+      {/* children={null} drops Base UI's default "▼" text, which would land inside the svg. */}
       <SelectPrimitive.Icon
         render={
           <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
         }
-      />
+      >
+        {null}
+      </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
 }

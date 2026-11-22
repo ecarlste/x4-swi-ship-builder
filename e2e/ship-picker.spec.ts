@@ -19,7 +19,7 @@ test("the Size dropdown narrows the Ship list to Ships of that size", async ({ p
   await page.goto("/");
 
   const size = page.getByRole("combobox", { name: "Size" });
-  await expect(size.getByRole("option", { selected: true })).toHaveText("S");
+  await expect(size).toHaveText("S");
   await expectListedShips(page, ["Bramble Fighter", "Swiftwing Courier", "Needle Striker"]);
 
   await choose(page, "Size", "M");
@@ -33,7 +33,7 @@ test("the Seller filter narrows the Ship list to one Faction's Ships", async ({ 
   await page.goto("/");
 
   const seller = page.getByRole("combobox", { name: "Seller" });
-  await expect(seller.getByRole("option", { selected: true })).toHaveText("Any");
+  await expect(seller).toHaveText("Any");
 
   await choose(page, "Seller", "Corsair Clans");
   await expectListedShips(page, ["Bramble Fighter", "Needle Striker"]);
