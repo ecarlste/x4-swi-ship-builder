@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { CircleAlert } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { gameData } from "./gameData.ts";
 import { Footer } from "./Footer.tsx";
 import { ShipBlock } from "./builder/ShipBlock.tsx";
@@ -115,18 +117,13 @@ export function App() {
         {message?.kind === "status" && message.text}
       </div>
       {message?.kind === "error" && (
-        <p role="alert" className="toolbar-message error">
-          {message.text}
-        </p>
+        <Alert variant="destructive" className="mx-4 my-2 w-auto">
+          <CircleAlert />
+          <AlertDescription className="text-destructive/90">{message.text}</AlertDescription>
+        </Alert>
       )}
       {notice && <RepairsNotice {...notice} onDismiss={session.dismissNotice} />}
-      {naming && (
-        <SaveDialog
-          suggestedName={naming.suggestedName}
-          onSave={(name) => session.save(name)}
-          onCancel={session.cancelNaming}
-        />
-      )}
+      <SaveDialog naming={naming} onSave={(name) => session.save(name)} onCancel={session.cancelNaming} />
       {showSaved && (
         <SavedLoadoutsList
           list={savedList}
