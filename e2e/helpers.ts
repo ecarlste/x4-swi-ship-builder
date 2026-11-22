@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 /** Helpers shared by the e2e specs. */
 import type { Page } from "@playwright/test";
 
@@ -5,9 +6,42 @@ type Size = "S" | "M" | "L" | "XL";
 
 /** Picks a Ship through the toolbar's picker, on the page as it is. */
 export async function pickShip(page: Page, size: Size, name: string) {
-  await page.getByRole("combobox", { name: "Size" }).selectOption(size);
+  await choose(page, "Size", size);
   await page.getByRole("combobox", { name: "Ship" }).fill(name);
   await page.getByRole("option", { name }).click();
+}
+
+/**
+ * Picks an option from one of the toolbar's dropdowns (Size or Seller): opens it, then picks the
+ * option by role. v1's native selects draw their options outside the page, so there the option is
+ * picked by its label instead.
+ */
+export async function choose(page: Page, dropdown: "Size" | "Seller", option: string) {
+  const control = page.getByRole("combobox", { name: dropdown });
+  if (await control.evaluate((el) => el instanceof HTMLSelectElement)) {
+    await control.selectOption({ label: option });
+    return;
+  }
+  await control.click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
+/**
+ * The colour a theme token (such as `success` or `destructive`) resolves to on the page, in the
+ * form the browser reports a computed `color`.
+ */
+export async function tokenColour(page: Page, token: "success" | "warning" | "destructive") {
+  return page.evaluate((name) => {
+    if (!getComputedStyle(document.documentElement).getPropertyValue(`--${name}`)) {
+      throw new Error(`The theme has no --${name} token`);
+    }
+    const probe = document.createElement("span");
+    probe.style.color = `var(--${name})`;
+    document.body.append(probe);
+    const colour = getComputedStyle(probe).color;
+    probe.remove();
+    return colour;
+  }, token);
 }
 
 /** Loads the app, then picks a Ship through the toolbar's picker. */
