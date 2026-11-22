@@ -1,9 +1,13 @@
 import { useId, useState, type ReactNode } from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { cn } from "cn";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Equipment } from "../gameData.ts";
 
 const EMPTY_LABEL = "— empty —";
+
+/** The surface the list and the comparison popover beside it share: shadcn's popover. */
+const SURFACE = "rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10";
 
 /**
  * A Slot's Equipment Select in the Loadout table: plain names sorted by name, "— empty —" first,
@@ -28,8 +32,8 @@ export function EquipmentSelect({
   /** The comparison popover's content for the highlighted option. */
   compare?: (option: Equipment) => ReactNode;
 }) {
-  /** The option the comparison popover is shown for. */
-  const [shown, setShown] = useState<Equipment | null>(null);
+  /** The option the comparison popover compares with the fitted item, if it shows. */
+  const [compared, setCompared] = useState<Equipment | null>(null);
   const popoverId = useId();
 
   const sorted = [...options].sort((a, b) => a.name.localeCompare(b.name));
@@ -38,7 +42,7 @@ export function EquipmentSelect({
     ...sorted.map((e) => ({ value: e.id, label: e.name })),
   ];
   const fitted = sorted.find((e) => e.id === value) ?? null;
-  const show = (option: Equipment | null) => setShown(compare ? option : null);
+  const show = (option: Equipment | null) => setCompared(compare ? option : null);
 
   return (
     <Select
@@ -62,7 +66,9 @@ export function EquipmentSelect({
           alignItemWithTrigger={false}
           className="isolate z-50 flex items-start gap-1"
         >
-          <SelectPrimitive.Popup className="max-h-[min(50vh,var(--available-height))] min-w-(--anchor-width) overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10">
+          <SelectPrimitive.Popup
+            className={cn(SURFACE, "max-h-[min(50vh,var(--available-height))] min-w-(--anchor-width) overflow-y-auto p-1")}
+          >
             <SelectPrimitive.List onMouseLeave={() => show(null)}>
               {items.map((item) => {
                 const option = sorted.find((e) => e.id === item.value) ?? null;
@@ -74,7 +80,7 @@ export function EquipmentSelect({
                     label={item.label}
                     // The name alone: the tick isn't part of it.
                     aria-label={item.label}
-                    aria-describedby={option !== null && option === shown ? popoverId : undefined}
+                    aria-describedby={option !== null && option === compared ? popoverId : undefined}
                     className={option ? undefined : "text-muted-foreground"}
                     // Highlighting an option, by hover or by key, focuses it. The hover is kept too, so
                     // coming back onto the option the list left still focused shows it again.
@@ -89,13 +95,13 @@ export function EquipmentSelect({
               })}
             </SelectPrimitive.List>
           </SelectPrimitive.Popup>
-          {shown && compare && (
+          {compared && compare && (
             <div
               id={popoverId}
               role="tooltip"
-              className="rounded-lg bg-popover p-3 text-sm whitespace-nowrap text-popover-foreground shadow-md ring-1 ring-foreground/10"
+              className={cn(SURFACE, "p-3 text-sm whitespace-nowrap")}
             >
-              {compare(shown)}
+              {compare(compared)}
             </div>
           )}
         </SelectPrimitive.Positioner>

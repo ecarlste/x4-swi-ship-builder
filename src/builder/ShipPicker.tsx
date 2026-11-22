@@ -67,7 +67,7 @@ export function ShipPicker({
   useEffect(() => {
     if (valueSize) setSize(valueSize);
   }, [value?.id, valueSize]);
-  const id = useId();
+  const labelIdPrefix = useId();
 
   const factionName = useMemo(() => new Map(factions.map((f) => [f.id, f.name])), [factions]);
   const sellerNames = (ship: Ship) => ship.sellers.map((id) => factionName.get(id) ?? id).join(", ");
@@ -90,38 +90,22 @@ export function ShipPicker({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <FilterSelect
+        label="Size"
+        labelId={`${labelIdPrefix}-size`}
+        items={SIZES}
+        value={size}
+        onValueChange={(next) => next && setSize(next)}
+      />
+      <FilterSelect
+        label="Seller"
+        labelId={`${labelIdPrefix}-seller`}
+        items={sellerOptions}
+        value={seller}
+        onValueChange={setSeller}
+      />
       <div className="flex items-center gap-2">
-        <span id={`${id}-size`}>Size</span>
-        <Select items={SIZES} value={size} onValueChange={(next) => next && setSize(next)}>
-          <SelectTrigger aria-labelledby={`${id}-size`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SIZES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex items-center gap-2">
-        <span id={`${id}-seller`}>Seller</span>
-        <Select items={sellerOptions} value={seller} onValueChange={setSeller}>
-          <SelectTrigger aria-labelledby={`${id}-seller`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {sellerOptions.map((f) => (
-              <SelectItem key={f.value ?? ""} value={f.value}>
-                {f.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex items-center gap-2">
-        <label htmlFor={`${id}-ship`}>Ship</label>
+        <label htmlFor={`${labelIdPrefix}-ship`}>Ship</label>
         <Combobox
           items={groups}
           value={value}
@@ -130,7 +114,7 @@ export function ShipPicker({
           isItemEqualToValue={(a, b) => a.id === b.id}
           autoHighlight
         >
-          <ComboboxInput id={`${id}-ship`} placeholder="Choose a Ship…" className="w-88 max-w-[70vw]" />
+          <ComboboxInput id={`${labelIdPrefix}-ship`} placeholder="Choose a Ship…" className="w-88 max-w-[70vw]" />
           <ComboboxContent>
             <ComboboxEmpty>No Ships match.</ComboboxEmpty>
             <ComboboxList aria-label="Ships">
@@ -143,11 +127,11 @@ export function ShipPicker({
                         key={ship.id}
                         value={ship}
                         aria-label={ship.name}
-                        aria-describedby={`${id}-${ship.id}-sellers`}
+                        aria-describedby={`${labelIdPrefix}-${ship.id}-sellers`}
                         className="justify-between gap-4"
                       >
                         <span>{ship.name}</span>
-                        <span id={`${id}-${ship.id}-sellers`} className="text-xs text-muted-foreground">
+                        <span id={`${labelIdPrefix}-${ship.id}-sellers`} className="text-xs text-muted-foreground">
                           {sellerNames(ship)}
                         </span>
                       </ComboboxItem>
@@ -159,6 +143,39 @@ export function ShipPicker({
           </ComboboxContent>
         </Combobox>
       </div>
+    </div>
+  );
+}
+
+/** One of the picker's filters: its label, then a Select of its options. */
+function FilterSelect<T extends string | null>({
+  label,
+  labelId,
+  items,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  labelId: string;
+  items: { value: T; label: string }[];
+  value: T;
+  onValueChange: (value: T | null) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span id={labelId}>{label}</span>
+      <Select items={items} value={value} onValueChange={onValueChange}>
+        <SelectTrigger aria-labelledby={labelId}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value ?? ""} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
