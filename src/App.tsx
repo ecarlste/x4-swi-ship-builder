@@ -111,7 +111,7 @@ export function App() {
           </button>
         </div>
       </div>
-      <div role="status" className="toolbar-message">
+      <div role="status" className="px-4 py-1 text-sm text-muted-foreground empty:hidden">
         {message?.kind === "status" && message.text}
       </div>
       {message?.kind === "error" && (
