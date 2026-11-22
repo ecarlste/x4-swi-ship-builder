@@ -59,9 +59,9 @@ export function App() {
   }, [ship]);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>{APP_TITLE}</h1>
+    <div className="flex min-h-screen flex-col">
+      <header className="px-4 py-3">
+        <h1 className="font-heading text-xl font-semibold">{APP_TITLE}</h1>
       </header>
       <div
         className="sticky top-0 z-5 flex flex-wrap items-center gap-2 border-b bg-card px-4 py-2"
@@ -75,12 +75,12 @@ export function App() {
           onPick={session.pickShip}
         />
         {missing.length > 0 && (
-          <span className="mandatory-missing" title={missing.map((m) => m.label).join("\n")}>
+          <span className="cursor-help text-warning" title={missing.map((m) => m.label).join("\n")}>
             ⚠ {missing.length} mandatory missing
           </span>
         )}
-        <div className="toolbar-actions">
-          {opened && <span className="opened-name">{opened.name}</span>}
+        <div className="ml-auto flex items-center gap-2">
+          {opened && <span className="font-semibold">{opened.name}</span>}
           <Button variant="outline" aria-expanded={showSaved} onClick={session.toggleSaved}>
             Saved Loadouts
           </Button>
@@ -130,11 +130,11 @@ export function App() {
           onDelete={session.delete}
         />
       )}
-      <main className="app-main">
+      <main className="flex-1">
         {ship && loadout && stats ? (
-          <div className="builder">
-            <div className="loadout">
-              <h2>{ship.name}</h2>
+          <div className="grid grid-cols-[1fr_340px] gap-4 px-4 py-3 max-[720px]:grid-cols-1">
+            <div>
+              <h2 className="mb-2 font-heading text-lg font-semibold">{ship.name}</h2>
               <LoadoutTable
                 gameData={gameData}
                 ship={ship}
@@ -149,7 +149,7 @@ export function App() {
             </aside>
           </div>
         ) : (
-          <p className="builder-empty">Choose a size, then a Ship. It opens as an Empty Loadout.</p>
+          <p className="px-4 py-3 text-muted-foreground">Choose a size, then a Ship. It opens as an Empty Loadout.</p>
         )}
       </main>
       <Footer manifest={gameData.manifest} />
