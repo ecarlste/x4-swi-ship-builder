@@ -97,11 +97,13 @@ function figures(index: GameDataIndex, loadout: Loadout, item: Equipment, fitted
       ];
     case "engine":
       return [
-        // In kN, as the Encyclopedia shows them; Travel Thrust is its Max Travel Thrust (#63).
+        // In kN, as the Encyclopedia shows them; Boost Thrust and Travel Thrust are its
+        // Max Boost Thrust (#114) and Max Travel Thrust (#63).
         { label: "Thrust", unit: "kN", decimals: 0, value: item.thrust.forward },
-        // Boost Speed's and Boost Acceleration's thrusts, before the Ship's drag and mass.
-        // unconfirmed (#114): no game screen checked for either.
+        // Boost Speed's thrust, before the Ship's drag.
         { label: "Boost Thrust", unit: "kN", decimals: 0, value: item.thrust.forward * item.boost.thrust },
+        // Boost Acceleration's thrust, before the Ship's mass. No game screen shows it, so it's
+        // checked over the Ship's mass against #39's in-game Boost Acceleration (#114).
         {
           label: "Boost Acceleration Thrust",
           unit: "kN",

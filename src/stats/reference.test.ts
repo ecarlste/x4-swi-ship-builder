@@ -12,7 +12,7 @@
  * torpedo launcher turrets, which could have added to Missiles.
  */
 import { describe, expect, test } from "vitest";
-import { loadoutStats, type LoadoutStats } from "./stats.ts";
+import { compareEquipment, loadoutStats, type LoadoutStats } from "./stats.ts";
 import {
   engine,
   engineSlot,
@@ -920,4 +920,28 @@ describe("in game on X4 8.00 + SWI 0.9.1 HF (#77)", () => {
       ...flightScreen(40, [195, 136, 587, 205, 100, 1, 10575, 136, 9, 19.3, 7.6, 7.8, 7.1, 6.7], [66, 10, 0, 40, 25]),
     });
   });
+});
+
+/**
+ * No game screen shows an engine's Boost Acceleration Thrust, the comparison
+ * popover's figure behind the Boost Acceleration row: that row is the Ship's
+ * engines' thrust over its mass. So the figure is checked through the Ship's
+ * Game Data mass against the Boost Acceleration #39 saw on the configuration
+ * screen (#114). The N-1 Modified's engine tells boost@acceleration (4) from
+ * boost@thrust (6), which would give 725.
+ */
+describe("the comparison popover's Boost Acceleration Thrust, over the Ship's mass (#114)", () => {
+  test.each([
+    ["N-1 Modified", 1, "engine_mando_s_n1", 2080, 483, n1Modified],
+    ["Gozanti-class Transport", 2, "engine_gozanti_01", 1350, 59, gozanti],
+  ])(
+    "%s, %d× %s: Boost Acceleration Thrust %d kN over the Ship's mass = Boost Acceleration %d, as in game",
+    (_name, count, engineId, figure, screen, ship) => {
+      const item = equipment.find((e) => e.id === engineId)!;
+      const comparison = compareEquipment(data, loadout(ship.id), item, null);
+      const thrust = comparison.figures.find((f) => f.label === "Boost Acceleration Thrust")!;
+      expect(thrust.shown).toBe(figure);
+      expect(Math.floor(((count * thrust.shown) / ship.stats.mass) * ship.stats.accFactors.forward)).toBe(screen);
+    },
+  );
 });
