@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
@@ -22,9 +23,9 @@ if (!existsSync(join(gameDataDir, "manifest.json"))) {
 }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    alias: { "@snapshot": gameDataDir },
+    alias: { "@snapshot": gameDataDir, "@": resolve(import.meta.dirname, "src") },
   },
   test: {
     include: ["src/**/*.test.{ts,tsx}", "shared/**/*.test.ts", "extract/**/*.test.ts", "e2e/**/*.test.ts", "scripts/**/*.test.ts"],
