@@ -176,12 +176,12 @@ input:not([data-slot]) {
 
 .builder {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr 340px;
   gap: 16px;
   padding: 12px 16px;
 }
 
-.builder h2 {
+.loadout > h2 {
   margin: 0 0 8px;
   font-size: 18px;
 }
@@ -191,80 +191,10 @@ input:not([data-slot]) {
   color: #8a93a6;
 }
 
-.ship-block h2,
-.stats-heading {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #8a93a6;
-}
-
-.ship-block ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.stats-heading {
-  margin-top: 16px;
-}
-
-.stats-table {
-  width: 100%;
-  margin-top: 4px;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.stats-table tbody + tbody tr:first-child > * {
-  padding-top: 10px;
-}
-
-.stats-table th {
-  text-align: left;
-  font-weight: normal;
-}
-
-.stats-table th.stat-sub {
-  padding-left: 16px;
-}
-
-.stats-table td {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.stats-price h2 {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #8a93a6;
-}
-
-.stats-price-average {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.stats-price-range {
-  font-size: 12px;
-  color: #8a93a6;
-}
-
-.stats-price-note {
-  margin-top: 2px;
-  font-size: 12px;
-  color: #8a93a6;
-}
-
 @media (max-width: 720px) {
   .builder {
     grid-template-columns: 1fr;
   }
-}
-
-.dim {
-  color: #8a93a6;
 }
 
 .mandatory-missing {
@@ -283,63 +213,3 @@ input:not([data-slot]) {
   font-weight: 600;
 }
 
-/* Changes since loading: the stats' change column and the Loadout table's changed rows. */
-.stats-table td.stat-change {
-  padding-left: 8px;
-  font-size: 12px;
-}
-
-.stat-change.better {
-  color: var(--success);
-}
-
-.stat-change.worse {
-  color: var(--destructive);
-}
-
-.comparison-popover {
-  padding: 8px 10px;
-  background: #1f2632;
-  border: 1px solid #2a3040;
-  border-radius: 4px;
-  box-shadow: 0 6px 18px #0009;
-  white-space: nowrap;
-}
-
-.comparison-name {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.comparison-figures {
-  border-collapse: collapse;
-  margin-bottom: 6px;
-}
-
-.comparison-figures th,
-.comparison-figures td {
-  padding: 1px 6px 1px 0;
-  font-weight: normal;
-  text-align: left;
-}
-
-.comparison-figures .num {
-  text-align: right;
-}
-
-.comparison-sellers {
-  margin: 2px 0 0;
-  padding-left: 1.2em;
-}
-
-.difference.better {
-  color: var(--success);
-}
-
-.difference.worse {
-  color: var(--destructive);
-}
-
-.difference.same {
-  color: #8a93a6;
-}

@@ -121,3 +121,38 @@ test("with nothing compatible loaded, No missile is the loaded row (#65)", async
     "No missile ◂ loaded",
   ]);
 });
+
+test("arrowing through an open Equipment control moves the popover to each focused option", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+  await fit(page, /con_weapon_01/, "Pulse Blaster");
+  await row(page, /con_weapon_01/).getByRole("combobox").focus();
+  const option = (name: string) => page.getByRole("listbox").getByRole("option", { name, exact: true });
+  const popover = page.getByRole("tooltip");
+
+  // Opening lands on the fitted option, which compares with itself.
+  await page.keyboard.press("ArrowDown");
+  await expect(option("Pulse Blaster")).toBeFocused();
+  await expect(popover).toContainText("Pulse Blaster");
+  await expect(figure(popover, "Burst Output").getByRole("cell")).toHaveText(["400 MW", "±0"]);
+
+  await page.keyboard.press("ArrowDown");
+  await expect(option("Torpedo Tube")).toBeFocused();
+  await expect(popover).toContainText("Torpedo Tube");
+  await expect(option("Torpedo Tube")).toHaveAccessibleDescription(/Torpedo Tube/);
+
+  await page.keyboard.press("ArrowDown");
+  await expect(option("Zephyr Cannon")).toBeFocused();
+  await expect(popover).toContainText("Zephyr Cannon");
+  await expect(figure(popover, "Burst Output").getByRole("cell")).toHaveText(["300 MW", "−100"]);
+  await expect(figure(popover, "Burst Output").getByText("−100")).toHaveCSS("color", await tokenColour(page, "destructive"));
+  await expect(option("Zephyr Cannon")).toHaveAccessibleDescription(/Zephyr Cannon/);
+  await expect(option("Torpedo Tube")).not.toHaveAttribute("aria-describedby");
+
+  // "— empty —" has nothing to compare, so the popover goes.
+  await page.keyboard.press("Home");
+  await expect(option("— empty —")).toBeFocused();
+  await expect(popover).toBeHidden();
+
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+});
