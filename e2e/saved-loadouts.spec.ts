@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fit, loadoutTable, pickShip, row } from "./helpers.ts";
+import { fit, loadoutTable, pickShip, row, tokenColour } from "./helpers.ts";
 
 const KEY = "swi-builder:saved-loadouts:v1";
 
@@ -62,7 +62,7 @@ test("a first save asks for a name, suggesting the Ship's, and the Loadout reope
   await entry.getByRole("button", { name: "Open" }).click();
 
   await expect(page.getByRole("combobox", { name: "Ship" })).toHaveValue("Ironback Hauler");
-  await expect(page.getByRole("combobox", { name: "Size" })).toHaveValue("l");
+  await expect(page.getByRole("combobox", { name: "Size" })).toHaveText("L");
   await expect(row(page, /con_shield_01/).getByRole("combobox")).toHaveText(/Bubble Shield M/);
 });
 
@@ -105,4 +105,63 @@ test("a stored value that isn't a list shows its error in the list", async ({ pa
   await showSavedLoadouts(page);
   await expect(savedList(page).getByRole("alert")).toContainText("couldn't be read");
   await expect(savedList(page).getByRole("listitem")).toHaveCount(0);
+});
+
+/** Presses Tab until the Save button has focus, as a keyboard user reaches it. */
+async function tabToSave(page: Page) {
+  for (let i = 0; i < 30; i++) {
+    if (await saveButton(page).evaluate((el) => el === document.activeElement)) return;
+    await page.keyboard.press("Tab");
+  }
+  throw new Error("Tab never reached the Save button");
+}
+
+test("the Save dialog opens, fills and saves by keyboard, keeping focus inside and returning it to Save", async ({ page }) => {
+  await pickShip(page, "S", "Swiftwing Courier");
+
+  await tabToSave(page);
+  await page.keyboard.press("Enter");
+  const dialog = saveDialog(page);
+  const name = dialog.getByRole("textbox", { name: "Name" });
+  await expect(dialog).toBeVisible();
+  await expect(name).toBeFocused();
+
+  // Tab cycles through the dialog's controls without leaving it, and comes back round to the name.
+  const focusInDialog = () => dialog.evaluate((el) => el.contains(document.activeElement));
+  for (let i = 0; i < 3; i++) {
+    await page.keyboard.press("Tab");
+    await expect.poll(focusInDialog).toBe(true);
+  }
+  await expect(name).toBeFocused();
+
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("Keyboard Courier");
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("status")).toContainText("Keyboard Courier");
+  await expect(saveButton(page)).toBeFocused();
+  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toContain("Keyboard Courier");
+});
+
+test("Escape cancels the Save dialog without saving, returning focus to Save", async ({ page }) => {
+  await pickShip(page, "S", "Swiftwing Courier");
+
+  await tabToSave(page);
+  await page.keyboard.press("Enter");
+  await expect(saveDialog(page)).toBeVisible();
+  await page.keyboard.type(" draft");
+  await page.keyboard.press("Escape");
+
+  await expect(saveDialog(page)).toBeHidden();
+  await expect(saveButton(page)).toBeFocused();
+  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBeNull();
+});
+
+test("the list's error is drawn in the destructive colour", async ({ page }) => {
+  await storeRaw(page, '{"not":"a list"}');
+
+  await showSavedLoadouts(page);
+  const alert = savedList(page).getByRole("alert");
+  await expect(alert).toHaveCSS("color", await tokenColour(page, "destructive"));
 });

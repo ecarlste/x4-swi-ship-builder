@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { choose } from "./helpers.ts";
 
 const shipPicker = (page: Page) => page.getByRole("combobox", { name: "Ship" });
 const shipOptions = (page: Page) => page.getByRole("listbox", { name: "Ships" }).getByRole("option");
@@ -18,13 +19,13 @@ test("the Size dropdown narrows the Ship list to Ships of that size", async ({ p
   await page.goto("/");
 
   const size = page.getByRole("combobox", { name: "Size" });
-  await expect(size.getByRole("option", { selected: true })).toHaveText("S");
+  await expect(size).toHaveText("S");
   await expectListedShips(page, ["Bramble Fighter", "Swiftwing Courier", "Needle Striker"]);
 
-  await size.selectOption("M");
+  await choose(page, "Size", "M");
   await expectListedShips(page, ["Lancer Gunship (Corsair Clans)", "Lancer Gunship (Freight Guild)"]);
 
-  await size.selectOption("XL");
+  await choose(page, "Size", "XL");
   await expectListedShips(page, []);
 });
 
@@ -32,15 +33,15 @@ test("the Seller filter narrows the Ship list to one Faction's Ships", async ({ 
   await page.goto("/");
 
   const seller = page.getByRole("combobox", { name: "Seller" });
-  await expect(seller.getByRole("option", { selected: true })).toHaveText("Any");
+  await expect(seller).toHaveText("Any");
 
-  await seller.selectOption("Corsair Clans");
+  await choose(page, "Seller", "Corsair Clans");
   await expectListedShips(page, ["Bramble Fighter", "Needle Striker"]);
 
-  await page.getByRole("combobox", { name: "Size" }).selectOption("M");
+  await choose(page, "Size", "M");
   await expectListedShips(page, ["Lancer Gunship (Corsair Clans)"]);
 
-  await seller.selectOption("Any");
+  await choose(page, "Seller", "Any");
   await expectListedShips(page, ["Lancer Gunship (Corsair Clans)", "Lancer Gunship (Freight Guild)"]);
 });
 
@@ -49,8 +50,8 @@ test("the Size and Seller filters only narrow the picker, leaving the open Ship 
   await shipPicker(page).click();
   await page.getByRole("option", { name: "Swiftwing Courier" }).click();
 
-  await page.getByRole("combobox", { name: "Seller" }).selectOption("Corsair Clans");
-  await page.getByRole("combobox", { name: "Size" }).selectOption("M");
+  await choose(page, "Seller", "Corsair Clans");
+  await choose(page, "Size", "M");
 
   await expect(page).toHaveTitle("Swiftwing Courier · X4: SWI Ship Builder");
   await expect(page.getByRole("heading", { name: "Swiftwing Courier" })).toBeVisible();
@@ -101,7 +102,7 @@ test("picking a Ship opens it, and a duplicate name shows its Seller suffix in t
   await page.goto("/");
   await expect(page.getByText("Choose a size, then a Ship.")).toBeVisible();
 
-  await page.getByRole("combobox", { name: "Size" }).selectOption("M");
+  await choose(page, "Size", "M");
   await shipPicker(page).fill("lancer");
   await shipOptions(page).filter({ hasText: "Lancer Gunship (Freight Guild)" }).click();
 
@@ -131,7 +132,7 @@ test("the Stats panel's Ship block lists each Seller with the Licence it require
   const shipBlock = page.getByRole("region", { name: "Ship" });
 
   // A Licence with a reputation shows it; each Seller names the licence itself.
-  await page.getByRole("combobox", { name: "Size" }).selectOption("L");
+  await choose(page, "Size", "L");
   await shipPicker(page).click();
   await page.getByRole("option", { name: "Ironback Hauler" }).click();
   await expect(shipBlock.getByRole("listitem")).toHaveText([
@@ -140,7 +141,7 @@ test("the Stats panel's Ship block lists each Seller with the Licence it require
   ]);
 
   // A Licence without a reputation shows just its name.
-  await page.getByRole("combobox", { name: "Size" }).selectOption("S");
+  await choose(page, "Size", "S");
   await shipPicker(page).fill("needle");
   await page.keyboard.press("Enter");
   await expect(shipBlock.getByRole("listitem")).toHaveText([

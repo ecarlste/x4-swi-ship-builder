@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { CircleAlert } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { gameData } from "./gameData.ts";
 import { Footer } from "./Footer.tsx";
 import { ShipBlock } from "./builder/ShipBlock.tsx";
@@ -7,8 +9,10 @@ import { LoadoutTable } from "./builder/LoadoutTable.tsx";
 import { StatsPanel } from "./builder/StatsPanel.tsx";
 import { SaveDialog, SavedLoadoutsList } from "./builder/SavedLoadouts.tsx";
 import { RepairsNotice } from "./builder/RepairsNotice.tsx";
+import { TooltipMark, WarningGlyph } from "./builder/TooltipMark.tsx";
 import { createSession } from "./builder/session.ts";
 import { useSession } from "./builder/useSession.ts";
+import { Button } from "@/components/ui/button";
 
 const APP_TITLE = "X4: SWI Ship Builder";
 
@@ -56,11 +60,15 @@ export function App() {
   }, [ship]);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>{APP_TITLE}</h1>
+    <div className="flex min-h-screen flex-col">
+      <header className="px-4 py-3">
+        <h1 className="font-heading text-xl font-semibold">{APP_TITLE}</h1>
       </header>
-      <div className="toolbar" role="toolbar" aria-label="Builder">
+      <div
+        className="sticky top-0 z-5 flex flex-wrap items-center gap-2 border-b bg-card px-4 py-2"
+        role="toolbar"
+        aria-label="Builder"
+      >
         <ShipPicker
           ships={gameData.ships}
           factions={gameData.factions}
@@ -68,32 +76,24 @@ export function App() {
           onPick={session.pickShip}
         />
         {missing.length > 0 && (
-          <span className="mandatory-missing" title={missing.map((m) => m.label).join("\n")}>
-            ⚠ {missing.length} mandatory missing
-          </span>
+          <TooltipMark explanation={missing.map((m) => m.label).join("\n")} className="text-warning">
+            <WarningGlyph /> {missing.length} mandatory missing
+          </TooltipMark>
         )}
-        <div className="toolbar-actions">
-          {opened && <span className="opened-name">{opened.name}</span>}
-          <button
-            type="button"
-            aria-expanded={showSaved}
-            onClick={session.toggleSaved}
-          >
+        <div className="ml-auto flex items-center gap-2">
+          {opened && <span className="font-semibold">{opened.name}</span>}
+          <Button variant="outline" aria-expanded={showSaved} onClick={session.toggleSaved}>
             Saved Loadouts
-          </button>
-          <button
-            type="button"
-            disabled={!loadout}
-            onClick={() => session.save()}
-          >
+          </Button>
+          <Button variant="outline" disabled={!loadout} onClick={() => session.save()}>
             Save
-          </button>
-          <button type="button" onClick={session.exportAll}>
+          </Button>
+          <Button variant="outline" onClick={session.exportAll}>
             Export
-          </button>
-          <button type="button" onClick={() => importInput.current?.click()}>
+          </Button>
+          <Button variant="outline" onClick={() => importInput.current?.click()}>
             Import
-          </button>
+          </Button>
           <input
             ref={importInput}
             type="file"
@@ -106,27 +106,22 @@ export function App() {
             }}
           />
 
-          <button type="button" disabled={!loadout} onClick={() => void session.copyLink(location.href)}>
+          <Button variant="outline" disabled={!loadout} onClick={() => void session.copyLink(location.href)}>
             Copy link
-          </button>
+          </Button>
         </div>
       </div>
-      <div role="status" className="toolbar-message">
+      <div role="status" className="px-4 py-1 text-sm text-muted-foreground empty:hidden">
         {message?.kind === "status" && message.text}
       </div>
       {message?.kind === "error" && (
-        <p role="alert" className="toolbar-message error">
-          {message.text}
-        </p>
+        <Alert variant="destructive" className="mx-4 my-2 w-auto">
+          <CircleAlert />
+          <AlertDescription>{message.text}</AlertDescription>
+        </Alert>
       )}
       {notice && <RepairsNotice {...notice} onDismiss={session.dismissNotice} />}
-      {naming && (
-        <SaveDialog
-          suggestedName={naming.suggestedName}
-          onSave={(name) => session.save(name)}
-          onCancel={session.cancelNaming}
-        />
-      )}
+      <SaveDialog naming={naming} onSave={(name) => session.save(name)} onCancel={session.cancelNaming} />
       {showSaved && (
         <SavedLoadoutsList
           list={savedList}
@@ -136,11 +131,11 @@ export function App() {
           onDelete={session.delete}
         />
       )}
-      <main className="app-main">
+      <main className="flex-1">
         {ship && loadout && stats ? (
-          <div className="builder">
-            <div className="loadout">
-              <h2>{ship.name}</h2>
+          <div className="grid grid-cols-[1fr_340px] gap-4 px-4 py-3 max-[720px]:grid-cols-1">
+            <div>
+              <h2 className="mb-2 font-heading text-lg font-semibold">{ship.name}</h2>
               <LoadoutTable
                 gameData={gameData}
                 ship={ship}
@@ -149,13 +144,13 @@ export function App() {
                 onChange={session.edit}
               />
             </div>
-            <aside className="stats" aria-label="Stats">
+            <aside className="self-start rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10" aria-label="Stats">
               <ShipBlock gameData={gameData} ship={ship} />
               <StatsPanel stats={stats} was={wasStats} />
             </aside>
           </div>
         ) : (
-          <p className="builder-empty">Choose a size, then a Ship. It opens as an Empty Loadout.</p>
+          <p className="px-4 py-3 text-muted-foreground">Choose a size, then a Ship. It opens as an Empty Loadout.</p>
         )}
       </main>
       <Footer manifest={gameData.manifest} />

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { fit, openShip, row } from "./helpers.ts";
+import { fit, openShip, row, tokenColour } from "./helpers.ts";
 
 /** Opens a row's Equipment dropdown and hovers one option; returns its comparison popover. */
 async function hover(page: Page, label: string | RegExp, equipment: string): Promise<Locator> {
@@ -13,8 +13,6 @@ async function hover(page: Page, label: string | RegExp, equipment: string): Pro
 /** A popover line: its figure, value and difference. */
 const figure = (popover: Locator, label: string) => popover.getByRole("row", { name: new RegExp(`^${label}`) });
 
-const GREEN = "rgb(95, 211, 141)";
-const RED = "rgb(255, 107, 107)";
 
 test("hovering an option on an empty Slot compares it with nothing", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
@@ -25,8 +23,8 @@ test("hovering an option on an empty Slot compares it with nothing", async ({ pa
   await expect(figure(popover, "Sustained Output").getByRole("cell")).toHaveText(["187 MW", "+187"]);
   await expect(figure(popover, "Price").getByRole("cell")).toHaveText(["30,000 Cr", "+30,000"]);
   // More output is better; paying more than nothing is worse.
-  await expect(figure(popover, "Burst Output").getByText("+300")).toHaveCSS("color", GREEN);
-  await expect(figure(popover, "Price").getByText("+30,000")).toHaveCSS("color", RED);
+  await expect(figure(popover, "Burst Output").getByText("+300")).toHaveCSS("color", await tokenColour(page, "success"));
+  await expect(figure(popover, "Price").getByText("+30,000")).toHaveCSS("color", await tokenColour(page, "destructive"));
 });
 
 test("hovering an option on a filled Slot shows its differences from the fitted item, coloured", async ({ page }) => {
@@ -37,15 +35,15 @@ test("hovering an option on a filled Slot shows its differences from the fitted 
   await expect(figure(popover, "Burst Output").getByRole("cell")).toHaveText(["300 MW", "−100"]);
   await expect(figure(popover, "Sustained Output").getByRole("cell")).toHaveText(["187 MW", "+6"]);
   await expect(figure(popover, "Price").getByRole("cell")).toHaveText(["30,000 Cr", "+18,000"]);
-  await expect(figure(popover, "Burst Output").getByText("−100")).toHaveCSS("color", RED);
-  await expect(figure(popover, "Sustained Output").getByText("+6")).toHaveCSS("color", GREEN);
-  await expect(figure(popover, "Price").getByText("+18,000")).toHaveCSS("color", RED);
+  await expect(figure(popover, "Burst Output").getByText("−100")).toHaveCSS("color", await tokenColour(page, "destructive"));
+  await expect(figure(popover, "Sustained Output").getByText("+6")).toHaveCSS("color", await tokenColour(page, "success"));
+  await expect(figure(popover, "Price").getByText("+18,000")).toHaveCSS("color", await tokenColour(page, "destructive"));
 
   // A cheaper option's price is better.
   await page.keyboard.press("Escape");
   await fit(page, /con_weapon_01/, "Zephyr Cannon");
   const cheaper = await hover(page, /con_weapon_01/, "Pulse Blaster");
-  await expect(figure(cheaper, "Price").getByText("−18,000")).toHaveCSS("color", GREEN);
+  await expect(figure(cheaper, "Price").getByText("−18,000")).toHaveCSS("color", await tokenColour(page, "success"));
 });
 
 test("the option text itself shows no differences", async ({ page }) => {
@@ -106,8 +104,8 @@ test("a hovered launcher shows a row per missile, best first, then No missile, a
   await expect(figure(missiles, "Heavy Torpedo").getByRole("cell")).toHaveText(["833 MW", "+433", "833 MW", "+652"]);
   await expect(figure(missiles, "Ion Torpedo").getByRole("cell")).toHaveText(["166 MW", "−234", "166 MW", "−15"]);
   await expect(figure(missiles, "No missile").getByRole("cell")).toHaveText(["0 MW", "−400", "0 MW", "−181"]);
-  await expect(figure(missiles, "Heavy Torpedo").getByText("+433")).toHaveCSS("color", GREEN);
-  await expect(figure(missiles, "No missile").getByText("−400")).toHaveCSS("color", RED);
+  await expect(figure(missiles, "Heavy Torpedo").getByText("+433")).toHaveCSS("color", await tokenColour(page, "success"));
+  await expect(figure(missiles, "No missile").getByText("−400")).toHaveCSS("color", await tokenColour(page, "destructive"));
   // No one-pair Burst / Sustained rows; the price still shows.
   await expect(figure(popover, "Burst Output")).toHaveCount(0);
   await expect(figure(popover, "Price").getByRole("cell")).toHaveText(["24,000 Cr", "+12,000"]);
@@ -122,4 +120,39 @@ test("with nothing compatible loaded, No missile is the loaded row (#65)", async
     "Ion Torpedo",
     "No missile ◂ loaded",
   ]);
+});
+
+test("arrowing through an open Equipment control moves the popover to each focused option", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+  await fit(page, /con_weapon_01/, "Pulse Blaster");
+  await row(page, /con_weapon_01/).getByRole("combobox").focus();
+  const option = (name: string) => page.getByRole("listbox").getByRole("option", { name, exact: true });
+  const popover = page.getByRole("tooltip");
+
+  // Opening lands on the fitted option, which compares with itself.
+  await page.keyboard.press("ArrowDown");
+  await expect(option("Pulse Blaster")).toBeFocused();
+  await expect(popover).toContainText("Pulse Blaster");
+  await expect(figure(popover, "Burst Output").getByRole("cell")).toHaveText(["400 MW", "±0"]);
+
+  await page.keyboard.press("ArrowDown");
+  await expect(option("Torpedo Tube")).toBeFocused();
+  await expect(popover).toContainText("Torpedo Tube");
+  await expect(option("Torpedo Tube")).toHaveAccessibleDescription(/Torpedo Tube/);
+
+  await page.keyboard.press("ArrowDown");
+  await expect(option("Zephyr Cannon")).toBeFocused();
+  await expect(popover).toContainText("Zephyr Cannon");
+  await expect(figure(popover, "Burst Output").getByRole("cell")).toHaveText(["300 MW", "−100"]);
+  await expect(figure(popover, "Burst Output").getByText("−100")).toHaveCSS("color", await tokenColour(page, "destructive"));
+  await expect(option("Zephyr Cannon")).toHaveAccessibleDescription(/Zephyr Cannon/);
+  await expect(option("Torpedo Tube")).not.toHaveAttribute("aria-describedby");
+
+  // "— empty —" has nothing to compare, so the popover goes.
+  await page.keyboard.press("Home");
+  await expect(option("— empty —")).toBeFocused();
+  await expect(popover).toBeHidden();
+
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
 });
