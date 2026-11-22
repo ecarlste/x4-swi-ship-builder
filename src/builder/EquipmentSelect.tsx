@@ -9,10 +9,8 @@ const EMPTY_LABEL = "— empty —";
  * A Slot's Equipment Select in the Loadout table: plain names sorted by name, "— empty —" first,
  * the fitted item ticked. No search or grouping. It works by keyboard: Enter, Space or the arrow
  * keys open it, the arrow keys and typed letters move through it, Enter fits and Escape closes
- * it unchanged. Hovering an option shows `compare`'s popover for it beside the list.
- *
- * Each option takes real focus as it is highlighted (Base UI), so the popover can follow focus
- * by calling `show` from the option's `onFocus` too.
+ * it unchanged. The highlighted option, hovered or arrowed to, shows `compare`'s popover beside
+ * the list: each option takes real focus as it is highlighted (Base UI), so the popover follows focus.
  */
 export function EquipmentSelect({
   label,
@@ -27,7 +25,7 @@ export function EquipmentSelect({
   /** The fitted item's Equipment id, or null when empty. */
   value: string | null;
   onChange: (equipment: string | null) => void;
-  /** The comparison popover's content for a hovered option. */
+  /** The comparison popover's content for the highlighted option. */
   compare?: (option: Equipment) => ReactNode;
 }) {
   /** The option the comparison popover is shown for. */
@@ -78,6 +76,9 @@ export function EquipmentSelect({
                     aria-label={item.label}
                     aria-describedby={option !== null && option === shown ? popoverId : undefined}
                     className={option ? undefined : "text-muted-foreground"}
+                    // Highlighting an option, by hover or by key, focuses it. The hover is kept too, so
+                    // coming back onto the option the list left still focused shows it again.
+                    onFocus={() => show(option)}
                     onMouseEnter={() => show(option)}
                   >
                     {item.label}
@@ -89,7 +90,11 @@ export function EquipmentSelect({
             </SelectPrimitive.List>
           </SelectPrimitive.Popup>
           {shown && compare && (
-            <div id={popoverId} role="tooltip" className="comparison-popover">
+            <div
+              id={popoverId}
+              role="tooltip"
+              className="rounded-lg bg-popover p-3 text-sm whitespace-nowrap text-popover-foreground shadow-md ring-1 ring-foreground/10"
+            >
               {compare(shown)}
             </div>
           )}

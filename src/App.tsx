@@ -146,7 +146,7 @@ export function App() {
                 onChange={session.edit}
               />
             </div>
-            <aside className="stats" aria-label="Stats">
+            <aside className="self-start rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10" aria-label="Stats">
               <ShipBlock gameData={gameData} ship={ship} />
               <StatsPanel stats={stats} was={wasStats} />
             </aside>
