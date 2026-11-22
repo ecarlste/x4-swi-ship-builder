@@ -148,10 +148,6 @@ body {
   margin: 0;
 }
 
-a {
-  color: #8ab4f8;
-}
-
 .app {
   display: flex;
   flex-direction: column;
@@ -166,20 +162,9 @@ a {
   flex: 1;
 }
 
-.app-footer {
-  padding: 8px 16px;
-  border-top: 1px solid #2a3040;
-  font-size: 12px;
-  color: #8a93a6;
-}
-
-.app-footer p {
-  margin: 4px 0;
-}
-
-/* shadcn components (which carry a data-slot) style themselves. */
+/* v1's controls only: shadcn components carry data-slot and style themselves. */
 button:not([data-slot]),
-select,
+select:not([data-slot]),
 input:not([data-slot]) {
   font: inherit;
   color: inherit;
@@ -409,115 +394,6 @@ input:not([data-slot]) {
 
 .opened-name {
   font-weight: 600;
-}
-
-.toolbar-message {
-  margin: 0;
-  padding: 0 16px;
-  font-size: 13px;
-}
-
-.toolbar-message:empty {
-  display: none;
-}
-
-.error {
-  color: #f28b82;
-}
-
-.saved-loadouts {
-  margin: 8px 16px;
-  padding: 8px 12px;
-  border: 1px solid #2a3040;
-  border-radius: 4px;
-  background: #161b23;
-}
-
-.saved-loadouts h2 {
-  margin: 0 0 8px;
-  font-size: 16px;
-}
-
-.saved-loadouts ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.saved-loadouts li {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 4px 0;
-  border-top: 1px solid #2a3040;
-}
-
-.saved-loadout-ship,
-.saved-loadout-error {
-  color: #8a93a6;
-}
-
-.saved-loadouts li.unreadable .saved-loadout-name {
-  color: #f28b82;
-}
-
-.saved-loadouts li.unavailable .saved-loadout-name,
-.saved-loadouts li.unavailable .saved-loadout-ship {
-  color: #5c6475;
-}
-
-.saved-loadout-repairs {
-  color: #f5c26b;
-  cursor: help;
-}
-
-.repairs-notice {
-  margin: 8px 16px;
-  padding: 8px 12px;
-  border: 1px solid #6b5420;
-  border-radius: 4px;
-  background: #221d12;
-  font-size: 13px;
-}
-
-.repairs-notice h2 {
-  margin: 0 0 6px;
-  font-size: 15px;
-  color: #f5c26b;
-}
-
-.repairs-notice p {
-  margin: 0 0 6px;
-}
-
-.repairs-notice ul {
-  margin: 0 0 8px;
-  padding-left: 20px;
-}
-
-.saved-loadout-actions {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.save-dialog {
-  color: inherit;
-  background: #1a2029;
-  border: 1px solid #2a3040;
-  border-radius: 6px;
-}
-
-.save-dialog h2 {
-  margin-top: 0;
-  font-size: 16px;
-}
-
-.save-dialog-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 12px;
 }
 
 /* Changes since loading: the stats' change column and the Loadout table's changed rows. */
