@@ -2,8 +2,14 @@ import { useId, useMemo, type ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { shotDamage } from "../stats/firepower.ts";
+import { DotIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { ComparisonPopover } from "./ComparisonPopover.tsx";
-import { EquipmentDropdown } from "./EquipmentDropdown.tsx";
+import { EquipmentSelect } from "./EquipmentSelect.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
 import { CREW_ROLE_NAMES, crewCount, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
 import { loadoutLines, type Held, type Line } from "../loadout/lines.ts";
@@ -93,9 +99,9 @@ export function LoadoutTable({
     /** The row's "was: …" text, when the line differs from the Loaded Loadout. */
     const wasText = (text: (held: Held | null) => string) => (line.was === undefined ? undefined : text(line.was));
     const wasNamed = wasText((held) => nameOf(held?.equipment ?? null));
-    const dropdown = (label: string, onPick: (id: string | null) => Edit) =>
+    const equipmentSelect = (label: string, onPick: (id: string | null) => Edit) =>
       place && (
-        <EquipmentDropdown
+        <EquipmentSelect
           label={label}
           options={rules.options(loadout, place)}
           value={fitted?.id ?? null}
@@ -121,11 +127,11 @@ export function LoadoutTable({
             key="engine"
             label={
               <>
-                Engines <span className="dim">{rules.limit(loadout, place)}×</span>
+                Engines <span className="text-muted-foreground">{rules.limit(loadout, place)}×</span>
               </>
             }
             missing={line.missing}
-            equipment={dropdown("Engines Equipment", (id) => rules.setEngine(loadout, id))}
+            equipment={equipmentSelect("Engines Equipment", (id) => rules.setEngine(loadout, id))}
             quantity={fitted ? formatNumber(count) : ""}
             keyValue={fitted ? keyValue(fitted) : ""}
             price={price}
@@ -140,10 +146,10 @@ export function LoadoutTable({
             missing={line.missing}
             label={
               <>
-                {slot.size.toUpperCase()} {KIND_LABEL[slot.kind]} <span className="dim">{slot.id}</span>
+                {slot.size.toUpperCase()} {KIND_LABEL[slot.kind]} <span className="text-muted-foreground">{slot.id}</span>
               </>
             }
-            equipment={dropdown(`${slot.id} Equipment`, (id) => rules.setSlot(loadout, slot.id, id))}
+            equipment={equipmentSelect(`${slot.id} Equipment`, (id) => rules.setSlot(loadout, slot.id, id))}
             quantity={fitted ? "1" : ""}
             keyValue={fitted ? keyValue(fitted) : ""}
             price={price}
@@ -161,10 +167,10 @@ export function LoadoutTable({
             missing={line.missing}
             label={
               <>
-                {GROUP_KIND_LABEL[kind]} <span className="dim">{group}</span>
+                {GROUP_KIND_LABEL[kind]} <span className="text-muted-foreground">{group}</span>
               </>
             }
-            equipment={dropdown(`${label} Equipment`, (id) => rules.setGroupEquipment(loadout, group, kind, id))}
+            equipment={equipmentSelect(`${label} Equipment`, (id) => rules.setGroupEquipment(loadout, group, kind, id))}
             quantity={
               <CountInput
                 label={`${label} count`}
@@ -187,7 +193,7 @@ export function LoadoutTable({
             key="thruster"
             label="Thruster"
             missing={line.missing}
-            equipment={dropdown("Thruster Equipment", (id) => rules.setThruster(loadout, id))}
+            equipment={equipmentSelect("Thruster Equipment", (id) => rules.setThruster(loadout, id))}
             quantity={fitted ? "1" : ""}
             keyValue={fitted ? keyValue(fitted) : ""}
             price={price}
@@ -226,12 +232,11 @@ export function LoadoutTable({
             label="Software"
             missing={line.missing}
             equipment={
-              <label className="software">
-                <input
-                  type="checkbox"
+              <label className="flex items-center gap-2">
+                <Checkbox
                   checked={count > 0}
-                  onChange={(e) => change(rules.setSoftware(loadout, place.equipment, e.target.checked))}
-                />{" "}
+                  onCheckedChange={(checked) => change(rules.setSoftware(loadout, place.equipment, checked))}
+                />
                 {nameOf(place.equipment)}
               </label>
             }
@@ -248,25 +253,31 @@ export function LoadoutTable({
 
   const crew = lines.filter((l) => l.place?.kind === "crew");
   return (
-    <table className="loadout-table" aria-label="Loadout">
-      <thead>
-        <tr>
-          <th scope="col">Slot</th>
-          <th scope="col">Equipment</th>
-          <th scope="col" className="num">
+    <Table aria-label="Loadout">
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead scope="col" className="text-xs text-muted-foreground">
+            Slot
+          </TableHead>
+          <TableHead scope="col" className="text-xs text-muted-foreground">
+            Equipment
+          </TableHead>
+          <TableHead scope="col" className="text-right text-xs text-muted-foreground">
             Qty
-          </th>
-          <th scope="col">Key value</th>
-          <th scope="col" className="num">
+          </TableHead>
+          <TableHead scope="col" className="text-xs text-muted-foreground">
+            Key value
+          </TableHead>
+          <TableHead scope="col" className="text-right text-xs text-muted-foreground">
             Price (avg)
-          </th>
-        </tr>
-      </thead>
-      <tbody>{lines.map(row)}</tbody>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>{lines.map(row)}</TableBody>
       {crew.length > 0 && (
         <CrewSection rules={rules} capacity={ship.capacities.crew} loadout={loadout} lines={crew} onChange={change} />
       )}
-    </table>
+    </Table>
   );
 }
 
@@ -292,15 +303,15 @@ function CrewSection({
   const headingId = useId();
   const used = crewCount(loadout);
   return (
-    <tbody aria-labelledby={headingId}>
-      <tr className="section">
-        <th scope="col" colSpan={5} id={headingId}>
+    <TableBody aria-labelledby={headingId}>
+      <TableRow className="hover:bg-transparent">
+        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
           Crew{" "}
-          <span className="dim">
+          <span className="text-muted-foreground">
             {formatNumber(used)} / {formatNumber(capacity)}
           </span>
-        </th>
-      </tr>
+        </TableHead>
+      </TableRow>
       {lines.map((line) => {
         if (line.place?.kind !== "crew") return null;
         const place = line.place;
@@ -325,7 +336,7 @@ function CrewSection({
           />
         );
       })}
-    </tbody>
+    </TableBody>
   );
 }
 
@@ -350,9 +361,10 @@ function CountInput({
   onChange: (count: number) => void;
 }) {
   return (
-    <span className="count">
-      <input
+    <span className="inline-flex items-center gap-1 text-muted-foreground">
+      <Input
         type="number"
+        className="h-7 w-18 text-right text-foreground"
         aria-label={label}
         min={0}
         max={limit}
@@ -364,7 +376,7 @@ function CountInput({
           onChange(Number.isFinite(n) ? Math.max(0, n) : 0);
         }}
       />
-      {max !== undefined && <> / {formatNumber(max)}</>}
+      {max !== undefined && <>/ {formatNumber(max)}</>}
     </span>
   );
 }
@@ -387,35 +399,60 @@ function Row({
   /** What the row held when the Loadout was opened or last saved, when that differs from now. */
   was?: string;
 }) {
-  const classes = [missing && "missing", was !== undefined && "changed"].filter(Boolean).join(" ");
   return (
-    <tr className={classes || undefined}>
-      <th scope="row">
+    <TableRow className={cn(missing && "bg-warning/10 hover:bg-warning/15")}>
+      <TableHead scope="row" className={cn("font-normal", missing && "text-warning")}>
         {label}
         {missing && (
           <>
             {" "}
-            <span className="missing-mark" title="Mandatory upgrade missing">
+            <Mark text="Mandatory upgrade missing" className="font-bold text-warning">
               *
-            </span>
+            </Mark>
           </>
         )}
         {was !== undefined && (
           <>
             {" "}
-            <span className="changed-mark" title="Changed since loading">
-              ●
-            </span>
+            <Mark text="Changed since loading" className="text-warning">
+              <DotIcon aria-hidden="true" className="size-4" strokeWidth={6} />
+            </Mark>
           </>
         )}
-      </th>
-      <td>
+      </TableHead>
+      <TableCell>
         {equipment}
-        {was !== undefined && <div className="was">was: {was}</div>}
-      </td>
-      <td className="num">{quantity}</td>
-      <td className="dim">{keyValue}</td>
-      <td className="num">{price}</td>
-    </tr>
+        {was !== undefined && <div className="text-xs text-muted-foreground">was: {was}</div>}
+      </TableCell>
+      <TableCell className="text-right">{quantity}</TableCell>
+      <TableCell className="text-muted-foreground">{keyValue}</TableCell>
+      <TableCell className="text-right">{price}</TableCell>
+    </TableRow>
+  );
+}
+
+/**
+ * A mark on a row header, explained by a Tooltip that opens on hover or focus. The mark is
+ * focusable, so the explanation can be read without a mouse.
+ */
+function Mark({ text, className, children }: { text: string; className?: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        aria-label={text}
+        className={cn(
+          "inline-flex items-center rounded-sm align-middle outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          className,
+        )}
+      >
+        {/* The explanation stays the mark's title, as v1 had it. The pointer passes through to the
+            trigger, so the browser doesn't show the title beside the Tooltip. */}
+        <span title={text} className="pointer-events-none inline-flex">
+          {children}
+        </span>
+      </TooltipTrigger>
+      {/* Base UI gives the popup no role of its own. */}
+      <TooltipContent role="tooltip">{text}</TooltipContent>
+    </Tooltip>
   );
 }
