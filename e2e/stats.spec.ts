@@ -112,3 +112,19 @@ test("the flight rows follow the engine and thruster", async ({ page }) => {
   await expect(stat(page, "Yaw (°/s)")).toHaveText("1.9");
   await expect(stat(page, "Roll (°/s)")).toHaveText("2.0");
 });
+
+test("a stat row's explanation is reached by Tab and opens as a Tooltip", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+  const explained = stats(page).getByRole("button", { name: "Avg. Turret Output (MW)" });
+
+  for (let presses = 0; presses < 150 && !(await explained.evaluate((el) => el === document.activeElement)); presses++) {
+    await page.keyboard.press("Tab");
+  }
+  await expect(explained).toBeFocused();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText("all turrets' damage averaged over six directions");
+
+  await page.keyboard.press("Tab");
+  await expect(tooltip).toBeHidden();
+});

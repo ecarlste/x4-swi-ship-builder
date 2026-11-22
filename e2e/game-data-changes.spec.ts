@@ -122,3 +122,22 @@ test.describe("opening a Loadout that changes", () => {
   });
 
 });
+
+test("a Saved Loadout's Repairs flag is reached by Tab and opens a Tooltip naming what no longer fits", async ({ page }) => {
+  await storeRaw(page, [escort]);
+  await showSavedLoadouts(page);
+  const flag = savedEntry(page, "Escort").getByRole("button", { name: /3 items no longer fit/ });
+
+  for (let presses = 0; presses < 30 && !(await flag.evaluate((el) => el === document.activeElement)); presses++) {
+    await page.keyboard.press("Tab");
+  }
+  await expect(flag).toBeFocused();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText("Zephyr Cannon in con_weapon_09: dropped");
+  await expect(tooltip).toContainText("fx_shield_gone in con_shield_01: dropped");
+  await expect(tooltip).toContainText("Glare Flare in consumables: count cut from 9 to 5");
+
+  await page.keyboard.press("Tab");
+  await expect(tooltip).toBeHidden();
+});

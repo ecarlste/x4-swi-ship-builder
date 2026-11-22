@@ -9,6 +9,7 @@ import { LoadoutTable } from "./builder/LoadoutTable.tsx";
 import { StatsPanel } from "./builder/StatsPanel.tsx";
 import { SaveDialog, SavedLoadoutsList } from "./builder/SavedLoadouts.tsx";
 import { RepairsNotice } from "./builder/RepairsNotice.tsx";
+import { TooltipMark, WarningGlyph } from "./builder/TooltipMark.tsx";
 import { createSession } from "./builder/session.ts";
 import { useSession } from "./builder/useSession.ts";
 import { Button } from "@/components/ui/button";
@@ -75,9 +76,9 @@ export function App() {
           onPick={session.pickShip}
         />
         {missing.length > 0 && (
-          <span className="cursor-help text-warning" title={missing.map((m) => m.label).join("\n")}>
-            ⚠ {missing.length} mandatory missing
-          </span>
+          <TooltipMark explanation={missing.map((m) => m.label).join("\n")} className="text-warning">
+            <WarningGlyph /> {missing.length} mandatory missing
+          </TooltipMark>
         )}
         <div className="ml-auto flex items-center gap-2">
           {opened && <span className="font-semibold">{opened.name}</span>}

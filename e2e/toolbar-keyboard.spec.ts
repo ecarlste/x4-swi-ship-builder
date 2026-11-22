@@ -149,3 +149,17 @@ test("disabled toolbar actions don't respond and Tab passes over them", async ({
   await toolbarButton(page, "Save").click({ force: true });
   await expect(page.getByRole("dialog", { name: "Save Loadout" })).toBeHidden();
 });
+
+test("the mandatory-missing count is reached by Tab and opens a Tooltip naming what's missing", async ({ page }) => {
+  await pickShipByKeyboard(page, "Swiftwing");
+  const count = page.getByRole("toolbar").getByRole("button", { name: /3 mandatory missing/ });
+  await tabTo(page, count);
+
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText("Engines Thruster Flight Assist Mk1");
+
+  // Moving on closes it.
+  await page.keyboard.press("Tab");
+  await expect(tooltip).toBeHidden();
+});

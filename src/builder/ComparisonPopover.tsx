@@ -4,6 +4,8 @@ import { compareEquipment, type Figure } from "../stats/stats.ts";
 import { sellerLicenceText } from "./licence.ts";
 import { formatCredits, formatNumber, formatSigned } from "./format.ts";
 import { verdictClass } from "./styles.ts";
+import { cn } from "cn";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 /** "+300", "−100" (a true minus sign) or "±0". */
 const signed = (n: number, decimals = 0) => (n === 0 ? "±0" : formatSigned(n, decimals));
@@ -25,10 +27,13 @@ function formatFigure(f: Figure) {
 }
 
 /** A figures table cell: tight rows, a gap before the next column. */
-const cell = (align: string) => `py-px pr-2 font-normal tabular-nums ${align}`;
+const cell = (className: string) => cn("h-auto py-px pr-2 pl-0 font-normal tabular-nums", className);
+
+/** A figures table row: no rule between rows, and no hover, since nothing in it is clickable. */
+const ROW = "border-0 hover:bg-transparent";
 
 /**
- * The comparison of a highlighted dropdown option with the fitted item (#10, #23):
+ * The comparison of a highlighted Equipment option with the fitted item (#10, #23):
  * its figures and price, each with its difference, then its Sellers and their
  * Licences. A launcher's figures are one row per missile it can fire, best
  * first, then "No missile", with the row the stats panel uses marked "loaded"
@@ -61,55 +66,55 @@ export function ComparisonPopover({
     <>
       <div className="mb-1 font-medium">{option.name}</div>
       {comparison.missiles && (
-        <table className="mb-2 border-collapse" aria-label="Missiles">
-          <thead>
-            <tr>
-              <th scope="col" className={cell("text-left text-muted-foreground")}>
+        <Table className="mb-2 w-auto" aria-label="Missiles">
+          <TableHeader className="[&_tr]:border-0">
+            <TableRow className={ROW}>
+              <TableHead scope="col" className={cell("text-left text-muted-foreground")}>
                 Missile
-              </th>
-              <th scope="col" colSpan={2} className={cell("text-right")}>
+              </TableHead>
+              <TableHead scope="col" colSpan={2} className={cell("text-right")}>
                 Burst
-              </th>
-              <th scope="col" colSpan={2} className={cell("text-right")}>
+              </TableHead>
+              <TableHead scope="col" colSpan={2} className={cell("text-right")}>
                 Sustained
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {comparison.missiles.map((row) => (
-              <tr key={row.missile?.id ?? ""}>
-                <th scope="row" className={cell("text-left")}>
+              <TableRow className={ROW} key={row.missile?.id ?? ""}>
+                <TableHead scope="row" className={cell("text-left")}>
                   {row.missile?.name ?? "No missile"}
                   {row.loaded && <span className="text-muted-foreground"> ◂ loaded</span>}
-                </th>
+                </TableHead>
                 {row.figures.map(formatFigure).flatMap((c, i) => [
-                  <td key={`${i}-value`} className={cell("text-right")}>
+                  <TableCell key={`${i}-value`} className={cell("text-right")}>
                     {c.value}
-                  </td>,
-                  <td key={`${i}-difference`} className={cell("text-right")}>
+                  </TableCell>,
+                  <TableCell key={`${i}-difference`} className={cell("text-right")}>
                     <span className={verdictClass(c.verdict)}>{c.difference}</span>
-                  </td>,
+                  </TableCell>,
                 ])}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
-      <table className="mb-2 border-collapse">
-        <tbody>
+      <Table className="mb-2 w-auto">
+        <TableBody>
           {lines.map((line) => (
-            <tr key={line.label}>
-              <th scope="row" className={cell("text-left")}>
+            <TableRow className={ROW} key={line.label}>
+              <TableHead scope="row" className={cell("text-left")}>
                 {line.label}
-              </th>
-              <td className={cell("text-right")}>{line.value}</td>
-              <td className={cell("text-right")}>
+              </TableHead>
+              <TableCell className={cell("text-right")}>{line.value}</TableCell>
+              <TableCell className={cell("text-right")}>
                 <span className={verdictClass(line.verdict)}>{line.difference}</span>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       <div className="text-muted-foreground">Sellers</div>
       <ul className="mt-0.5 list-disc pl-5">
         {option.sellers.map((id) => (

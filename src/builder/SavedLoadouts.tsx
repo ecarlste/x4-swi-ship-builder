@@ -10,11 +10,12 @@ import { indexGameData } from "../gameDataIndex.ts";
 import type { SavedLoadoutEntry, SavedLoadoutList } from "../codec/savedLoadouts.ts";
 import { describeRepair } from "../loadout/repairs.ts";
 import { resolveLoadout } from "../loadout/resolve.ts";
+import { TooltipMark, WarningGlyph } from "./TooltipMark.tsx";
 
 /**
  * The Saved Loadouts list: each one's name and Ship name, with Open, Export
  * and Delete. Each entry is checked against the Game Data: one that opens
- * with Repairs is marked ⚠ with a count and a tooltip naming the
+ * with Repairs is marked with a warning, a count and a Tooltip naming the
  * Repairs; one whose Ship is gone is Unavailable, with Export and Delete only.
  * An Unreadable entry offers Delete only. A version change alone isn't shown.
  */
@@ -81,9 +82,9 @@ export function SavedLoadoutsList({
               <span className="font-medium">{entry.loadout.name}</span>{" "}
               <span className="text-muted-foreground">{shipName(entry.loadout.ship)}</span>
               {repairs > 0 && (
-                <span className="cursor-help text-warning" title={resolved.repairs.map(describeRepair).join("\n")}>
-                  ⚠ {repairs} {repairs === 1 ? "item no longer fits" : "items no longer fit"}
-                </span>
+                <TooltipMark explanation={resolved.repairs.map(describeRepair).join("\n")} className="text-warning">
+                  <WarningGlyph /> {repairs} {repairs === 1 ? "item no longer fits" : "items no longer fit"}
+                </TooltipMark>
               )}
               <Actions>
                 <EntryButton onClick={() => onOpen(entry)}>Open</EntryButton>
