@@ -8,3 +8,5 @@ playwright-report/
 # Only the project settings are shared; the rest of .claude/ is local.
 .claude/*
 !.claude/settings.json
+# Local notes, never shared.
+/.scratch/
