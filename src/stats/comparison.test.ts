@@ -209,6 +209,28 @@ describe("engines' Travel Thrust matches the Encyclopedia (#63)", () => {
   });
 });
 
+/**
+ * Max Boost Thrust as the Encyclopedia shows it, in game on X4 8.00 + SWI
+ * 0.9.1 HF (#63's screenshots, checked in #114). Thrust and boost@thrust are
+ * copied from the 091_x4-800 Game Data; the other inputs don't touch this figure.
+ */
+describe("engines' Boost Thrust matches the Encyclopedia (#114)", () => {
+  const travel = { thrust: 1, charge: 1, attack: 0 };
+  test.each([
+    ["C-ROC Engine", "engine_croc", 800, 2.7, 2160],
+    ["Gozanti Engine", "engine_gozanti_01", 1350, 2.7, 3645],
+    ["Daedal Engine", "engine_mc75", 8000, 2, 16000],
+  ])("%s (%s): Thrust %d kN × boost@thrust %s = Max Boost Thrust %d kN", (_name, id, forward, boostThrust, encyclopedia) => {
+    const item = engine(id, forward, { thrust: boostThrust, acceleration: 1, duration: 1, recharge: 1 }, travel);
+    const comparison = compareEquipment(gameData([ship()], [item]), loadout("fx_ship"), item, null);
+    const thrusts = comparison.figures.filter((f) => f.label === "Thrust" || f.label === "Boost Thrust");
+    expect(thrusts.map((f) => [f.label, f.unit, f.shown])).toEqual([
+      ["Thrust", "kN", forward],
+      ["Boost Thrust", "kN", encyclopedia],
+    ]);
+  });
+});
+
 // Strafe Speed and Strafe Acceleration are both the strafe thrust over one of
 // the Ship's own figures, so one Strafe Thrust compares them both.
 test("thrusters show their strafe thrust, then their yaw, pitch and roll torque", () => {
