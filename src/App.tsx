@@ -9,6 +9,7 @@ import { SaveDialog, SavedLoadoutsList } from "./builder/SavedLoadouts.tsx";
 import { RepairsNotice } from "./builder/RepairsNotice.tsx";
 import { createSession } from "./builder/session.ts";
 import { useSession } from "./builder/useSession.ts";
+import { Button } from "@/components/ui/button";
 
 const APP_TITLE = "X4: SWI Ship Builder";
 
@@ -60,7 +61,11 @@ export function App() {
       <header className="app-header">
         <h1>{APP_TITLE}</h1>
       </header>
-      <div className="toolbar" role="toolbar" aria-label="Builder">
+      <div
+        className="sticky top-0 z-5 flex flex-wrap items-center gap-2 border-b bg-card px-4 py-2"
+        role="toolbar"
+        aria-label="Builder"
+      >
         <ShipPicker
           ships={gameData.ships}
           factions={gameData.factions}
@@ -74,26 +79,18 @@ export function App() {
         )}
         <div className="toolbar-actions">
           {opened && <span className="opened-name">{opened.name}</span>}
-          <button
-            type="button"
-            aria-expanded={showSaved}
-            onClick={session.toggleSaved}
-          >
+          <Button variant="outline" aria-expanded={showSaved} onClick={session.toggleSaved}>
             Saved Loadouts
-          </button>
-          <button
-            type="button"
-            disabled={!loadout}
-            onClick={() => session.save()}
-          >
+          </Button>
+          <Button variant="outline" disabled={!loadout} onClick={() => session.save()}>
             Save
-          </button>
-          <button type="button" onClick={session.exportAll}>
+          </Button>
+          <Button variant="outline" onClick={session.exportAll}>
             Export
-          </button>
-          <button type="button" onClick={() => importInput.current?.click()}>
+          </Button>
+          <Button variant="outline" onClick={() => importInput.current?.click()}>
             Import
-          </button>
+          </Button>
           <input
             ref={importInput}
             type="file"
@@ -106,9 +103,9 @@ export function App() {
             }}
           />
 
-          <button type="button" disabled={!loadout} onClick={() => void session.copyLink(location.href)}>
+          <Button variant="outline" disabled={!loadout} onClick={() => void session.copyLink(location.href)}>
             Copy link
-          </button>
+          </Button>
         </div>
       </div>
       <div role="status" className="toolbar-message">
