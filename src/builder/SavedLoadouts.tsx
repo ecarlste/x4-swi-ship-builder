@@ -1,6 +1,5 @@
-import { useId, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { CircleAlert } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -64,9 +63,9 @@ export function SavedLoadoutsList({
           const resolved = resolveLoadout(gameData, entry.loadout);
           if (resolved.status === "unavailable") {
             return (
-              <Entry key={`unavailable-${entry.loadout.id}-${entry.index}`} className="text-muted-foreground/60">
-                <span>{entry.loadout.name}</span>{" "}
-                <span>
+              <Entry key={`unavailable-${entry.loadout.id}-${entry.index}`}>
+                <span className="text-muted-foreground/60">{entry.loadout.name}</span>{" "}
+                <span className="text-muted-foreground/60">
                   Ship no longer in Game Data <span className="text-muted-foreground">{resolved.ship}</span>
                 </span>
                 <Actions>
@@ -99,8 +98,8 @@ export function SavedLoadoutsList({
   );
 }
 
-function Entry({ className, ...props }: ComponentProps<"li">) {
-  return <li className={cn("flex items-center gap-3 border-t py-1.5", className)} {...props} />;
+function Entry({ children }: { children: ReactNode }) {
+  return <li className="flex items-center gap-3 border-t py-1.5">{children}</li>;
 }
 
 function Actions({ children }: { children: ReactNode }) {
