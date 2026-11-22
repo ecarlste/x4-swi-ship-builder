@@ -62,7 +62,7 @@ test("a first save asks for a name, suggesting the Ship's, and the Loadout reope
   await entry.getByRole("button", { name: "Open" }).click();
 
   await expect(page.getByRole("combobox", { name: "Ship" })).toHaveValue("Ironback Hauler");
-  await expect(page.getByRole("combobox", { name: "Size" })).toHaveValue("l");
+  await expect(page.getByRole("combobox", { name: "Size" })).toHaveText("L");
   await expect(row(page, /con_shield_01/).getByRole("combobox")).toHaveText(/Bubble Shield M/);
 });
 
