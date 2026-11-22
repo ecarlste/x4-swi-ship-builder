@@ -113,13 +113,13 @@ export function App() {
           </button>
         </div>
       </div>
-      <div role="status" className="toolbar-message">
+      <div role="status" className="px-4 py-1 text-sm text-muted-foreground empty:hidden">
         {message?.kind === "status" && message.text}
       </div>
       {message?.kind === "error" && (
         <Alert variant="destructive" className="mx-4 my-2 w-auto">
           <CircleAlert />
-          <AlertDescription className="text-destructive/90">{message.text}</AlertDescription>
+          <AlertDescription>{message.text}</AlertDescription>
         </Alert>
       )}
       {notice && <RepairsNotice {...notice} onDismiss={session.dismissNotice} />}

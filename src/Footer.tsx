@@ -7,7 +7,7 @@ import type { Manifest } from "./gameData.ts";
  */
 export function Footer({ manifest }: { manifest: Manifest }) {
   return (
-    <footer className="app-footer">
+    <footer className="space-y-1 border-t px-4 py-3 text-xs text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-primary">
       <p>
         Game Data: SWI {manifest.swi.label} · X4 {manifest.x4.version}
       </p>

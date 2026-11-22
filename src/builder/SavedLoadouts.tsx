@@ -43,7 +43,7 @@ export function SavedLoadoutsList({
       {!list.ok && (
         <Alert variant="destructive" className="mb-2">
           <CircleAlert />
-          <AlertDescription className="text-destructive/90">{list.error}</AlertDescription>
+          <AlertDescription>{list.error}</AlertDescription>
         </Alert>
       )}
       {list.ok && list.entries.length === 0 && <p className="text-sm text-muted-foreground">No Saved Loadouts yet.</p>}

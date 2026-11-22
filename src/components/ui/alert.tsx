@@ -10,6 +10,9 @@ const alertVariants = cva(
         default: "bg-card text-card-foreground",
         destructive:
           "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
+        // Added for #121 (not in shadcn's registry): drawn in the theme's `warning` token.
+        warning:
+          "border-warning/40 bg-warning/10 text-warning *:data-[slot=alert-description]:text-foreground/90 *:[svg]:text-current",
       },
     },
     defaultVariants: {
