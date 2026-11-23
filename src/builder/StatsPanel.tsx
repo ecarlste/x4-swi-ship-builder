@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { cn } from "cn";
 import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { compareFigure, comparePrice, type LoadoutStats, type StatRow } from "../stats/stats.ts";
@@ -95,18 +95,16 @@ const CELL = "h-auto p-px";
 
 /**
  * A stat row, with its change since `was` when given. A row the game explains on mouse-over has its
- * label as a mark whose Tooltip gives the explanation; the row keeps it as its title too, as v1 had
- * it, except while the Tooltip shows it.
+ * label as a mark whose Tooltip gives the explanation.
  */
 function StatTableRow({ row, was }: { row: StatRow; was: number | null }) {
-  const [explaining, setExplaining] = useState(false);
   const explanation = TOOLTIPS[row.id];
   const label = `${row.label}${row.unit ? ` (${row.unit})` : ""}`;
   return (
-    <TableRow title={explaining ? undefined : explanation} className="border-0 hover:bg-transparent">
+    <TableRow className="border-0 hover:bg-transparent">
       <TableHead scope="row" className={cn(CELL, "font-normal whitespace-normal", SUB_ROWS.has(row.id) && "pl-4")}>
         {explanation ? (
-          <TooltipMark explanation={explanation} titled={false} onOpenChange={setExplaining}>
+          <TooltipMark explanation={explanation}>
             {label}
           </TooltipMark>
         ) : (
