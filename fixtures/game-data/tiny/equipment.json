@@ -29,6 +29,12 @@
     "magazine": null, "heat": null, "missiles": "fl_missiles_s", "missileStorage": 0
   },
   {
+    "kind": "weapon", "id": "fx_zip_pod_s", "name": "Zip Pod", "nameId": "{900002,21}",
+    "price": { "min": 16000, "average": 20000, "max": 24000 }, "licence": null, "sellers": ["fx_guild"],
+    "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "magazine": null, "heat": null, "missiles": "fl_missiles_s", "missileStorage": 6
+  },
+  {
     "kind": "turret", "id": "fx_turret_m", "name": "Flak Turret", "nameId": "{900002,7}",
     "price": { "min": 40000, "average": 45000, "max": 50000 }, "licence": null, "sellers": ["fx_guild"],
     "size": "m", "damage": { "value": 80, "noShield": 10, "hull": 0 }, "barrelAmount": 2, "fireRate": 3,

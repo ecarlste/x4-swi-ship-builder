@@ -186,13 +186,14 @@ describe("validateSnapshot", () => {
           'ships: fx_courier slot con_shield_01 takes shield but fit list "fl_weapon_s" has weapon "fx_cannon_s"',
           'ships: fx_courier slot con_shield_01 takes shield but fit list "fl_weapon_s" has weapon "fx_launcher_s"',
           'ships: fx_courier slot con_shield_01 takes shield but fit list "fl_weapon_s" has weapon "fx_pulse_s"',
+          'ships: fx_courier slot con_shield_01 takes shield but fit list "fl_weapon_s" has weapon "fx_zip_pod_s"',
           'ships: fx_courier slot con_shield_01 takes shield but fit list "fl_weapon_s" has weapon "fx_tube_s"',
           'ships: fx_hauler slot group enginegroup engine takes engine but fit list "fl_thruster_l" has thruster "fx_thruster_l"',
           'ships: fx_hauler drones takes drone but fit list "fl_deployables" has deployable "fx_beacon"',
           'equipment: fx_launcher_s missiles takes missile but fit list "fl_drones" has drone "fx_cargo_drone"',
         ]),
       );
-      expect(errors).toHaveLength(7);
+      expect(errors).toHaveLength(8);
     });
 
     it("reports mandatory software that isn't one of the Ship's software options", () => {
