@@ -80,6 +80,8 @@ This runs Vitest (`npm run test:unit`) and then Playwright Test (`npm run test:u
 
 Each checkout serves the app on its own port, hashed from the checkout's path into 20000–29999, so UI runs in two worktrees at once don't share a server (two paths can hash to the same port, but rarely). Each run builds and starts its own server; if something is already on the port, the run stops rather than test it. Set `PW_PORT` to pick the port yourself, e.g. `PW_PORT=5301 npm run test:ui`.
 
+E2e tests act like the user: they find elements by role, label and text, and drive them by keyboard and pointer, never by class names, ids, titles or DOM structure. `npm run check:e2e` (`scripts/e2eLocators.ts`, run in CI before Playwright) fails on `getByTitle(`, a `title` attribute assertion, `toHaveClass(`, `selectOption(` and a `locator()` with a class, id or attribute selector, printing each one's file and line.
+
 ## Worktrees
 
 Each ticket gets its own worktree, so sessions don't share a working tree, a snapshot or `node_modules`:
