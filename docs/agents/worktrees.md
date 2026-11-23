@@ -10,10 +10,10 @@ From any checkout of the repo:
 npm run worktree -- <issue> <slug>
 ```
 
-For example, `npm run worktree -- 76 ticket-worktrees`. It:
+For example, `npm run worktree -- 76 ticket-worktrees`. A ticket on an integration branch passes that branch as a third argument, `base` (default `main`): `npm run worktree -- 121 shadcn-review-fixes shadcn-ui-migration`. It:
 
-1. fetches `origin`,
-2. adds `../x4-swi-ship-builder-<issue>`, next to the main checkout, on a new branch `<issue>-<slug>` from `origin/main` (not the main checkout's HEAD),
+1. fetches `origin`, and stops before making anything if `origin/<base>` doesn't exist,
+2. adds `../x4-swi-ship-builder-<issue>`, next to the main checkout, on a new branch `<issue>-<slug>` from `origin/<base>` (not the main checkout's HEAD),
 3. copies the main checkout's `game-data/` into it, so a ticket that changes the Game Data schema re-extracts only its own snapshot,
 4. links `.cache/extract/files` to the main checkout's (the merged game files are only ever read); `layers.json` and `merge-log.json` are copied beside it so `npm run extract -- --transform-only` works, and the report and diff it writes are the worktree's own,
 5. copies the main checkout's `.env`, if it has one, so `npm run extract` finds `X4_INSTALL_DIR` without `--x4` (a copy, not a link: editing one checkout's `.env` doesn't change the other's),

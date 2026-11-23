@@ -88,7 +88,7 @@ Each ticket gets its own worktree, so sessions don't share a working tree, a sna
 npm run worktree -- 76 ticket-worktrees
 ```
 
-This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main`, copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, copies the main checkout's `.env` if it has one, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
+This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main` (or from `origin/<base>`, given a third argument: an integration-branch ticket passes the integration branch), copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, copies the main checkout's `.env` if it has one, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
 
 A tracked pre-commit hook (`.githooks/`, wired up by `npm ci` through the `prepare` script) refuses commits on `main` in every worktree. For a deliberate one, set `ALLOW_MAIN_COMMIT=1`.
 
