@@ -77,7 +77,7 @@ test("typing part of a name filters the Ship list as you type", async ({ page })
   await expect(page.getByText("No Ships match.")).toBeVisible();
 });
 
-test("the Ship list is grouped by Ship Type, and each option shows its Sellers", async ({ page }) => {
+test("the Ship list is grouped by Ship Type, and each option shows the Ship's name only", async ({ page }) => {
   await page.goto("/");
   await shipPicker(page).click();
   const list = page.getByRole("listbox", { name: "Ships" });
@@ -92,10 +92,11 @@ test("the Ship list is grouped by Ship Type, and each option shows its Sellers",
   await expect(fighters.nth(1)).toHaveAccessibleName("Swiftwing Courier");
   await expect(groups.nth(1).getByRole("option")).toHaveAccessibleName("Needle Striker");
 
-  await expect(fighters.nth(1)).toHaveAccessibleDescription("Freight Guild");
-  await expect(list.getByRole("option", { name: "Needle Striker" })).toHaveAccessibleDescription(
-    "Corsair Clans, Freight Guild",
-  );
+  // No Seller list: each option reads as its name and nothing else.
+  await expect(list.getByRole("option")).toHaveText(["Bramble Fighter", "Swiftwing Courier", "Needle Striker"]);
+  for (const option of await list.getByRole("option").all()) {
+    await expect(option).toHaveAccessibleDescription("");
+  }
 });
 
 test("picking a Ship opens it, and a duplicate name shows its Seller suffix in the picker and title", async ({ page }) => {
