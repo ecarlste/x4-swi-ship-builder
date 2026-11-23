@@ -218,7 +218,7 @@ describe("resolveLoadout: Slot Groups", () => {
 });
 
 describe("resolveLoadout: mandatory software (ADR 0006)", () => {
-  test("a mandatory Software Family with nothing fitted gets its cheapest ware, reported as an addition", () => {
+  test("a mandatory Software Family with nothing fitted gets the Ship's default ware, reported as an addition", () => {
     const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_bramble", software: ["fx_scanner"] }));
     expect(repaired.software).toEqual(["fx_scanner", "fx_flightassist", "fx_dock_mk1"]);
     expect(repairs.map(describeRepair)).toEqual([
@@ -227,8 +227,8 @@ describe("resolveLoadout: mandatory software (ADR 0006)", () => {
     ]);
   });
 
-  test("a mandatory ware that's dropped is replaced by the cheapest the Ship can fit", () => {
-    // The Needle's fit list has no Docking Computer Mk1, so it gets the Mk2.
+  test("a mandatory ware earlier than the Ship's default is dropped and replaced by the default", () => {
+    // The Needle's default is the Docking Computer Mk2; the Mk1 on its fit list isn't offered.
     const { loadout: repaired, repairs } = resolved(
       loadout({ ship: "fx_needle", software: ["fx_flightassist", "fx_dock_mk1"] }),
     );

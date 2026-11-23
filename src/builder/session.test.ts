@@ -102,7 +102,7 @@ describe("picking a Ship", () => {
 });
 
 describe("mandatory software (ADR 0006)", () => {
-  test("picking a Ship opens an Empty Loadout holding the cheapest ware of each mandatory Software Family", () => {
+  test("picking a Ship opens an Empty Loadout holding the Ship's default ware of each mandatory Software Family", () => {
     const { session, state } = setup();
 
     session.pickShip(ship("fx_courier"));
@@ -113,12 +113,26 @@ describe("mandatory software (ADR 0006)", () => {
     expect(state().loadout?.software).toEqual(["fx_flightassist", "fx_dock_mk1"]);
   });
 
-  test("a Ship whose fit list has no Mk1 of a mandatory family starts on its Mk2, as the M12-L Kimogila does", () => {
+  test("a mandatory family starts on the Ship's default ware even when an earlier one is on its fit list, as on the Y-wing Longprobe", () => {
     const { session, state } = setup();
 
+    // The Needle's default Docking Software is the Mk2; its fit list has the Mk1 too.
     session.pickShip(ship("fx_needle"));
 
     expect(state().loadout?.software).toEqual(["fx_flightassist", "fx_dock_mk2"]);
+  });
+
+  test("opening a Loadout holding a ware earlier than the default swaps in the default, as a Repair", () => {
+    const stored = savedLoadout({ ship: "fx_needle", software: ["fx_flightassist", "fx_dock_mk1"] });
+    const { session, state } = setup([stored]);
+
+    session.openSaved(stored);
+
+    expect(state().loadout?.software).toEqual(["fx_flightassist", "fx_dock_mk2"]);
+    expect(state().notice?.repairs.map((r) => [r.type, r.name])).toEqual([
+      ["dropped", "Docking Computer Mk1"],
+      ["added", "Docking Computer Mk2"],
+    ]);
   });
 
   test("the Empty Loadout's Price includes its mandatory software", () => {
@@ -138,7 +152,7 @@ describe("mandatory software (ADR 0006)", () => {
     expect(state().stats?.missing.filter((m) => m.place.kind === "software")).toEqual([]);
   });
 
-  test("opening a Loadout without a mandatory ware adds the cheapest one as a Repair", () => {
+  test("opening a Loadout without a mandatory ware adds the default one as a Repair", () => {
     const stored = savedLoadout({ ship: "fx_bramble", name: "Bare Bramble", software: undefined });
     const { session, state, storage } = setup([stored]);
     const before = storage.raw();

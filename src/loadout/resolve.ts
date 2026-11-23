@@ -7,8 +7,8 @@
  * dropped; a count above the new capacity is clamped. Crew over the Ship's
  * crew capacity is cut to fit, service crew first (ADR 0004). Of two pieces
  * of software in one Software Family, the newer is kept, and a mandatory
- * Software Family with none fitted gets its cheapest ware (ADR 0006). Ids are matched as
- * they are: there are no rename tables. A version change on its own isn't a
+ * Software Family with none fitted gets the Ship's default ware of it (ADR 0006). Ids
+ * are matched as they are: there are no rename tables. A version change on its own isn't a
  * Repair.
  *
  * None of these rules live here: the stored Loadout is replayed through the
@@ -65,7 +65,7 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
   // That order is only the replay's: what is kept stays in the order it was stored.
   const kept = new Set(repaired.software);
   if (kept.size > 0) repaired = { ...repaired, software: [...new Set(loadout.software)].filter((id) => kept.has(id)) };
-  // A mandatory Software Family with nothing fitted gets its cheapest ware (ADR 0006).
+  // A mandatory Software Family with nothing fitted gets the Ship's default ware of it (ADR 0006).
   replay(rules.withMandatorySoftware(repaired));
   // Consumables of one kind share its capacity in the order they were stored.
   for (const [id, count] of Object.entries(loadout.consumables ?? {})) replay(rules.setConsumable(repaired, id, count));

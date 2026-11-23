@@ -77,7 +77,7 @@ An estimate of what a Loadout costs: the Chassis, each piece of Equipment (the e
 _Avoid_: cost, value, purchase price
 
 **Empty Loadout**:
-The loadout every ship starts with in the builder: no equipment and no Crew, except the cheapest software the Ship can fit from each of its mandatory Software Families (ADR 0006). Like a shipyard, it starts with only the Captain.
+The loadout every ship starts with in the builder: no equipment and no Crew, except the Ship's default ware of each of its mandatory Software Families, the earliest it can fit (ADR 0006). Like a shipyard, it starts with only the Captain.
 _Avoid_: default loadout, base loadout, template
 
 **Loaded Loadout**:
