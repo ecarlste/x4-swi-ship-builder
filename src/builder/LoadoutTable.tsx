@@ -1,10 +1,11 @@
-import { useId, useMemo, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { shotDamage } from "../stats/firepower.ts";
 import { DotIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "cn";
 import { ComparisonPopover } from "./ComparisonPopover.tsx";
@@ -183,6 +184,7 @@ export function LoadoutTable({
                 value={fitted ? count : 0}
                 max={size}
                 limit={size}
+                showMax
                 disabled={!fitted}
                 onChange={(n) => change(rules.setGroupCount(loadout, group, kind, n))}
               />
@@ -219,6 +221,7 @@ export function LoadoutTable({
                 label={`${item.name} count`}
                 value={count}
                 // Every item of a kind shares the Ship's capacity for it, which the section heading shows.
+                max={kindOf(place.equipment).capacity}
                 limit={rules.limit(loadout, place)}
                 onChange={(n) => change(rules.setConsumable(loadout, item.id, n))}
               />
@@ -381,6 +384,7 @@ function CrewSection({
                 label={`${label} count`}
                 value={line.count}
                 // Service crew and marines share the Ship's crew capacity, which the header shows.
+                max={ship.capacities.crew}
                 limit={rules.limit(loadout, place)}
                 onChange={(n) => onChange(rules.setCrew(loadout, place.role, n))}
               />
@@ -396,27 +400,57 @@ function CrewSection({
 }
 
 /**
- * A count, shown as "count / max" when given a max. The input stops at
- * limit, which is lower than max when other items share the capacity; the
- * edit itself clamps a typed value over it.
+ * A count, as a slider beside a number input showing the same value. The
+ * slider's track spans max, the capacity the row draws on; its thumb stops at
+ * limit, which is lower than max when other rows share the capacity. A typed
+ * value applies on blur or Enter, clamped to 0..limit. The limit comes from the
+ * rules; the control only keeps to it.
  */
 function CountInput({
   label,
   value,
   max,
   limit,
+  showMax = false,
   disabled,
   onChange,
 }: {
   label: string;
   value: number;
-  max?: number;
+  /** The capacity the slider's track spans. */
+  max: number;
   limit: number;
+  /** Shows "/ max" after the number. */
+  showMax?: boolean;
   disabled?: boolean;
   onChange: (count: number) => void;
 }) {
+  /** What's typed but not yet applied, while it differs from the count. */
+  const [draft, setDraft] = useState<string | null>(null);
+  const set = (n: number) => {
+    const count = Math.min(limit, Math.max(0, n));
+    if (count !== value) onChange(count);
+  };
+  const commit = () => {
+    if (draft === null) return;
+    const n = Math.floor(Number(draft));
+    set(Number.isFinite(n) ? n : value);
+    setDraft(null);
+  };
   return (
-    <span className="inline-flex items-center gap-1 text-muted-foreground">
+    <span className="inline-flex items-center gap-2 text-muted-foreground">
+      <Slider
+        className="w-28"
+        aria-label={label}
+        min={0}
+        max={max}
+        step={1}
+        largeStep={10}
+        // One thumb: the wrapper draws a thumb per value, and two for a bare number.
+        value={[value]}
+        disabled={disabled}
+        onValueChange={(v) => set(Array.isArray(v) ? v[0] : v)}
+      />
       <Input
         type="number"
         className="h-7 w-18 text-right text-foreground"
@@ -424,14 +458,15 @@ function CountInput({
         min={0}
         max={limit}
         step={1}
-        value={value}
+        value={draft ?? value}
         disabled={disabled}
-        onChange={(e) => {
-          const n = Math.floor(Number(e.target.value));
-          onChange(Number.isFinite(n) ? Math.max(0, n) : 0);
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
         }}
       />
-      {max !== undefined && <>/ {formatNumber(max)}</>}
+      {showMax && <>/ {formatNumber(max)}</>}
     </span>
   );
 }

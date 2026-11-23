@@ -111,9 +111,11 @@ test("consumable counts can't exceed the Ship's capacities", async ({ page }) =>
   await expect(flares).toHaveValue("0");
 
   await flares.fill("3");
+  await flares.press("Enter");
   await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(3)).toHaveText("180 Cr");
   await expect(countermeasures.getByRole("columnheader")).toHaveText(/3 \/ 5$/);
   await flares.fill("9");
+  await flares.press("Enter");
   await expect(flares).toHaveValue("5");
   await expect(countermeasures.getByRole("columnheader")).toHaveText(/5 \/ 5$/);
 });
@@ -136,8 +138,10 @@ test("missiles are limited to those a fitted launcher can fire, sharing the Ship
   await fit(page, /con_weapon_02/, "Torpedo Tube");
   await expect(missiles.getByRole("rowheader")).toHaveText(["Dart Missile", "Heavy Torpedo", "Ion Torpedo"]);
   await countOf(page, "Dart Missile").fill("6");
+  await countOf(page, "Dart Missile").press("Enter");
   await expect(missiles.getByRole("columnheader")).toHaveText(/6 \/ 10$/);
   await countOf(page, "Heavy Torpedo").fill("9");
+  await countOf(page, "Heavy Torpedo").press("Enter");
   // 10 missiles in all: 6 Darts leave room for 4 Torpedoes.
   await expect(countOf(page, "Heavy Torpedo")).toHaveValue("4");
   await expect(rowOf(page, "Heavy Torpedo").getByRole("cell").nth(3)).toHaveText("10,000 Cr");
@@ -161,8 +165,10 @@ test("drones, deployables and countermeasures each have a section heading with t
   await expect(section(page, "Countermeasures").getByRole("columnheader")).toHaveText(/^Countermeasures\s*0 \/ 20$/);
 
   await countOf(page, "Porter Drone").fill("7");
+  await countOf(page, "Porter Drone").press("Enter");
   await expect(section(page, "Drones").getByRole("columnheader")).toHaveText(/7 \/ 20$/);
   await countOf(page, "Marker Beacon").fill("12");
+  await countOf(page, "Marker Beacon").press("Enter");
   await expect(countOf(page, "Marker Beacon")).toHaveValue("10");
   await expect(section(page, "Deployables").getByRole("columnheader")).toHaveText(/10 \/ 10$/);
   // Each section counts only its own rows.
@@ -262,9 +268,11 @@ test("a Slot Group has one row per kind, with an Equipment choice and a count up
   await expect(turrets.getByRole("cell").nth(3)).toHaveText("180,000 Cr");
 
   await count.fill("2");
+  await count.press("Enter");
   await expect(count).toHaveValue("2");
   await expect(turrets.getByRole("cell").nth(3)).toHaveText("90,000 Cr");
   await count.fill("9");
+  await count.press("Enter");
   await expect(count).toHaveValue("4");
 });
 
@@ -284,12 +292,14 @@ test("service crew and marines share the Ship's crew capacity, and Price adds ea
 
   // The fixture's crew price averages 6,000 Cr.
   await countOf(page, "Service crew").fill("12");
+  await countOf(page, "Service crew").press("Enter");
   await expect(rowOf(page, "Service crew").getByRole("cell").nth(3)).toHaveText("72,000 Cr");
   await expect(crew.getByRole("columnheader")).toHaveText(/13 \/ 21$/);
   await expect(price).toContainText("2,572,000 Cr");
 
   // Marines get only what the service crew leave, and the reverse.
   await countOf(page, "Marines").fill("15");
+  await countOf(page, "Marines").press("Enter");
   await expect(countOf(page, "Marines")).toHaveValue("8");
   await expect(rowOf(page, "Marines").getByRole("cell").nth(3)).toHaveText("48,000 Cr");
   await expect(crew.getByRole("columnheader")).toHaveText(/21 \/ 21$/);
@@ -327,10 +337,12 @@ test("the Crew heading counts the Captain's seat, as the stats panel's Crew does
 
   await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*1 \/ 2$/);
   await countOf(page, "Marines").fill("1");
+  await countOf(page, "Marines").press("Enter");
   await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*2 \/ 2$/);
   await expect(statsCrew).toHaveText("2");
   // The seat isn't a crew place: the Marine took the only one.
   await countOf(page, "Service crew").fill("1");
+  await countOf(page, "Service crew").press("Enter");
   await expect(countOf(page, "Service crew")).toHaveValue("0");
 });
 

@@ -90,6 +90,7 @@ test("a Slot Group row shows what it held, with its count", async ({ page }) => 
   await saveAs(page, "Hauler");
 
   await row(page, /Shields group_front/).getByRole("spinbutton").fill("1");
+  await row(page, /Shields group_front/).getByRole("spinbutton").press("Enter");
 
   await expect(row(page, /Shields group_front/)).toContainText("was: Bubble Shield M ×2");
   await expect(statCells(page, "Avg. Group Shield (MJ)")).toHaveText(["5,000", "−5,000"]);
