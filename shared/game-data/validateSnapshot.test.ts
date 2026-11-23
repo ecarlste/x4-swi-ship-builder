@@ -240,6 +240,20 @@ describe("validateSnapshot", () => {
       });
     });
 
+    it("reports a bolt colour that isn't an AARRGGBB value", () => {
+      const errors = errorsAfter((raw) => {
+        raw.equipment.find((e: any) => e.id === "fx_pulse_s").boltColour = "#FF00FF00";
+        raw.equipment.find((e: any) => e.id === "fx_turret_m_red").boltColour = "FFGG0000";
+        raw.equipment.find((e: any) => e.id === "fx_cannon_s").boltColour = "FF0000";
+      });
+
+      expect(errors).toEqual([
+        `equipment: fx_pulse_s bolt colour "#FF00FF00" isn't an AARRGGBB value`,
+        `equipment: fx_turret_m_red bolt colour "FFGG0000" isn't an AARRGGBB value`,
+        `equipment: fx_cannon_s bolt colour "FF0000" isn't an AARRGGBB value`,
+      ]);
+    });
+
     it("reports a name that still carries the game's colour markup", () => {
       const errors = errorsAfter((raw) => {
         raw.equipment.find((e: any) => e.id === "fx_flare").name = "\\033#FF00FF00#G\\033X";
