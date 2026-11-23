@@ -38,7 +38,7 @@ test("a mandatory family of one ware is fitted, with no control", async ({ page 
   await expect(flightAssist.getByRole("combobox")).toHaveCount(0);
 });
 
-test("a mandatory family of several wares starts on the cheapest, with no None, and adds it to the Price", async ({ page }) => {
+test("a mandatory family of several wares starts on the Ship's default, with no None, and adds it to the Price", async ({ page }) => {
   await openShip(page, "S", "Bramble Fighter");
 
   const docking = family(page, "Docking Software");
@@ -57,11 +57,14 @@ test("a mandatory family of several wares starts on the cheapest, with no None, 
   await expect(docking.getByRole("cell").nth(3)).toHaveText("10,000 Cr");
 });
 
-test("a Ship whose fit list has no Mk1 of a mandatory family starts on its Mk2", async ({ page }) => {
+test("a mandatory family starts on the Ship's default ware and doesn't offer the wares before it", async ({ page }) => {
+  // The Needle's default is the Docking Computer Mk2, and the Mk1 is on its fit list too, as on the Y-wing Longprobe.
   await openShip(page, "S", "Needle Striker");
 
   const docking = family(page, "Docking Software");
   await expect(docking.getByRole("cell")).toHaveText(["Docking Computer Mk2", "1", "", "10,000 Cr"]);
+  await expect(docking.getByRole("combobox")).toHaveCount(0);
+  await expect(softwareSection(page)).not.toContainText("Docking Computer Mk1");
 });
 
 test("an optional family of one ware is a toggle", async ({ page }) => {

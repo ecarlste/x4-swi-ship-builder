@@ -21,9 +21,9 @@ const escort = {
   consumables: { fx_flare: 9 },
 };
 
-async function openEscort(page: Page) {
+async function openEscort(page: Page, stored: object = escort) {
   await page.goto("/");
-  await page.evaluate(([key, raw]) => localStorage.setItem(key!, raw!), [KEY, JSON.stringify([escort])]);
+  await page.evaluate(([key, raw]) => localStorage.setItem(key!, raw!), [KEY, JSON.stringify([stored])]);
   await page.reload();
   await page.getByRole("toolbar").getByRole("button", { name: "Saved Loadouts", exact: true }).click();
   await page.getByRole("region", { name: "Saved Loadouts" }).getByRole("button", { name: "Open" }).click();
@@ -32,13 +32,22 @@ async function openEscort(page: Page) {
 test("the Repairs notice is an alert listing the Repairs, drawn in the warning colour", async ({ page }) => {
   await openEscort(page);
 
-  const alert = page.getByRole("alert").filter({ hasText: "This Loadout changed with the Game Data" });
+  const alert = page.getByRole("alert").filter({ hasText: "This Loadout was repaired to fit its Ship" });
   await expect(alert.getByRole("listitem")).toHaveText([
     /Zephyr Cannon in con_weapon_09: dropped/,
     /Glare Flare in consumables: count cut from 9 to 5/,
   ]);
-  await expect(alert.getByText("This Loadout changed with the Game Data")).toHaveCSS(
+  await expect(alert.getByText("This Loadout was repaired to fit its Ship")).toHaveCSS(
     "color",
     await tokenColour(page, "warning"),
   );
+});
+
+test("a Loadout repaired only by an addition gets a title that fits it", async ({ page }) => {
+  // Made with the current Game Data, but without the Docking Software the Bramble must fit (ADR 0006).
+  await openEscort(page, { ...escort, gameData: { swi: "999", x4: "999" }, ship: "fx_bramble", slots: {}, consumables: {} });
+
+  const alert = page.getByRole("alert");
+  await expect(alert.getByRole("heading")).toHaveText("This Loadout was repaired to fit its Ship");
+  await expect(alert.getByRole("listitem")).toHaveText([/Docking Computer Mk1 in software: added/]);
 });

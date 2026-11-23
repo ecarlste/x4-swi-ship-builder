@@ -303,7 +303,7 @@ export function readEquipment(
       });
       return;
     }
-    const item = readItem(files, text, candidate, sellers, defaults, known, warnings);
+    const item = readItem({ files, text, defaults, known, warnings }, candidate, sellers);
     if (typeof item === "string") {
       leftOut.push({ ware: id, reason: item });
       warnings.push(`${id}: ${item}`);
@@ -407,19 +407,23 @@ export function readEquipment(
   };
 }
 
+/** What reading every item draws on: the game files and text, and what's collected across all items. */
+interface ItemContext {
+  files: GameFiles;
+  text: TextResolver;
+  /** Class properties from libraries/defaults.xml, by class. */
+  defaults: Map<string, JsonElement>;
+  /** Every candidate ware, by id. */
+  known: Map<string, Candidate>;
+  warnings: string[];
+}
+
 /**
  * An included item's name, price, licence, Sellers and raw inputs; or, when
  * its data breaks our rules, the reason it is left out.
  */
-function readItem(
-  files: GameFiles,
-  text: TextResolver,
-  c: Candidate,
-  sellers: string[],
-  defaults: Map<string, JsonElement>,
-  known: Map<string, Candidate>,
-  warnings: string[],
-): Equipment | string {
+function readItem(ctx: ItemContext, c: Candidate, sellers: string[]): Equipment | string {
+  const { files, text, defaults, known, warnings } = ctx;
   const where = `ware ${c.id}`;
   const nameId = attr(c.ware, "name");
   if (nameId === undefined) throw new ExtractError(`${where} has no name`);
