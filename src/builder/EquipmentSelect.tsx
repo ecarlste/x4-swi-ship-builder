@@ -3,6 +3,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "cn";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Equipment } from "../gameData.ts";
+import { EquipmentName } from "./EquipmentName.tsx";
 
 const EMPTY_LABEL = "— empty —";
 
@@ -59,7 +60,7 @@ export function EquipmentSelect({
       }}
     >
       <SelectTrigger aria-label={label} className="w-full min-w-56 data-placeholder:text-muted-foreground">
-        <SelectValue />
+        <SelectValue>{() => (fitted ? <EquipmentName equipment={fitted} /> : (emptyLabel ?? ""))}</SelectValue>
       </SelectTrigger>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Positioner
@@ -90,7 +91,7 @@ export function EquipmentSelect({
                     onFocus={() => show(option)}
                     onMouseEnter={() => show(option)}
                   >
-                    {item.label}
+                    {option ? <EquipmentName equipment={option} /> : item.label}
                     {/* The tick as text too, beside the drawn one, as the option has always had it. */}
                     {selected && <span className="sr-only">✓</span>}
                   </SelectItem>

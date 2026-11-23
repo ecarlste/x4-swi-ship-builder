@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CircleAlert } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Toaster, useToastManager } from "@/components/ui/toast";
 import { gameData } from "./gameData.ts";
 import { Footer } from "./Footer.tsx";
 import { ShipBlock } from "./builder/ShipBlock.tsx";
@@ -40,6 +39,7 @@ export function App() {
   const { loadout, ship, opened, notice, message, savedList, showSaved, naming, stats, was, wasStats } =
     useSession(session);
   const importInput = useRef<HTMLInputElement>(null);
+  const { add: addToast } = useToastManager();
   const missing = stats?.missing ?? [];
 
   /** Opens the Loadout a Share Link carries in the URL fragment, if there is one. */
@@ -54,6 +54,19 @@ export function App() {
     window.addEventListener("hashchange", openShareLink);
     return () => window.removeEventListener("hashchange", openShareLink);
   }, [session]);
+
+  /**
+   * Each message the session sets shows as a toast. Status toasts close by themselves; errors stay
+   * until dismissed. Every message is a new object, so two alike in a row still make two toasts.
+   */
+  useEffect(() => {
+    if (!message) return;
+    addToast(
+      message.kind === "error"
+        ? { description: message.text, type: "error", timeout: 0 }
+        : { description: message.text, type: "status" },
+    );
+  }, [message, addToast]);
 
   useEffect(() => {
     document.title = ship ? `${ship.name} · ${APP_TITLE}` : APP_TITLE;
@@ -111,15 +124,6 @@ export function App() {
           </Button>
         </div>
       </div>
-      <div role="status" className="px-4 py-1 text-sm text-muted-foreground empty:hidden">
-        {message?.kind === "status" && message.text}
-      </div>
-      {message?.kind === "error" && (
-        <Alert variant="destructive" className="mx-4 my-2 w-auto">
-          <CircleAlert />
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
       {notice && <RepairsNotice {...notice} onDismiss={session.dismissNotice} />}
       <SaveDialog naming={naming} onSave={(name) => session.save(name)} onCancel={session.cancelNaming} />
       {showSaved && (
@@ -154,6 +158,7 @@ export function App() {
         )}
       </main>
       <Footer manifest={gameData.manifest} />
+      <Toaster />
     </div>
   );
 }

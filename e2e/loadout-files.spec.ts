@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 
+import { toasts } from "./helpers.ts";
 const KEY = "swi-builder:saved-loadouts:v1";
 
 const savedList = (page: Page) => page.getByRole("region", { name: "Saved Loadouts" });
@@ -89,7 +90,7 @@ test("Import adds the file's Loadouts, and a clashing id gets a new one so both 
 
   await importFile(page, loadoutFile([{ ...escort, name: "Escort (theirs)" }, freighter]));
 
-  await expect(page.getByRole("status")).toContainText("Imported 2 Loadouts");
+  await expect(toasts(page)).toContainText("Imported 2 Loadouts");
   await expect(savedList(page).getByRole("listitem")).toHaveText([/^Escort\b/, /Escort \(theirs\)/, /Freighter/]);
 
   const list = JSON.parse((await stored(page))!) as { id: string; name: string }[];
@@ -129,7 +130,7 @@ for (const [what, contents, error] of [
 
     await importFile(page, contents);
 
-    await expect(page.getByRole("alert")).toContainText(error);
+    await expect(toasts(page)).toContainText(error);
     expect(await stored(page)).toBe(before);
   });
 }
