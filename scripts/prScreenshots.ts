@@ -120,7 +120,7 @@ function shotsIn(dir: string): string[] {
   return existsSync(dir) ? readdirSync(dir).filter((file) => file.endsWith(".png")).sort() : [];
 }
 
-function required(name: string): string {
+function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} must be set.`);
   return value;
@@ -135,8 +135,8 @@ const USAGE = [
 function main([command, ...args]: string[]): number {
   if (command === "publish" && args.length === 1) {
     const [dir] = args;
-    const pr = Number(required("PR_NUMBER"));
-    const headSha = required("HEAD_SHA");
+    const pr = Number(requiredEnv("PR_NUMBER"));
+    const headSha = requiredEnv("HEAD_SHA");
     const files = shotsIn(dir).map((file) => ({ path: `pr-${pr}/${headSha}/${file}`, from: join(dir, file) }));
     replaceFolder(pr, files, `PR #${pr} screenshots at ${headSha.slice(0, 7)}`);
     return 0;
@@ -145,17 +145,17 @@ function main([command, ...args]: string[]): number {
     const [dir] = args;
     process.stdout.write(
       commentBody({
-        repo: required("GITHUB_REPOSITORY"),
-        pr: Number(required("PR_NUMBER")),
-        baseSha: required("BASE_SHA"),
-        headSha: required("HEAD_SHA"),
+        repo: requiredEnv("GITHUB_REPOSITORY"),
+        pr: Number(requiredEnv("PR_NUMBER")),
+        baseSha: requiredEnv("BASE_SHA"),
+        headSha: requiredEnv("HEAD_SHA"),
         files: shotsIn(dir),
       }),
     );
     return 0;
   }
   if (command === "clean" && args.length === 0) {
-    const pr = Number(required("PR_NUMBER"));
+    const pr = Number(requiredEnv("PR_NUMBER"));
     replaceFolder(pr, [], `PR #${pr} closed: remove its screenshots`);
     return 0;
   }

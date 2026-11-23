@@ -23,7 +23,7 @@ The states are `STATES` in `scripts/prScreenshots.ts` (key, label, order in the 
 
 ## Where the images live
 
-The orphan branch `pr-screenshots`, under `pr-<number>/<head sha>/{before,after}-<state>.png`, linked from the comment through `raw.githubusercontent.com` (the repo is public). Each push replaces the PR's folder; closing the PR removes it. Commits there are made as the Actions bot by `node scripts/prScreenshots.ts publish|clean`. The "Protect main" ruleset covers only `main`. Never base work on that branch or merge it.
+The orphan branch `pr-screenshots`, under `pr-<number>/<head sha>/{before,after}-<state>.png`, linked from the comment through `raw.githubusercontent.com` (the repo is public). Each push replaces the PR's folder; closing (or merging) the PR removes it, so from then on its comment's images no longer load. Commits there are made as the Actions bot by `node scripts/prScreenshots.ts publish|clean`. The "Protect main" ruleset covers only `main`. Never base work on that branch or merge it.
 
 ## Limits
 

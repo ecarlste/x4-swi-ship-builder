@@ -34,7 +34,8 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      SHOTS_OUT: ${{ runner.temp }}/shots
+      # Relative to the checkout: job-level env can't read the runner context.
+      SHOTS_OUT: shots-out
       GAME_DATA_DIR: fixtures/game-data/tiny
     steps:
       # The head itself, not the merge commit: "after" is the PR as pushed.
