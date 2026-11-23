@@ -85,6 +85,24 @@ export function crewCount(loadout: Loadout): number {
   return (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
 }
 
+/**
+ * What the Ship's buy screen calls its Captain: "Pilot" on S and M Ships,
+ * "Captain" on L and XL. The Captain is free, always fitted and not part of
+ * the Loadout (ADR 0004).
+ */
+export function captainTitle(ship: Ship): "Pilot" | "Captain" {
+  return ship.size === "s" || ship.size === "m" ? "Pilot" : "Captain";
+}
+
+/**
+ * The Ship's seats as the game's Crew figure counts them: the Captain's seat
+ * sits on top of the crew capacity, so it adds one to both what's taken and
+ * the total (ADR 0004).
+ */
+export function crewSeats(ship: Ship, loadout: Loadout): { taken: number; total: number } {
+  return { taken: crewCount(loadout) + 1, total: ship.capacities.crew + 1 };
+}
+
 export type ConsumableKind = "missile" | "drone" | "deployable" | "countermeasure";
 
 /**

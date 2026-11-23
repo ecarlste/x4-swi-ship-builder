@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { engineSlot, loadout, ship } from "./testing/fixtures.ts";
-import { crewCount, shipEngines } from "./loadout.ts";
+import { captainTitle, crewCount, crewSeats, shipEngines } from "./loadout.ts";
 
 describe("shipEngines", () => {
   test("counts the Ship's engine Slots and the sizes of all its engine Slot Groups (AA-9 Gas Miner: 1 + 2 = 3)", () => {
@@ -31,5 +31,22 @@ describe("crewCount", () => {
     expect(crewCount(loadout("fx_ship", { crew: { service: 3, marines: 2 } }))).toBe(5);
     expect(crewCount(loadout("fx_ship", { crew: { marines: 2 } }))).toBe(2);
     expect(crewCount(loadout("fx_ship"))).toBe(0);
+  });
+});
+
+describe("the Captain (ADR 0004)", () => {
+  test("is the Pilot on S and M Ships and the Captain on L and XL, as the buy screen names it", () => {
+    expect((["s", "m", "l", "xl"] as const).map((size) => captainTitle(ship({ size })))).toEqual([
+      "Pilot",
+      "Pilot",
+      "Captain",
+      "Captain",
+    ]);
+  });
+
+  test("takes a seat on top of the crew capacity, which the Crew figure counts", () => {
+    const hauler = ship({ capacities: { ...ship().capacities, crew: 20 } });
+    expect(crewSeats(hauler, loadout("fx_ship", { crew: { service: 3, marines: 2 } }))).toEqual({ taken: 6, total: 21 });
+    expect(crewSeats(hauler, loadout("fx_ship"))).toEqual({ taken: 1, total: 21 });
   });
 });

@@ -12,7 +12,7 @@ import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentSelect } from "./EquipmentSelect.tsx";
 import { TooltipMark } from "./TooltipMark.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
-import { CREW_ROLE_NAMES, crewCount, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
+import { captainTitle, CREW_ROLE_NAMES, crewSeats, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
 import { loadoutLines, type Held, type Line } from "../loadout/lines.ts";
 import { loadoutRules, type ConsumableOptions, type Edit, type LoadoutRules } from "../loadout/rules.ts";
 
@@ -428,21 +428,18 @@ function CrewSection({
   onChange: (edit: Edit) => void;
 }) {
   const headingId = useId();
-  // The Captain's seat, on top of the crew capacity.
-  const used = crewCount(loadout) + 1;
-  const capacity = ship.capacities.crew + 1;
-  const captain = ship.size === "s" || ship.size === "m" ? "Pilot" : "Captain";
+  const seats = crewSeats(ship, loadout);
   return (
     <TableBody aria-labelledby={headingId}>
       <TableRow className="hover:bg-transparent">
         <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
           Crew{" "}
           <span className="text-muted-foreground">
-            {formatNumber(used)} / {formatNumber(capacity)}
+            {formatNumber(seats.taken)} / {formatNumber(seats.total)}
           </span>
         </TableHead>
       </TableRow>
-      <Row label={captain} equipment="" quantity="1" keyValue="" price="Free" />
+      <Row label={captainTitle(ship)} equipment="" quantity="1" keyValue="" price="Free" />
       {lines.map((line) => {
         if (line.place?.kind !== "crew") return null;
         const place = line.place;
