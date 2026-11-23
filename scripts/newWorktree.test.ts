@@ -72,6 +72,32 @@ describe("new-worktree.sh", () => {
     expect(git(worktree(), "log", "--format=%s", "-1")).toBe("on origin");
   });
 
+  it("branches from origin/<base> when given a base branch, and runs npm ci once", () => {
+    const other = join(tmp, "other");
+    run("git", ["clone", "-q", join(tmp, "origin.git"), other]);
+    git(other, "switch", "-q", "-c", "integration");
+    git(other, "commit", "-q", "--allow-empty", "-m", "on integration");
+    git(other, "push", "-q", "origin", "integration");
+
+    newWorktree("76", "ticket-worktrees", "integration");
+
+    expect(git(worktree(), "branch", "--show-current")).toBe("76-ticket-worktrees");
+    expect(git(worktree(), "log", "--format=%s", "-1")).toBe("on integration");
+    expect(readFileSync(npmLog, "utf8").trim()).toBe(`${realpathSync(worktree())} ci`);
+  });
+
+  it("refuses a base branch origin doesn't have, before making a worktree", () => {
+    expect(() => newWorktree("76", "ticket-worktrees", "no-such-branch")).toThrow(/origin has no branch no-such-branch/);
+    // A revision, not a branch: it would cut from a commit that isn't a tip.
+    git(main, "commit", "-q", "--allow-empty", "-m", "second");
+    git(main, "push", "-q", "origin", "main");
+    expect(() => newWorktree("76", "ticket-worktrees", "main~1")).toThrow(/origin has no branch main~1/);
+
+    expect(existsSync(worktree())).toBe(false);
+    expect(git(main, "branch", "--list", "76-ticket-worktrees")).toBe("");
+    expect(existsSync(npmLog)).toBe(false);
+  });
+
   it("runs npm ci in the new worktree", () => {
     newWorktree("76", "ticket-worktrees");
 

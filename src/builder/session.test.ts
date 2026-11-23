@@ -418,6 +418,16 @@ describe("opening a Saved Loadout", () => {
     expect(state().notice).toBeNull();
   });
 
+  test("missiles that fit only in a launcher's own storage open as saved, as many as the stats' Missiles (#158)", () => {
+    const { session, state } = setup();
+    // The Courier holds 10 missiles; the Zip Pod holds 6 more of its own.
+    session.openSaved(savedLoadout({ slots: { con_weapon_01: "fx_zip_pod_s" }, consumables: { fx_dart: 16 } }));
+
+    expect(state().notice).toBeNull();
+    expect(state().loadout?.consumables).toEqual({ fx_dart: 16 });
+    expect(state().stats?.rows.find((r) => r.id === "MissileCapacity")?.value).toBe(16);
+  });
+
   test("one whose Ship is gone isn't opened, and says why", () => {
     const { session, state } = setup([shielded, relic]);
     session.openSaved(shielded);

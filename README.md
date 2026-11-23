@@ -76,9 +76,11 @@ The **Game Data check** (`shared/game-data/currentSnapshot.test.ts`, part of `np
 npm test
 ```
 
-This runs Vitest (`npm run test:unit`) and then Playwright Test (`npm run test:ui`). Playwright serves the app with the fixture snapshot. The first time, install a browser with `npx playwright install --with-deps chromium`.
+This runs Vitest (`npm run test:unit`) and then Playwright Test (`npm run test:ui`). Playwright builds the app with the fixture snapshot into `.cache/e2e-dist` and serves that build with `vite preview`; a built app loads much faster than the dev server, so tests don't run out of time when several suites share the machine. The first time, install a browser with `npx playwright install --with-deps chromium`.
 
-Each checkout serves the app on its own port, hashed from the checkout's path into 20000–29999, so UI runs in two worktrees at once don't share a dev server (two paths can hash to the same port, but rarely). Rerunning in the same checkout reuses its server if it's still up. Set `PW_PORT` to pick the port yourself, e.g. `PW_PORT=5301 npm run test:ui`.
+Each checkout serves the app on its own port, hashed from the checkout's path into 20000–29999, so UI runs in two worktrees at once don't share a server (two paths can hash to the same port, but rarely). Each run builds and starts its own server; if something is already on the port, the run stops rather than test it. Set `PW_PORT` to pick the port yourself, e.g. `PW_PORT=5301 npm run test:ui`.
+
+E2e tests act like the user: they find elements by role, label and text, and drive them by keyboard and pointer, never by class names, ids, titles or DOM structure. `npm run check:e2e` (`scripts/e2eLocators.ts`, run in CI before Playwright) fails on `getByTitle(`, a `title` attribute assertion, `toHaveClass(`, `selectOption(` and a `locator()` with a class, id or attribute selector, printing each one's file and line.
 
 ## Worktrees
 
@@ -88,8 +90,24 @@ Each ticket gets its own worktree, so sessions don't share a working tree, a sna
 npm run worktree -- 76 ticket-worktrees
 ```
 
-This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main`, copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, copies the main checkout's `.env` if it has one, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
+This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main` (or from `origin/<base>`, given a third argument: an integration-branch ticket passes the integration branch), copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, copies the main checkout's `.env` if it has one, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
 
 A tracked pre-commit hook (`.githooks/`, wired up by `npm ci` through the `prepare` script) refuses commits on `main` in every worktree. For a deliberate one, set `ALLOW_MAIN_COMMIT=1`.
 
 No commit credits an AI tool. A tracked commit-msg hook removes `Co-authored-by` trailers naming one, and the `attribution` CI job (`.github/workflows/attribution.yml`, which re-runs when the PR description is edited) fails a PR whose commits (trailers, author or committer email) or description still do. The pattern lives in `scripts/aiAttribution.ts`.
+
+## PR screenshots
+
+Every PR from this repo gets a bot comment with before and after screenshots, so a reviewer can see a UI change without running it. The `Screenshots` workflow (`.github/workflows/screenshots.yml`) builds the app at the PR's base and at its head, both against the fixture snapshot, and runs `screenshots/shots.spec.ts` against each build: full-page shots, 1280px wide, of the empty page, a fitted Loadout with the comparison popover open, Saved Loadouts open and the Save dialog open. The PNGs are committed to the orphan `pr-screenshots` branch under `pr-<number>/<head sha>/`, and one comment, found again by a hidden marker, shows them in a table. Each push replaces the PR's folder and updates the same comment; closing the PR deletes the folder.
+
+The screenshots aren't a test. A build or a state that fails leaves its image out (the comment shows _None_) and never fails `check`. PRs from forks are skipped: their token can't push the branch or comment. To take the screenshots locally:
+
+```bash
+GAME_DATA_DIR=fixtures/game-data/tiny npm run build
+```
+
+```bash
+SHOTS_PHASE=after SHOTS_DIST=dist SHOTS_OUT=test-results/shots npx playwright test -c screenshots/playwright.config.ts
+```
+
+See `docs/agents/pr-screenshots.md`.

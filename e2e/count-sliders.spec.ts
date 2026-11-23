@@ -38,10 +38,12 @@ test("the thumb stops at the limit the section's other rows leave, though the tr
   const torpedoes = sliderOf(page, "Heavy Torpedo");
   await expect(torpedoes).toHaveAttribute("max", "10");
   // Dragging to the far end of the track stops at the 4 the Darts leave.
-  const box = (await loadoutTable(page).getByRole("row").filter({ has: torpedoes }).locator('[data-slot="slider"]').boundingBox())!;
-  await page.mouse.move(box.x + 2, box.y + box.height / 2);
+  // Grab the thumb, at 0 on the track's left end, and drag well past the track's right end.
+  const thumb = (await torpedoes.boundingBox())!;
+  const y = thumb.y + thumb.height / 2;
+  await page.mouse.move(thumb.x + thumb.width / 2, y);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width + 50, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.move(thumb.x + 300, y, { steps: 5 });
   await page.mouse.up();
   await expect(torpedoes).toHaveAttribute("aria-valuenow", "4");
   await expect(countOf(page, "Heavy Torpedo")).toHaveValue("4");

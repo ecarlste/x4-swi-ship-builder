@@ -1,5 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { fit, loadoutTable, pickShip, row } from "./helpers.ts";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import { fit, loadoutTable, pickShip, row, tokenColour } from "./helpers.ts";
 
 const stats = (page: Page) => page.getByRole("complementary", { name: "Stats" });
 /** The cells of the first Stats row with this label: its value, then its change once there is one. */
@@ -12,8 +12,8 @@ const statCells = (page: Page, label: string) =>
 
 /** Every "was: …" line in the Loadout table. */
 const wasLines = (page: Page) => loadoutTable(page).getByText(/^was: /);
-/** Every Loadout table row marked as changed since loading. */
-const changedMarks = (page: Page) => loadoutTable(page).getByTitle("Changed since loading");
+/** The marks on rows changed since loading, within `scope`. */
+const changedMarks = (scope: Locator) => scope.getByRole("button", { name: "Changed since loading", exact: true });
 
 const saveButton = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: "Save", exact: true });
 
@@ -71,17 +71,20 @@ test("editing an opened Saved Loadout shows the change column and a was line on 
   await fit(page, /con_shield_01/, "— empty —");
 
   await expect(statCells(page, "Shield (MJ)")).toHaveText(["0", "−1,000"]);
-  await expect(statCells(page, "Shield (MJ)").nth(1)).toHaveClass(/worse/);
+  await expect(statCells(page, "Shield (MJ)").nth(1)).toHaveCSS("color", await tokenColour(page, "destructive"));
   await expect(statCells(page, "Recharge Rate (MW)")).toHaveText(["0", "−100"]);
   // Rows the edit left alone get an empty change cell.
   await expect(statCells(page, "Hull (MJ)")).toHaveText(["3,000", ""]);
   await expect(stats(page).getByRole("region", { name: "Price" })).toContainText("−9,000 Cr");
   // A lower Price is better.
-  await expect(stats(page).getByRole("region", { name: "Price" }).getByText("−9,000 Cr")).toHaveClass(/better/);
+  await expect(stats(page).getByRole("region", { name: "Price" }).getByText("−9,000 Cr")).toHaveCSS(
+    "color",
+    await tokenColour(page, "success"),
+  );
 
   await expect(row(page, /con_shield_01/)).toContainText("was: Bubble Shield S");
-  await expect(changedMarks(page)).toHaveCount(1);
-  await expect(row(page, /con_shield_01/).getByTitle("Changed since loading")).toBeVisible();
+  await expect(changedMarks(loadoutTable(page))).toHaveCount(1);
+  await expect(changedMarks(row(page, /con_shield_01/))).toBeVisible();
 });
 
 test("a Slot Group row shows what it held, with its count", async ({ page }) => {

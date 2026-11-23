@@ -4,7 +4,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
-import { row } from "./helpers.ts";
+import { explanationOf, row } from "./helpers.ts";
 
 const KEY = "swi-builder:saved-loadouts:v1";
 
@@ -69,14 +69,17 @@ test.describe("the Saved Loadouts list", () => {
     await storeRaw(page, [escort, patrol]);
     await showSavedLoadouts(page);
 
-    const flag = savedEntry(page, "Escort").getByText("⚠ 3 Repairs");
+    const flag = savedEntry(page, "Escort").getByRole("button", { name: "3 Repairs" });
     await expect(flag).toBeVisible();
-    await expect(flag).toHaveAttribute("title", /Zephyr Cannon in con_weapon_09: dropped/);
-    await expect(flag).toHaveAttribute("title", /fx_shield_gone in con_shield_01: dropped/);
-    await expect(flag).toHaveAttribute("title", /Glare Flare in consumables: count cut from 9 to 5/);
+    const explanation = await explanationOf(flag);
+    await expect(explanation).toContainText("Zephyr Cannon in con_weapon_09: dropped");
+    await expect(explanation).toContainText("fx_shield_gone in con_shield_01: dropped");
+    await expect(explanation).toContainText("Glare Flare in consumables: count cut from 9 to 5");
+    // One line per item.
+    await expect.poll(async () => (await explanation.innerText()).split("\n")).toHaveLength(3);
 
     // A version change on its own isn't shown.
-    await expect(savedEntry(page, "Patrol")).not.toContainText("⚠");
+    await expect(savedEntry(page, "Patrol").getByRole("button")).toHaveText(["Open", "Export", "Delete"]);
   });
 
   test("shows a Loadout whose Ship is gone as Unavailable, with Delete and Export only", async ({ page }) => {

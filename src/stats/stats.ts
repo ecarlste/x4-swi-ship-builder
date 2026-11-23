@@ -7,7 +7,7 @@
  * decimals, as the screen does.
  */
 import type { CargoType, Equipment, GameData, Price } from "../gameData.ts";
-import type { Loadout } from "../loadout/loadout.ts";
+import { missileCapacity, type Loadout } from "../loadout/loadout.ts";
 import { loadoutLines, type Line } from "../loadout/lines.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { missingUpgrades, type MissingUpgrade } from "./mandatory.ts";
@@ -196,11 +196,8 @@ export function loadoutStats(gameData: GameData, loadout: Loadout): LoadoutStats
 
   add("CrewCapacity", "Crew", "", 0, "crew", ship.capacities.crew + 1);
   add("UnitCapacity", "Units", "", 0, "crew", ship.capacities.drones);
-  // A launcher's own storage adds to the Ship's (#39: the Light Rocket Launcher's 6).
-  // unconfirmed (#71): times the count for a Slot Group launcher. No launcher with
-  // storage fits a Slot Group in Game Data.
-  const launcherStorage = sum(fittedGuns.map(({ item, count }) => item.missileStorage * count));
-  add("MissileCapacity", "Missiles", "", 0, "crew", ship.capacities.missiles + launcherStorage);
+  // A launcher's own storage adds to the Ship's (#39), counted as the Loadout rules count it (#158).
+  add("MissileCapacity", "Missiles", "", 0, "crew", missileCapacity(ship, loadout, index.equipment));
   add("DeployableCapacity", "Deployables", "", 0, "crew", ship.capacities.deployables);
   add("CountermeasureCapacity", "Countermeasures", "", 0, "crew", ship.capacities.countermeasures);
 

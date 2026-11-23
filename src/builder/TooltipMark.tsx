@@ -11,8 +11,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 export function TooltipMark({
   explanation,
   label,
-  titled = true,
-  onOpenChange,
   className,
   children,
 }: {
@@ -20,32 +18,22 @@ export function TooltipMark({
   explanation: string;
   /** The mark's accessible name, for a mark that is only a glyph. Without one, its text names it. */
   label?: string;
-  /** Whether the mark keeps the explanation as its own title, as v1 had it. Off when a parent has it. */
-  titled?: boolean;
-  onOpenChange?: (open: boolean) => void;
   className?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <Tooltip
-      onOpenChange={(next) => {
-        setOpen(next);
-        onOpenChange?.(next);
-      }}
+      onOpenChange={setOpen}
     >
       <TooltipTrigger
         aria-label={label}
         className={cn(
-          "inline-flex cursor-help items-center rounded-sm align-middle outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          "inline-flex cursor-help items-center gap-1 rounded-sm align-middle outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
           className,
         )}
       >
-        {/* The pointer passes through to the trigger, so the browser doesn't show the title beside
-            the Tooltip. */}
-        <span title={titled ? explanation : undefined} className="pointer-events-none inline-flex items-center gap-1">
-          {children}
-        </span>
+        {children}
       </TooltipTrigger>
       {/* Base UI gives the popup no role of its own. It is a tooltip only while open: one still
           fading out isn't, so it never stands beside the one now showing. */}
@@ -56,12 +44,7 @@ export function TooltipMark({
   );
 }
 
-/** The warning icon, with "⚠" beside it as text, as the warnings have always had it. */
+/** The warning icon, drawn only: the warning's text says what it is. */
 export function WarningGlyph() {
-  return (
-    <>
-      <TriangleAlert aria-hidden="true" className="size-4" />
-      <span className="sr-only">⚠</span>
-    </>
-  );
+  return <TriangleAlert aria-hidden="true" className="size-4" />;
 }

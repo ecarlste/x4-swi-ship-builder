@@ -9,7 +9,7 @@
  * when the serialization changes.
  */
 import { z } from "zod";
-import type { GameData, Ship } from "../gameData.ts";
+import type { Equipment, GameData, Ship } from "../gameData.ts";
 import { engineParts } from "../../shared/game-data/engines.ts";
 
 export const LOADOUT_FORMAT = 1;
@@ -104,6 +104,38 @@ export function crewSeats(ship: Ship, loadout: Loadout): { taken: number; total:
 }
 
 export type ConsumableKind = "missile" | "drone" | "deployable" | "countermeasure";
+
+/**
+ * How many missiles a Loadout can carry: the Ship's missile capacity plus each
+ * fitted launcher's own missile storage (#39, #158: in game the N-1 Modified's
+ * 6 plus the Light Rocket Launcher's 6 is 12). The Loadout rules and the stats
+ * panel both count it here. unconfirmed (#71): a Slot Group launcher's storage
+ * counts once per count; no launcher with storage fits a Slot Group in Game Data.
+ */
+export function missileCapacity(ship: Ship, loadout: Loadout, equipment: ReadonlyMap<string, Equipment>): number {
+  return fittedLaunchers(loadout, equipment).reduce(
+    (total, { item, count }) => total + item.missileStorage * count,
+    ship.capacities.missiles,
+  );
+}
+
+/**
+ * The weapons and turrets a Loadout fits in its Slots and Slot Groups, each
+ * with how many are fitted: 1 in a Slot, the count in a Slot Group.
+ */
+export function fittedLaunchers(
+  loadout: Loadout,
+  equipment: ReadonlyMap<string, Equipment>,
+): { item: Extract<Equipment, { kind: "weapon" | "turret" }>; count: number }[] {
+  const fitted = [
+    ...Object.values(loadout.slots ?? {}).map((id) => ({ id, count: 1 })),
+    ...Object.values(loadout.groups ?? {}).flatMap((kinds) => Object.values(kinds).map((e) => ({ id: e.equipment, count: e.count }))),
+  ];
+  return fitted.flatMap(({ id, count }) => {
+    const item = equipment.get(id);
+    return item?.kind === "weapon" || item?.kind === "turret" ? [{ item, count }] : [];
+  });
+}
 
 /**
  * How many engines the Ship takes and the fit list they come from: its engine

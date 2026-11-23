@@ -76,14 +76,11 @@ export function EquipmentSelect({
             <SelectPrimitive.List onMouseLeave={() => show(null)}>
               {items.map((item) => {
                 const option = sorted.find((e) => e.id === item.value) ?? null;
-                const selected = item.value === (fitted?.id ?? null);
                 return (
                   <SelectItem
                     key={item.value ?? ""}
                     value={item.value}
                     label={item.label}
-                    // The name alone: the tick isn't part of it.
-                    aria-label={item.label}
                     aria-describedby={option !== null && option === compared ? popoverId : undefined}
                     className={option ? undefined : "text-muted-foreground"}
                     // Highlighting an option, by hover or by key, focuses it. The hover is kept too, so
@@ -92,8 +89,6 @@ export function EquipmentSelect({
                     onMouseEnter={() => show(option)}
                   >
                     {option ? <EquipmentName equipment={option} /> : item.label}
-                    {/* The tick as text too, beside the drawn one, as the option has always had it. */}
-                    {selected && <span className="sr-only">✓</span>}
                   </SelectItem>
                 );
               })}

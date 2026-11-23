@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 /** Helpers shared by the e2e specs. */
-import type { Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 type Size = "S" | "M" | "L" | "XL";
 
@@ -11,19 +11,24 @@ export async function pickShip(page: Page, size: Size, name: string) {
   await page.getByRole("option", { name }).click();
 }
 
-/**
- * Picks an option from one of the toolbar's dropdowns (Size or Seller): opens it, then picks the
- * option by role. v1's native selects draw their options outside the page, so there the option is
- * picked by its label instead.
- */
+/** Picks an option from one of the toolbar's dropdowns (Size or Seller): opens it, then picks the option. */
 export async function choose(page: Page, dropdown: "Size" | "Seller", option: string) {
   const control = page.getByRole("combobox", { name: dropdown });
-  if (await control.evaluate((el) => el instanceof HTMLSelectElement)) {
-    await control.selectOption({ label: option });
-    return;
-  }
   await control.click();
   await page.getByRole("option", { name: option, exact: true }).click();
+}
+
+/** Focuses a mark, as a keyboard user reaches it, and returns the Tooltip explaining it. */
+export async function explanationOf(mark: Locator) {
+  const page = mark.page();
+  // A Tooltip opens on keyboard focus, not on a script's focus: step off the mark and back on by key.
+  await mark.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(mark).toBeFocused();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  return tooltip;
 }
 
 /**
