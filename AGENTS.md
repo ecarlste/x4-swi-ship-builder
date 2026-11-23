@@ -17,3 +17,7 @@ Single-context: one GLOSSARY.md + docs/adr/ at the repo root. See `docs/agents/d
 ### Worktrees
 
 Ticket work happens in its own worktree (`npm run worktree -- <issue> <slug>`); the main checkout stays on a clean `main`. See `docs/agents/worktrees.md`.
+
+### PR screenshots
+
+CI posts before and after UI screenshots on every PR as a bot comment; PR descriptions link to it rather than attaching screenshots. See `docs/agents/pr-screenshots.md`.
