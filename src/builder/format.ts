@@ -21,3 +21,10 @@ export function formatSigned(n: number, decimals?: number): string {
 
 /** A price in whole credits: "1,234 Cr". */
 export const formatCredits = (n: number) => `${formatNumber(n, 0)} Cr`;
+
+/**
+ * An X4 version as the game writes it: the manifest's integer form "800" is
+ * "8.00". The footer and the Repairs notice both show versions through this.
+ */
+export const formatX4Version = (version: string) =>
+  /^\d{3,}$/.test(version) ? `${version.slice(0, -2)}.${version.slice(-2)}` : version;

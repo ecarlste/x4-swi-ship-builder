@@ -4,7 +4,7 @@ import { readShareLink, shareLinkUrl } from "./shareLink.ts";
 
 const shared: SharedLoadout = {
   format: 1,
-  gameData: { swi: "091", x4: "8.00" },
+  gameData: { swi: "091", x4: "800" },
   ship: "ship_xwing",
   name: "Escort",
   slots: { con_weapon_01: "weapon_laser" },
