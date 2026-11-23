@@ -1,6 +1,6 @@
 # Coding standards
 
-The rules a reviewer checks a diff against. Each rule says what the code does, why, and what to flag. Tooling (`npm run typecheck`, the tests) and the docs it names (`README.md`, `GLOSSARY.md`, `docs/adr/`) are covered elsewhere; these rules are the conventions no config records.
+The rules a reviewer checks a diff against. Each rule says what the code does, why, and what to flag. Tooling (`npm run typecheck`, the tests) and the docs it names (`README.md`, `GLOSSARY.md`, `docs/adr/`) are covered elsewhere; these rules are the conventions no config records. E2e tests locating or asserting by markup (class names, titles, native selects) is enforced by `npm run check:e2e` (`scripts/e2eLocators.ts`) in CI, so don't check it by hand.
 
 ## 1. Docs change with the behaviour they describe
 

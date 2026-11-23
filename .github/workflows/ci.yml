@@ -28,6 +28,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:unit
+      - run: npm run check:e2e
       - run: npx playwright install --with-deps chromium
       - id: test-ui
         run: npm run test:ui
