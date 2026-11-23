@@ -13,7 +13,7 @@ import { TooltipMark } from "./TooltipMark.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
 import { CREW_ROLE_NAMES, crewCount, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
 import { loadoutLines, type Held, type Line } from "../loadout/lines.ts";
-import { loadoutRules, type Edit, type LoadoutRules } from "../loadout/rules.ts";
+import { loadoutRules, type ConsumableOptions, type Edit, type LoadoutRules } from "../loadout/rules.ts";
 
 const CONSUMABLE_LABEL: Record<ConsumableKind, string> = {
   missile: "Missiles",
@@ -60,7 +60,8 @@ function keyValue(item: Equipment): string {
  * The editable Loadout table, one row per line of the Loadout: the Chassis
  * first, read-only; one row for all the Ship's engines, which take one engine
  * type between them (ADR 0001); one row per other Slot and per Slot Group kind;
- * the thruster, the consumables and the software. After the Equipment, a Crew
+ * and the thruster. Then a section per consumable kind the Ship carries, each
+ * headed by its shared count, then the software. After the Equipment, a Crew
  * section for a Ship with crew capacity. Columns: Slot, Equipment, quantity,
  * key value and average price.
  *
@@ -88,6 +89,8 @@ export function LoadoutTable({
   const lines = loadoutLines(gameData, ship, loadout, was);
   const slots = new Map(ship.slots.map((s) => [s.id, s]));
   const consumables = rules.consumables(loadout);
+  /** The kind whose section a consumable is listed in: the first whose items include it. */
+  const kindOf = (id: string) => consumables.find((o) => o.items.some((e) => e.id === id))!;
   const nameOf = (id: string | null) => (id ? (equipment.get(id)?.name ?? id) : "empty");
   /** Applies an edit, discarding its Repairs. */
   const change = (edit: Edit) => onChange(edit.loadout);
@@ -204,20 +207,18 @@ export function LoadoutTable({
           />
         );
       case "consumable": {
-        const kind = consumables.find((o) => o.items.some((e) => e.id === place.equipment))!;
-        const item = kind.items.find((e) => e.id === place.equipment)!;
+        const item = kindOf(place.equipment).items.find((e) => e.id === place.equipment)!;
         return (
           <Row
             key={`consumable/${item.id}`}
-            label={CONSUMABLE_LABEL[kind.kind]}
+            label={item.name}
             missing={line.missing}
-            equipment={item.name}
+            equipment=""
             quantity={
               <CountInput
                 label={`${item.name} count`}
                 value={count}
-                max={kind.capacity}
-                // Every item of a kind shares the Ship's capacity for it.
+                // Every item of a kind shares the Ship's capacity for it, which the section heading shows.
                 limit={rules.limit(loadout, place)}
                 onChange={(n) => change(rules.setConsumable(loadout, item.id, n))}
               />
@@ -255,6 +256,9 @@ export function LoadoutTable({
   };
 
   const crew = lines.filter((l) => l.place?.kind === "crew");
+  const consumableLines = lines.filter((l) => l.place?.kind === "consumable");
+  const software = lines.filter((l) => l.place?.kind === "software");
+  const equipmentLines = lines.filter((l) => !["consumable", "software", "crew"].includes(l.place?.kind ?? ""));
   return (
     <Table aria-label="Loadout">
       <TableHeader>
@@ -276,11 +280,53 @@ export function LoadoutTable({
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>{lines.map(row)}</TableBody>
+      <TableBody>{equipmentLines.map(row)}</TableBody>
+      {consumables.map((kind) => {
+        const kindLines = consumableLines.filter((l) => l.place?.kind === "consumable" && kindOf(l.place.equipment) === kind);
+        return (
+          kindLines.length > 0 && (
+            <ConsumableSection key={kind.kind} kind={kind} loadout={loadout}>
+              {kindLines.map(row)}
+            </ConsumableSection>
+          )
+        );
+      })}
+      {software.length > 0 && <TableBody>{software.map(row)}</TableBody>}
       {crew.length > 0 && (
         <CrewSection rules={rules} capacity={ship.capacities.crew} loadout={loadout} lines={crew} onChange={change} />
       )}
     </Table>
+  );
+}
+
+/**
+ * One consumable kind's rows under a heading with the kind's shared count
+ * against its capacity, as the game's sections show it. The rows show only
+ * their own counts.
+ */
+function ConsumableSection({
+  kind,
+  loadout,
+  children,
+}: {
+  kind: ConsumableOptions;
+  loadout: Loadout;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  const used = kind.items.reduce((sum, e) => sum + (loadout.consumables?.[e.id] ?? 0), 0);
+  return (
+    <TableBody aria-labelledby={headingId}>
+      <TableRow className="hover:bg-transparent">
+        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
+          {CONSUMABLE_LABEL[kind.kind]}{" "}
+          <span className="text-muted-foreground">
+            {formatNumber(used)} / {formatNumber(kind.capacity)}
+          </span>
+        </TableHead>
+      </TableRow>
+      {children}
+    </TableBody>
   );
 }
 

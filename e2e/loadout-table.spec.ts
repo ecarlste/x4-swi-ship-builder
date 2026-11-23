@@ -96,43 +96,77 @@ const countOf = (page: Page, item: string) => page.getByRole("spinbutton", { nam
 const rowOf = (page: Page, item: string) =>
   loadoutTable(page).getByRole("row").filter({ has: countOf(page, item) });
 
+/** A consumable section of the Loadout table, found by its heading. */
+const section = (page: Page, name: string) => loadoutTable(page).getByRole("rowgroup", { name: new RegExp(`^${name}`) });
+
 test("consumable counts can't exceed the Ship's capacities", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
+  const countermeasures = section(page, "Countermeasures");
   const flares = countOf(page, "Glare Flare");
-  await expect(rowOf(page, "Glare Flare").getByRole("rowheader")).toHaveText("Countermeasures");
-  await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(1)).toContainText("/ 5");
+  await expect(countermeasures.getByRole("columnheader")).toHaveText(/^Countermeasures\s*0 \/ 5$/);
+  await expect(countermeasures.getByRole("rowheader")).toHaveText(["Glare Flare"]);
+  // The heading carries the shared capacity; the row shows only its own count.
+  await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(1)).not.toContainText("/");
   await expect(flares).toHaveValue("0");
 
   await flares.fill("3");
   await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(3)).toHaveText("180 Cr");
+  await expect(countermeasures.getByRole("columnheader")).toHaveText(/3 \/ 5$/);
   await flares.fill("9");
   await expect(flares).toHaveValue("5");
+  await expect(countermeasures.getByRole("columnheader")).toHaveText(/5 \/ 5$/);
 });
 
 test("missiles are limited to those a fitted launcher can fire, sharing the Ship's missile capacity", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
   // No launcher, no missiles.
-  await expect(loadoutTable(page).getByRole("rowheader", { name: "Missiles" })).toHaveCount(0);
+  await expect(section(page, "Missiles")).toHaveCount(0);
 
   // Only Corsair Clans sell the Dart Launcher, and only the Freight Guild sells the
   // Courier: any compatible Equipment fits whatever its Faction.
   await fit(page, /con_weapon_01/, "Dart Launcher");
   await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/Dart Launcher/);
-  await expect(rowOf(page, "Dart Missile").getByRole("rowheader")).toHaveText("Missiles");
-  await expect(rowOf(page, "Dart Missile").getByRole("cell").nth(1)).toContainText("/ 10");
+  const missiles = section(page, "Missiles");
+  await expect(missiles.getByRole("columnheader")).toHaveText(/^Missiles\s*0 \/ 10$/);
+  await expect(missiles.getByRole("rowheader")).toHaveText(["Dart Missile"]);
+  await expect(rowOf(page, "Dart Missile").getByRole("cell").nth(1)).not.toContainText("/");
 
   await fit(page, /con_weapon_02/, "Torpedo Tube");
+  await expect(missiles.getByRole("rowheader")).toHaveText(["Dart Missile", "Heavy Torpedo", "Ion Torpedo"]);
   await countOf(page, "Dart Missile").fill("6");
+  await expect(missiles.getByRole("columnheader")).toHaveText(/6 \/ 10$/);
   await countOf(page, "Heavy Torpedo").fill("9");
   // 10 missiles in all: 6 Darts leave room for 4 Torpedoes.
   await expect(countOf(page, "Heavy Torpedo")).toHaveValue("4");
   await expect(rowOf(page, "Heavy Torpedo").getByRole("cell").nth(3)).toHaveText("10,000 Cr");
+  await expect(missiles.getByRole("columnheader")).toHaveText(/10 \/ 10$/);
 
   // Removing the Dart Launcher removes its missiles from the Loadout.
   await fit(page, /con_weapon_01/, "— empty —");
   await expect(countOf(page, "Dart Missile")).toHaveCount(0);
+  await expect(missiles.getByRole("columnheader")).toHaveText(/4 \/ 10$/);
+});
+
+test("drones, deployables and countermeasures each have a section heading with their shared count", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+
+  // The Hauler carries no missiles.
+  await expect(section(page, "Missiles")).toHaveCount(0);
+  await expect(section(page, "Drones").getByRole("columnheader")).toHaveText(/^Drones\s*0 \/ 20$/);
+  await expect(section(page, "Drones").getByRole("rowheader")).toHaveText(["Porter Drone"]);
+  await expect(section(page, "Deployables").getByRole("columnheader")).toHaveText(/^Deployables\s*0 \/ 10$/);
+  await expect(section(page, "Deployables").getByRole("rowheader")).toHaveText(["Marker Beacon"]);
+  await expect(section(page, "Countermeasures").getByRole("columnheader")).toHaveText(/^Countermeasures\s*0 \/ 20$/);
+
+  await countOf(page, "Porter Drone").fill("7");
+  await expect(section(page, "Drones").getByRole("columnheader")).toHaveText(/7 \/ 20$/);
+  await countOf(page, "Marker Beacon").fill("12");
+  await expect(countOf(page, "Marker Beacon")).toHaveValue("10");
+  await expect(section(page, "Deployables").getByRole("columnheader")).toHaveText(/10 \/ 10$/);
+  // Each section counts only its own rows.
+  await expect(section(page, "Countermeasures").getByRole("columnheader")).toHaveText(/0 \/ 20$/);
 });
 
 const MISSING = "Mandatory upgrade missing";
