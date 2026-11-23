@@ -77,61 +77,87 @@ test("the thruster has its own row and dropdown", async ({ page }) => {
   ]);
 });
 
-test("software is chosen from the Ship's software options", async ({ page }) => {
-  await openShip(page, "S", "Swiftwing Courier");
-
-  const scanner = page.getByRole("checkbox", { name: "Long Scanner" });
-  const scannerRow = loadoutTable(page).getByRole("row").filter({ has: scanner });
-  await expect(page.getByRole("checkbox", { name: "Flight Assist Mk1" })).not.toBeChecked();
-  await expect(scanner).not.toBeChecked();
-
-  await scanner.check();
-  await expect(scannerRow.getByRole("cell").nth(3)).toHaveText("11,000 Cr");
-  await scanner.uncheck();
-  await expect(scannerRow.getByRole("cell").nth(3)).toHaveText("");
-});
-
 const countOf = (page: Page, item: string) => page.getByRole("spinbutton", { name: `${item} count` });
 const rowOf = (page: Page, item: string) =>
   loadoutTable(page).getByRole("row").filter({ has: countOf(page, item) });
 
+/** A consumable section of the Loadout table, found by its heading. */
+const section = (page: Page, name: string) => loadoutTable(page).getByRole("rowgroup", { name: new RegExp(`^${name}`) });
+
 test("consumable counts can't exceed the Ship's capacities", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
+  const countermeasures = section(page, "Countermeasures");
   const flares = countOf(page, "Glare Flare");
-  await expect(rowOf(page, "Glare Flare").getByRole("rowheader")).toHaveText("Countermeasures");
-  await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(1)).toContainText("/ 5");
+  await expect(countermeasures.getByRole("columnheader")).toHaveText(/^Countermeasures\s*0 \/ 5$/);
+  await expect(countermeasures.getByRole("rowheader")).toHaveText(["Glare Flare"]);
+  // The heading carries the shared capacity; the row shows only its own count.
+  await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(1)).not.toContainText("/");
   await expect(flares).toHaveValue("0");
 
   await flares.fill("3");
+  await flares.press("Enter");
   await expect(rowOf(page, "Glare Flare").getByRole("cell").nth(3)).toHaveText("180 Cr");
+  await expect(countermeasures.getByRole("columnheader")).toHaveText(/3 \/ 5$/);
   await flares.fill("9");
+  await flares.press("Enter");
   await expect(flares).toHaveValue("5");
+  await expect(countermeasures.getByRole("columnheader")).toHaveText(/5 \/ 5$/);
 });
 
 test("missiles are limited to those a fitted launcher can fire, sharing the Ship's missile capacity", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
   // No launcher, no missiles.
-  await expect(loadoutTable(page).getByRole("rowheader", { name: "Missiles" })).toHaveCount(0);
+  await expect(section(page, "Missiles")).toHaveCount(0);
 
   // Only Corsair Clans sell the Dart Launcher, and only the Freight Guild sells the
   // Courier: any compatible Equipment fits whatever its Faction.
   await fit(page, /con_weapon_01/, "Dart Launcher");
   await expect(row(page, /con_weapon_01/).getByRole("combobox")).toHaveText(/Dart Launcher/);
-  await expect(rowOf(page, "Dart Missile").getByRole("rowheader")).toHaveText("Missiles");
-  await expect(rowOf(page, "Dart Missile").getByRole("cell").nth(1)).toContainText("/ 10");
+  const missiles = section(page, "Missiles");
+  await expect(missiles.getByRole("columnheader")).toHaveText(/^Missiles\s*0 \/ 10$/);
+  await expect(missiles.getByRole("rowheader")).toHaveText(["Dart Missile"]);
+  await expect(rowOf(page, "Dart Missile").getByRole("cell").nth(1)).not.toContainText("/");
 
   await fit(page, /con_weapon_02/, "Torpedo Tube");
+  await expect(missiles.getByRole("rowheader")).toHaveText(["Dart Missile", "Heavy Torpedo", "Ion Torpedo"]);
   await countOf(page, "Dart Missile").fill("6");
+  await countOf(page, "Dart Missile").press("Enter");
+  await expect(missiles.getByRole("columnheader")).toHaveText(/6 \/ 10$/);
   await countOf(page, "Heavy Torpedo").fill("9");
+  await countOf(page, "Heavy Torpedo").press("Enter");
   // 10 missiles in all: 6 Darts leave room for 4 Torpedoes.
   await expect(countOf(page, "Heavy Torpedo")).toHaveValue("4");
   await expect(rowOf(page, "Heavy Torpedo").getByRole("cell").nth(3)).toHaveText("10,000 Cr");
+  await expect(missiles.getByRole("columnheader")).toHaveText(/10 \/ 10$/);
 
   // Removing the Dart Launcher removes its missiles from the Loadout.
   await fit(page, /con_weapon_01/, "— empty —");
   await expect(countOf(page, "Dart Missile")).toHaveCount(0);
+  await expect(missiles.getByRole("columnheader")).toHaveText(/4 \/ 10$/);
+});
+
+test("drones, deployables and countermeasures each have a section heading with their shared count", async ({ page }) => {
+  await openShip(page, "L", "Ironback Hauler");
+
+  // The Hauler carries no missiles.
+  await expect(section(page, "Missiles")).toHaveCount(0);
+  await expect(section(page, "Drones").getByRole("columnheader")).toHaveText(/^Drones\s*0 \/ 20$/);
+  await expect(section(page, "Drones").getByRole("rowheader")).toHaveText(["Porter Drone"]);
+  await expect(section(page, "Deployables").getByRole("columnheader")).toHaveText(/^Deployables\s*0 \/ 10$/);
+  await expect(section(page, "Deployables").getByRole("rowheader")).toHaveText(["Marker Beacon"]);
+  await expect(section(page, "Countermeasures").getByRole("columnheader")).toHaveText(/^Countermeasures\s*0 \/ 20$/);
+
+  await countOf(page, "Porter Drone").fill("7");
+  await countOf(page, "Porter Drone").press("Enter");
+  await expect(section(page, "Drones").getByRole("columnheader")).toHaveText(/7 \/ 20$/);
+  await countOf(page, "Marker Beacon").fill("12");
+  await countOf(page, "Marker Beacon").press("Enter");
+  await expect(countOf(page, "Marker Beacon")).toHaveValue("10");
+  await expect(section(page, "Deployables").getByRole("columnheader")).toHaveText(/10 \/ 10$/);
+  // Each section counts only its own rows.
+  await expect(section(page, "Countermeasures").getByRole("columnheader")).toHaveText(/0 \/ 20$/);
 });
 
 test("a launcher's own missile storage adds to the missiles the Ship carries, as in the stats panel (#158)", async ({ page }) => {
@@ -146,6 +172,7 @@ test("a launcher's own missile storage adds to the missiles the Ship carries, as
   await fit(page, /con_weapon_01/, "Zip Pod");
   await expect(missiles).toHaveText("16");
   await countOf(page, "Dart Missile").fill("99");
+  await countOf(page, "Dart Missile").press("Enter");
   await expect(countOf(page, "Dart Missile")).toHaveValue("16");
 
   // Swapping it for the Dart Launcher, which has no storage, cuts the Darts back to the Ship's 10.
@@ -163,28 +190,25 @@ const missingMarks = (scope: Locator) => scope.getByRole("button", { name: MISSI
 test("the toolbar counts missing mandatory upgrades and the table marks their rows", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
-  // Engines, the thruster and default software are mandatory; weapons aren't.
+  // Engines and the thruster are mandatory; weapons aren't. Mandatory software is always fitted (ADR 0006).
   const count = missingCount(page);
-  await expect(count).toHaveAccessibleName("3 mandatory missing");
+  await expect(count).toHaveAccessibleName("2 mandatory missing");
   const explanation = await explanationOf(count);
-  await expect.poll(() => explanation.innerText()).toBe("Engines\nThruster\nFlight Assist Mk1");
+  await expect.poll(() => explanation.innerText()).toBe("Engines\nThruster");
   await expect(missingMarks(row(page, /^Engines/))).toHaveText("*");
   await expect(missingMarks(row(page, "Thruster"))).toBeVisible();
-  const flightAssist = page.getByRole("checkbox", { name: "Flight Assist Mk1" });
-  await expect(missingMarks(loadoutTable(page).getByRole("row").filter({ has: flightAssist }))).toBeVisible();
   await expect(missingMarks(row(page, /con_weapon_01/))).toHaveCount(0);
-  await expect(missingMarks(loadoutTable(page))).toHaveCount(3);
+  await expect(missingMarks(loadoutTable(page))).toHaveCount(2);
 
   // Nothing is blocked: other rows can still be filled.
   await fit(page, /con_weapon_01/, "Pulse Blaster");
-  await expect(count).toHaveAccessibleName("3 mandatory missing");
+  await expect(count).toHaveAccessibleName("2 mandatory missing");
 
   await fit(page, /^Engines/, "Sprint Engine S");
-  await expect(count).toHaveAccessibleName("2 mandatory missing");
+  await expect(count).toHaveAccessibleName("1 mandatory missing");
   await expect(missingMarks(row(page, /^Engines/))).toHaveCount(0);
 
   await fit(page, "Thruster", "Nimble Thruster S");
-  await flightAssist.check();
   await expect(count).toBeHidden();
   await expect(missingMarks(loadoutTable(page))).toHaveCount(0);
 
@@ -199,16 +223,16 @@ test("Slots tagged mandatory and the engines in a Slot Group count as mandatory 
   await openShip(page, "L", "Ironback Hauler");
 
   const count = missingCount(page);
-  await expect(count).toHaveAccessibleName("4 mandatory missing");
+  await expect(count).toHaveAccessibleName("3 mandatory missing");
   const explanation = await explanationOf(count);
-  await expect.poll(() => explanation.innerText()).toBe("Engines\nShield con_shield_01\nThruster\nFlight Assist Mk1");
+  await expect.poll(() => explanation.innerText()).toBe("Engines\nShield con_shield_01\nThruster");
   await expect(missingMarks(row(page, /con_shield_01/))).toBeVisible();
   await expect(missingMarks(row(page, /^Engines/))).toBeVisible();
   // Turret and shield groups aren't mandatory.
   await expect(missingMarks(row(page, /Turrets group_front/))).toHaveCount(0);
 
   await fit(page, /^Engines/, "Haul Engine L");
-  await expect(count).toHaveAccessibleName("3 mandatory missing");
+  await expect(count).toHaveAccessibleName("2 mandatory missing");
 });
 
 test("one Engines row fits one engine type to all of the Ship's engines (#50)", async ({ page }) => {
@@ -251,9 +275,11 @@ test("a Slot Group has one row per kind, with an Equipment choice and a count up
   await expect(turrets.getByRole("cell").nth(3)).toHaveText("180,000 Cr");
 
   await count.fill("2");
+  await count.press("Enter");
   await expect(count).toHaveValue("2");
   await expect(turrets.getByRole("cell").nth(3)).toHaveText("90,000 Cr");
   await count.fill("9");
+  await count.press("Enter");
   await expect(count).toHaveValue("4");
 });
 
@@ -262,28 +288,69 @@ test("service crew and marines share the Ship's crew capacity, and Price adds ea
   const crew = loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ });
   const price = page.getByRole("complementary", { name: "Stats" }).getByRole("region", { name: "Price" });
 
-  // A new Loadout has no Crew, only the Captain, who isn't a count.
-  await expect(crew.getByRole("rowheader")).toHaveText(["Service crew", "Marines"]);
-  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*0 \/ 20$/);
+  // A new Loadout has no Crew, only the Captain, whose seat the heading counts.
+  await expect(crew.getByRole("rowheader")).toHaveText(["Captain", "Service crew", "Marines"]);
+  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*1 \/ 21$/);
   await expect(countOf(page, "Service crew")).toHaveValue("0");
   await expect(countOf(page, "Marines")).toHaveValue("0");
   // The header carries the shared capacity; a count beside it would read as that much more free.
   await expect(rowOf(page, "Service crew").getByRole("cell").nth(1)).not.toContainText("/");
-  await expect(loadoutTable(page)).not.toContainText(/captain/i);
   await expect(price).toContainText("2,500,000 Cr");
 
   // The fixture's crew price averages 6,000 Cr.
   await countOf(page, "Service crew").fill("12");
+  await countOf(page, "Service crew").press("Enter");
   await expect(rowOf(page, "Service crew").getByRole("cell").nth(3)).toHaveText("72,000 Cr");
-  await expect(crew.getByRole("columnheader")).toHaveText(/12 \/ 20$/);
+  await expect(crew.getByRole("columnheader")).toHaveText(/13 \/ 21$/);
   await expect(price).toContainText("2,572,000 Cr");
 
   // Marines get only what the service crew leave, and the reverse.
   await countOf(page, "Marines").fill("15");
+  await countOf(page, "Marines").press("Enter");
   await expect(countOf(page, "Marines")).toHaveValue("8");
   await expect(rowOf(page, "Marines").getByRole("cell").nth(3)).toHaveText("48,000 Cr");
-  await expect(crew.getByRole("columnheader")).toHaveText(/20 \/ 20$/);
+  await expect(crew.getByRole("columnheader")).toHaveText(/21 \/ 21$/);
   await expect(price).toContainText("2,620,000 Cr");
+});
+
+test("the Crew section starts with the Captain, called Pilot on S and M Ships, fixed and free", async ({ page }) => {
+  for (const [size, ship, label] of [
+    ["S", "Swiftwing Courier", "Pilot"],
+    ["M", "Lancer Gunship (Corsair Clans)", "Pilot"],
+    ["L", "Ironback Hauler", "Captain"],
+  ] as const) {
+    await openShip(page, size, ship);
+    const crew = loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ });
+    await expect(crew.getByRole("rowheader").first()).toHaveText(label);
+    const captain = row(page, label);
+    // Every Ship has its Captain: nothing to pick, count or remove, and no price (ADR 0004).
+    await expect(captain.getByRole("cell")).toHaveText(["", "1", "", "Free"]);
+    await expect(captain.getByRole("combobox")).toHaveCount(0);
+    await expect(captain.getByRole("spinbutton")).toHaveCount(0);
+    await expect(captain.getByRole("checkbox")).toHaveCount(0);
+  }
+});
+
+test("the Crew heading counts the Captain's seat, as the stats panel's Crew does", async ({ page }) => {
+  // Like an X-wing: one crew place, plus the Captain's seat.
+  await openShip(page, "S", "Swiftwing Courier");
+  const crew = loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ });
+  const statsCrew = page
+    .getByRole("complementary", { name: "Stats" })
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: "Crew", exact: true }) })
+    .first()
+    .getByRole("cell");
+
+  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*1 \/ 2$/);
+  await countOf(page, "Marines").fill("1");
+  await countOf(page, "Marines").press("Enter");
+  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*2 \/ 2$/);
+  await expect(statsCrew).toHaveText("2");
+  // The seat isn't a crew place: the Marine took the only one.
+  await countOf(page, "Service crew").fill("1");
+  await countOf(page, "Service crew").press("Enter");
+  await expect(countOf(page, "Service crew")).toHaveValue("0");
 });
 
 test("a Ship with no crew capacity has no Crew section", async ({ page }) => {

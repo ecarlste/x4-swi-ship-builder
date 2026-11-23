@@ -135,8 +135,12 @@ export function checkIntegrity(data: SnapshotData): string[] {
   }
 
   for (const item of data.equipment) {
-    if ((item.kind === "weapon" || item.kind === "turret") && item.missiles !== null) {
-      checkFitList(`equipment: ${item.id}`, "missiles", item.missiles, "missile");
+    if (item.kind === "weapon" || item.kind === "turret") {
+      // A bolt colour is kept from the game's colour markup, \033#AARRGGBB#, so it must be eight hex digits.
+      if (item.boltColour !== null && !/^[0-9A-Fa-f]{8}$/.test(item.boltColour)) {
+        errors.push(`equipment: ${item.id} bolt colour "${item.boltColour}" isn't an AARRGGBB value`);
+      }
+      if (item.missiles !== null) checkFitList(`equipment: ${item.id}`, "missiles", item.missiles, "missile");
     }
     checkSellersAndLicence("equipment", item);
   }
@@ -162,6 +166,22 @@ export function checkIntegrity(data: SnapshotData): string[] {
       }
       seen.add(at.id);
       at = at.predecessor === null ? undefined : equipment.get(at.predecessor);
+    }
+  }
+
+  // Every Software Family has the game's name, the same on each of its wares, so its group is never unlabelled.
+  for (const item of data.equipment) {
+    if (item.kind !== "software") continue;
+    if (item.familyName.trim() === "") {
+      errors.push(`equipment: ${item.id} Software Family has no name`);
+      continue;
+    }
+    const predecessor = item.predecessor === null ? undefined : equipment.get(item.predecessor);
+    if (predecessor?.kind === "software" && predecessor.familyName.trim() !== "" && predecessor.familyName !== item.familyName) {
+      errors.push(
+        `equipment: ${item.id} Software Family is named "${item.familyName}", ` +
+          `but ${predecessor.id} names it "${predecessor.familyName}"`,
+      );
     }
   }
 

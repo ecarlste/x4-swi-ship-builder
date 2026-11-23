@@ -95,6 +95,7 @@ test("a hovered launcher shows a row per missile, best first, then No missile, a
   await fit(page, /con_weapon_01/, "Pulse Blaster");
   await fit(page, /con_weapon_02/, "Torpedo Tube");
   await page.getByRole("spinbutton", { name: "Ion Torpedo count" }).fill("3");
+  await page.getByRole("spinbutton", { name: "Ion Torpedo count" }).press("Enter");
   const popover = await hover(page, /con_weapon_01/, "Torpedo Tube");
 
   // Each against the fitted Pulse Blaster (400 / 181); the Heavy Torpedo outfires the loaded Ion Torpedo.

@@ -78,3 +78,6 @@ export async function fragmentFor(page: Page, value: unknown) {
     return `#l=${base64url}`;
   }, JSON.stringify(value));
 }
+
+/** The toast region, where status messages and errors appear. */
+export const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" });

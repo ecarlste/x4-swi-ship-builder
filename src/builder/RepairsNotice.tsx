@@ -2,15 +2,16 @@ import { useId } from "react";
 import { TriangleAlert, X } from "lucide-react";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { formatX4Version } from "./format.ts";
 import { describeRepair, type LoadoutRepair } from "../loadout/repairs.ts";
 import type { GameDataVersions } from "../loadout/resolve.ts";
 
-const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${v.x4}`;
+const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${formatX4Version(v.x4)}`;
 
 /**
  * The dismissable notice shown when a Loadout opened from a Saved Loadout, a
- * Share Link or a Loadout File was repaired against the Game Data: every drop
- * and clamp, plus the version change.
+ * Share Link or a Loadout File was repaired against the Game Data: every
+ * Repair, plus the version change.
  */
 export function RepairsNotice({
   repairs,
@@ -29,7 +30,7 @@ export function RepairsNotice({
       <Alert variant="warning">
         <TriangleAlert aria-hidden />
         <AlertTitle>
-          <h2 id={headingId}>This Loadout changed with the Game Data</h2>
+          <h2 id={headingId}>This Loadout was repaired to fit its Ship</h2>
         </AlertTitle>
         <AlertDescription>
           {versionChanged && (

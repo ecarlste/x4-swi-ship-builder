@@ -1,6 +1,6 @@
 /**
  * Loadouts made against older Game Data (#44): stored and shared Loadouts
- * that no longer fit the fixture snapshot (SWI "999", X4 "9.99").
+ * that no longer fit the fixture snapshot (SWI "999", X4 "999").
  */
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
@@ -12,7 +12,7 @@ const toolbarButton = (page: Page, name: string) =>
   page.getByRole("toolbar").getByRole("button", { name, exact: true });
 const savedList = (page: Page) => page.getByRole("region", { name: "Saved Loadouts" });
 const savedEntry = (page: Page, name: string | RegExp) => savedList(page).getByRole("listitem").filter({ hasText: name });
-const notice = (page: Page) => page.getByRole("region", { name: "This Loadout changed with the Game Data" });
+const notice = (page: Page) => page.getByRole("region", { name: "This Loadout was repaired to fit its Ship" });
 
 async function showSavedLoadouts(page: Page) {
   await toolbarButton(page, "Saved Loadouts").click();
@@ -27,12 +27,14 @@ async function storeRaw(page: Page, value: unknown) {
   await page.reload();
 }
 
-const older = { swi: "091", x4: "8.00" };
+const older = { swi: "091", x4: "800" };
 
 const savedLoadout = (over: Record<string, unknown> = {}) => ({
   format: 1,
   gameData: older,
   ship: "fx_courier",
+  // The Flight Assist every fixture Ship must fit (ADR 0006).
+  software: ["fx_flightassist"],
   id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
   name: "Escort",
   createdAt: "2026-11-01T10:00:00.000Z",
@@ -67,7 +69,7 @@ test.describe("the Saved Loadouts list", () => {
     await storeRaw(page, [escort, patrol]);
     await showSavedLoadouts(page);
 
-    const flag = savedEntry(page, "Escort").getByRole("button", { name: "3 items no longer fit" });
+    const flag = savedEntry(page, "Escort").getByRole("button", { name: "3 Repairs" });
     await expect(flag).toBeVisible();
     const explanation = await explanationOf(flag);
     await expect(explanation).toContainText("Zephyr Cannon in con_weapon_09: dropped");
@@ -124,12 +126,24 @@ test.describe("opening a Loadout that changes", () => {
     await expect(notice(page)).toBeHidden();
   });
 
+  test("a Saved Loadout without its Ship's mandatory software opens with it added, listed as a Repair", async ({ page }) => {
+    await storeRaw(page, [savedLoadout({ ship: "fx_bramble", name: "Bare Bramble", software: undefined })]);
+    await showSavedLoadouts(page);
+    await savedEntry(page, "Bare Bramble").getByRole("button", { name: "Open" }).click();
+
+    await expect(notice(page).getByRole("listitem")).toHaveText([
+      "Flight Assist Mk1 in software: added, the Ship must fit Flight Assist Software",
+      "Docking Computer Mk1 in software: added, the Ship must fit Docking Software",
+    ]);
+    await expect(row(page, /^Docking Software/).getByRole("combobox")).toHaveText(/Docking Computer Mk1/);
+  });
+
 });
 
 test("a Saved Loadout's Repairs flag is reached by Tab and opens a Tooltip naming what no longer fits", async ({ page }) => {
   await storeRaw(page, [escort]);
   await showSavedLoadouts(page);
-  const flag = savedEntry(page, "Escort").getByRole("button", { name: /3 items no longer fit/ });
+  const flag = savedEntry(page, "Escort").getByRole("button", { name: /3 Repairs/ });
 
   for (let presses = 0; presses < 30 && !(await flag.evaluate((el) => el === document.activeElement)); presses++) {
     await page.keyboard.press("Tab");

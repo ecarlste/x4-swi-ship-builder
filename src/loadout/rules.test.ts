@@ -345,6 +345,82 @@ describe("the engine, thruster and software", () => {
   });
 });
 
+describe("Software Families (ADR 0006)", () => {
+  const at = (average: number) => ({ min: average, average, max: average });
+  const assist = software("fx_assist", null, at(0), "Flight Assist Software");
+  const dockMk1 = software("fx_dock_mk1", null, at(100), "Docking Software");
+  const dockMk2 = software("fx_dock_mk2", "fx_dock_mk1", at(400), "Docking Software");
+  const lrsMk1 = software("fx_lrs_mk1", null, at(200), "Long Range Scanner Software");
+  const lrsMk2 = software("fx_lrs_mk2", "fx_lrs_mk1", at(800), "Long Range Scanner Software");
+  const trader = ship({ software: { fitList: "fl_software", mandatory: ["fx_assist", "fx_lrs_mk2"] } });
+  const rules = loadoutRules(
+    gameData([trader], [assist, dockMk1, dockMk2, lrsMk1, lrsMk2], [
+      // Newest first, and the Mk1 of the mandatory Long Range Scanner left out, as on the M12-L Kimogila.
+      { id: "fl_software", equipment: ["fx_lrs_mk2", "fx_dock_mk2", "fx_assist", "fx_dock_mk1"] },
+    ]),
+    trader,
+  );
+  const empty = loadout("fx_ship");
+
+  test("groups the Ship's software by family, in fit list order, each with the wares the Ship can fit, earliest in the chain first", () => {
+    expect(rules.softwareFamilies().map((f) => [f.name, f.mandatory, f.options.map((e) => e.id)])).toEqual([
+      ["Long Range Scanner Software", true, ["fx_lrs_mk2"]],
+      ["Docking Software", false, ["fx_dock_mk1", "fx_dock_mk2"]],
+      ["Flight Assist Software", true, ["fx_assist"]],
+    ]);
+  });
+
+  test("fitting the mandatory software adds the Ship's default ware of each mandatory family that has none", () => {
+    expect(rules.withMandatorySoftware(empty).loadout.software).toEqual(["fx_lrs_mk2", "fx_assist"]);
+    expect(rules.withMandatorySoftware(loadout("fx_ship", { software: ["fx_assist"] }))).toEqual({
+      loadout: loadout("fx_ship", { software: ["fx_assist", "fx_lrs_mk2"] }),
+      repairs: [
+        {
+          type: "added",
+          place: { kind: "software", equipment: "fx_lrs_mk2" },
+          equipment: "fx_lrs_mk2",
+          name: "fx_lrs_mk2",
+          family: "Long Range Scanner Software",
+        },
+      ],
+    });
+  });
+
+  test("a mandatory family's ware can't be removed, only swapped", () => {
+    const fitted = loadout("fx_ship", { software: ["fx_assist", "fx_lrs_mk2"] });
+    expect(rules.setSoftware(fitted, "fx_assist", false)).toEqual({ loadout: fitted, repairs: [] });
+  });
+
+  describe("a mandatory family whose default ware has an earlier one on the fit list, as on the Y-wing Longprobe", () => {
+    const longprobe = ship({ software: { fitList: "fl_longprobe", mandatory: ["fx_lrs_mk2"] } });
+    const longprobeRules = loadoutRules(
+      gameData([longprobe], [lrsMk1, lrsMk2], [{ id: "fl_longprobe", equipment: ["fx_lrs_mk1", "fx_lrs_mk2"] }]),
+      longprobe,
+    );
+
+    test("starts on the Ship's default ware and doesn't offer the earlier one", () => {
+      expect(longprobeRules.softwareFamilies().map((f) => [f.name, f.options.map((e) => e.id)])).toEqual([
+        ["Long Range Scanner Software", ["fx_lrs_mk2"]],
+      ]);
+      expect(longprobeRules.withMandatorySoftware(empty).loadout.software).toEqual(["fx_lrs_mk2"]);
+      expect(longprobeRules.options(empty, { kind: "software", equipment: "fx_lrs_mk1" })).toEqual([]);
+    });
+
+    test("refuses the earlier ware, so a Loadout holding it gets the default instead", () => {
+      const place = { kind: "software", equipment: "fx_lrs_mk1" };
+      expect(longprobeRules.setSoftware(empty, "fx_lrs_mk1", true)).toEqual({
+        loadout: empty,
+        repairs: [{ type: "dropped", place, equipment: "fx_lrs_mk1", name: "fx_lrs_mk1", reason: "doesnt-fit" }],
+      });
+    });
+  });
+
+  test("an optional family's ware can be removed", () => {
+    const fitted = loadout("fx_ship", { software: ["fx_assist", "fx_dock_mk2"] });
+    expect(rules.setSoftware(fitted, "fx_dock_mk2", false).loadout.software).toEqual(["fx_assist"]);
+  });
+});
+
 describe("consumables", () => {
   const flare = priced("countermeasure", "fx_flare", { min: 1, average: 1, max: 1 });
   const chaff = priced("countermeasure", "fx_chaff", { min: 1, average: 1, max: 1 });

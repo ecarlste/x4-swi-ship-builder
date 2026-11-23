@@ -99,7 +99,7 @@
     ],
     "slotGroups": [],
     "thrusters": "fl_thruster_s",
-    "software": { "fitList": "fl_software", "mandatory": ["fx_flightassist"] },
+    "software": { "fitList": "fl_software", "mandatory": ["fx_flightassist", "fx_dock_mk1"] },
     "drones": "fl_empty",
     "deployables": "fl_empty",
     "countermeasures": "fl_countermeasures"
@@ -132,7 +132,7 @@
     ],
     "slotGroups": [],
     "thrusters": "fl_thruster_s",
-    "software": { "fitList": "fl_software", "mandatory": ["fx_flightassist"] },
+    "software": { "fitList": "fl_software_needle", "mandatory": ["fx_flightassist", "fx_dock_mk2"] },
     "drones": "fl_empty",
     "deployables": "fl_empty",
     "countermeasures": "fl_countermeasures"

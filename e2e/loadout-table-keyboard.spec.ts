@@ -56,12 +56,12 @@ test("software is toggled with Space", async ({ page }) => {
   await expect(price).toHaveText("");
 });
 
-test("a count is set with the arrow keys or by typing, and clamps over its limit", async ({ page }) => {
+test("a count is set with the arrow keys on its slider or by typing, and clamps over its limit", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
   const flares = page.getByRole("spinbutton", { name: "Glare Flare count" });
+  const slider = page.getByRole("slider", { name: "Glare Flare count" });
   const cells = loadoutTable(page).getByRole("row").filter({ has: flares }).getByRole("cell");
-  await expect(cells.nth(1)).toContainText("/ 5");
-  await flares.focus();
+  await slider.focus();
 
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("ArrowUp");
@@ -70,8 +70,11 @@ test("a count is set with the arrow keys or by typing, and clamps over its limit
   await page.keyboard.press("ArrowDown");
   await expect(flares).toHaveValue("1");
 
+  await page.keyboard.press("Tab");
+  await expect(flares).toBeFocused();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("9");
+  await page.keyboard.press("Enter");
   await expect(flares).toHaveValue("5");
   await expect(cells.nth(3)).toHaveText("300 Cr");
 });

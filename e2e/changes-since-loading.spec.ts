@@ -43,7 +43,7 @@ async function storeCourierWithShield(page: Page) {
       JSON.stringify([
         {
           format: 1,
-          gameData: { swi: "999", x4: "9.99" },
+          gameData: { swi: "999", x4: "999" },
           ship: "fx_courier",
           slots: { con_shield_01: "fx_shield_s" },
           id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
@@ -93,6 +93,7 @@ test("a Slot Group row shows what it held, with its count", async ({ page }) => 
   await saveAs(page, "Hauler");
 
   await row(page, /Shields group_front/).getByRole("spinbutton").fill("1");
+  await row(page, /Shields group_front/).getByRole("spinbutton").press("Enter");
 
   await expect(row(page, /Shields group_front/)).toContainText("was: Bubble Shield M ×2");
   await expect(statCells(page, "Avg. Group Shield (MJ)")).toHaveText(["5,000", "−5,000"]);

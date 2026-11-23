@@ -19,25 +19,31 @@
   {
     "kind": "weapon", "id": "fx_pulse_s", "name": "Pulse Blaster", "nameId": "{900002,5}",
     "price": { "min": 10000, "average": 12000, "max": 14000 }, "licence": null, "sellers": ["fx_corsairs", "fx_guild"],
-    "size": "s", "damage": { "value": 100, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 4,
+    "boltColour": null, "size": "s", "damage": { "value": 100, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 4,
     "magazine": null, "heat": { "perShot": 50, "overheat": 1000, "coolDelay": 1, "coolRate": 200 }, "missiles": null, "missileStorage": 0
   },
   {
     "kind": "weapon", "id": "fx_launcher_s", "name": "Dart Launcher", "nameId": "{900002,6}",
     "price": { "min": 15000, "average": 18000, "max": 21000 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
-    "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "boltColour": null, "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
     "magazine": null, "heat": null, "missiles": "fl_missiles_s", "missileStorage": 0
   },
   {
     "kind": "weapon", "id": "fx_zip_pod_s", "name": "Zip Pod", "nameId": "{900002,21}",
     "price": { "min": 16000, "average": 20000, "max": 24000 }, "licence": null, "sellers": ["fx_guild"],
-    "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "boltColour": null, "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
     "magazine": null, "heat": null, "missiles": "fl_missiles_s", "missileStorage": 6
   },
   {
     "kind": "turret", "id": "fx_turret_m", "name": "Flak Turret", "nameId": "{900002,7}",
     "price": { "min": 40000, "average": 45000, "max": 50000 }, "licence": null, "sellers": ["fx_guild"],
-    "size": "m", "damage": { "value": 80, "noShield": 10, "hull": 0 }, "barrelAmount": 2, "fireRate": 3,
+    "boltColour": null, "size": "m", "damage": { "value": 80, "noShield": 10, "hull": 0 }, "barrelAmount": 2, "fireRate": 3,
+    "magazine": { "size": 20, "reloadTime": 5 }, "heat": null, "missiles": null, "missileStorage": 0
+  },
+  {
+    "kind": "turret", "id": "fx_turret_m_red", "name": "Flak Turret R", "nameId": "{900002,20}",
+    "price": { "min": 40000, "average": 45000, "max": 50000 }, "licence": null, "sellers": ["fx_guild"],
+    "boltColour": "FFFF0000", "size": "m", "damage": { "value": 80, "noShield": 10, "hull": 0 }, "barrelAmount": 2, "fireRate": 3,
     "magazine": { "size": 20, "reloadTime": 5 }, "heat": null, "missiles": null, "missileStorage": 0
   },
   {
@@ -78,22 +84,44 @@
   },
   {
     "kind": "software", "id": "fx_flightassist", "name": "Flight Assist Mk1", "nameId": "{900002,14}",
-    "price": { "min": 0, "average": 0, "max": 0 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null
+    "price": { "min": 0, "average": 0, "max": 0 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Flight Assist Software"
   },
   {
     "kind": "software", "id": "fx_scanner", "name": "Long Scanner", "nameId": "{900002,15}",
-    "price": { "min": 10000, "average": 11000, "max": 12000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null
+    "price": { "min": 10000, "average": 11000, "max": 12000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Long Range Scanner Software"
+  },
+  {
+    "kind": "software", "id": "fx_dock_mk1", "name": "Docking Computer Mk1", "nameId": "{900002,30}",
+    "price": { "min": 2000, "average": 2500, "max": 3000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Docking Software"
+  },
+  {
+    "kind": "software", "id": "fx_dock_mk2", "name": "Docking Computer Mk2", "nameId": "{900002,31}",
+    "price": { "min": 8000, "average": 10000, "max": 12000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": "fx_dock_mk1",
+    "familyName": "Docking Software"
+  },
+  {
+    "kind": "software", "id": "fx_trade_mk1", "name": "Trading Computer Mk1", "nameId": "{900002,32}",
+    "price": { "min": 20000, "average": 25000, "max": 30000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Trading Software"
+  },
+  {
+    "kind": "software", "id": "fx_trade_mk2", "name": "Trading Computer Mk2", "nameId": "{900002,33}",
+    "price": { "min": 40000, "average": 50000, "max": 60000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": "fx_trade_mk1",
+    "familyName": "Trading Software"
   },
   {
     "kind": "weapon", "id": "fx_cannon_s", "name": "Zephyr Cannon", "nameId": "{900002,16}",
     "price": { "min": 25000, "average": 30000, "max": 35000 }, "licence": null, "sellers": ["fx_guild"],
-    "size": "s", "damage": { "value": 300, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "boltColour": null, "size": "s", "damage": { "value": 300, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
     "magazine": null, "heat": { "perShot": 100, "overheat": 1000, "coolDelay": 1, "coolRate": 200 }, "missiles": null, "missileStorage": 0
   },
   {
     "kind": "weapon", "id": "fx_tube_s", "name": "Torpedo Tube", "nameId": "{900002,17}",
     "price": { "min": 20000, "average": 24000, "max": 28000 }, "licence": "fx_militaryequipment", "sellers": ["fx_corsairs"],
-    "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
+    "boltColour": null, "size": "s", "damage": { "value": 0, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,
     "magazine": null, "heat": null, "missiles": "fl_torpedoes_s", "missileStorage": 0
   },
   {

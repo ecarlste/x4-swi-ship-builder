@@ -78,6 +78,7 @@ describe("transform: Equipment", () => {
       price: { min: 900, average: 1000, max: 1100 },
       licence: "militaryequipment",
       sellers: ["fx_guild"],
+      boltColour: null,
       size: "s",
       damage: { value: 100, noShield: 20, hull: 7 },
       barrelAmount: 2,
@@ -104,6 +105,21 @@ describe("transform: Equipment", () => {
       heat: null,
     });
     expect(item("fx_tractor")).toMatchObject({ fireRate: 1 });
+  });
+
+  it("keeps a colour variant's bolt colour from the markup on its letter, and gives Equipment without one none", () => {
+    const { item } = run(
+      wharfWorld()
+        .equipment(gun({ id: "fx_laser_green", name: "\\033#95e03b29#XX-20 Heavy Turbolaser\\033X \\033#FF00FF00#G\\033X" }))
+        .equipment(gun({ id: "fx_laser_red", name: "\\033#95e03b29#XX-18-546 Heavy Dual Turbolaser \\033X \\033#ffff0000#R\\033X" }))
+        .equipment(gun({ id: "fx_ion", name: "\\033#993d7bff#V-50 Heavy Ion Cannon\\033X" }))
+        .equipment(gun({ id: "fx_plain", name: "Plain Blaster" })),
+    );
+
+    expect(item("fx_laser_green")).toMatchObject({ name: "XX-20 Heavy Turbolaser G", boltColour: "FF00FF00" });
+    expect(item("fx_laser_red")).toMatchObject({ name: "XX-18-546 Heavy Dual Turbolaser  R", boltColour: "ffff0000" });
+    expect(item("fx_ion")).toMatchObject({ name: "V-50 Heavy Ion Cannon", boltColour: null });
+    expect(item("fx_plain")).toMatchObject({ name: "Plain Blaster", boltColour: null });
   });
 
   it("lists in each Slot the Equipment whose type connection tags, but for `component`, the Slot has", () => {
@@ -324,6 +340,55 @@ describe("transform: fit lists", () => {
     expect(report()).toContain(
       "fx_scanner_mk3: its predecessor fx_scanner_mk2 isn't in the Game Data, so its predecessor is fx_scanner_mk1",
     );
+  });
+
+  it("names each Software Family after the factoryname of its chain's oldest ware, even one no Ship lists", () => {
+    const { item } = run(
+      wharfWorld()
+        .ship({
+          id: "fx_scout",
+          owners: ["fx_guild"],
+          // The Mk1 is on no fit list, so it isn't in the Game Data, but it still names the family.
+          software: [{ ware: "fx_dock_mk2", default: true }, { ware: "fx_flightassist" }],
+        })
+        .text("20108", "161", "Docking Software")
+        .text("20108", "151", "Flight Assist Software")
+        .equipment({ id: "fx_dock_mk1", kind: "software", factoryName: "{20108,161}" })
+        .equipment({ id: "fx_dock_mk2", kind: "software", predecessor: "fx_dock_mk1", factoryName: null })
+        .equipment({ id: "fx_flightassist", kind: "software", factoryName: "{20108,151}" }),
+    );
+
+    expect(item("fx_dock_mk1")).toBeUndefined();
+    expect(item("fx_dock_mk2").familyName).toBe("Docking Software");
+    expect(item("fx_flightassist").familyName).toBe("Flight Assist Software");
+  });
+
+  it("names a ware whose own factoryname differs after its family, and says so in the report", () => {
+    const { item, report } = run(
+      wharfWorld()
+        .ship({ id: "fx_scout", owners: ["fx_guild"], software: [{ ware: "fx_scanner_mk1" }, { ware: "fx_scanner_mk2" }] })
+        .text("20108", "101", "Object Scanner Software")
+        .text("20108", "181", "Spacesuit Software")
+        .equipment({ id: "fx_scanner_mk1", kind: "software", factoryName: "{20108,101}" })
+        .equipment({ id: "fx_scanner_mk2", kind: "software", predecessor: "fx_scanner_mk1", factoryName: "{20108,181}" }),
+    );
+
+    expect(item("fx_scanner_mk2").familyName).toBe("Object Scanner Software");
+    expect(report()).toContain(
+      `fx_scanner_mk2: its factoryname "Spacesuit Software" isn't its family's, so it is named after fx_scanner_mk1: "Object Scanner Software"`,
+    );
+  });
+
+  it("fails, naming the family, when the game gives a Software Family no name", () => {
+    expect(() =>
+      run(
+        wharfWorld()
+          .ship({ id: "fx_scout", owners: ["fx_guild"], software: [{ ware: "fx_scanner_mk2" }] })
+          .text("20108", "111", "Long Range Scanner Software")
+          .equipment({ id: "fx_scanner_mk1", kind: "software", factoryName: null })
+          .equipment({ id: "fx_scanner_mk2", kind: "software", predecessor: "fx_scanner_mk1", factoryName: "{20108,111}" }),
+      ),
+    ).toThrow("Software Family fx_scanner_mk1 has no name: ware fx_scanner_mk1 has no factoryname");
   });
 
   it("gives every drone, deployable and countermeasure to Ships that can carry them", () => {

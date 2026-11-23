@@ -26,6 +26,19 @@ describe.skipIf(!hasSnapshot)("Game Data check: game-data/current", () => {
     expect(validateSnapshot(raw).errors).toEqual([]);
   });
 
+  // Counted in 091_x4-800's English text (#139): every R, G, O or B variant colours its letter on its own.
+  it("gives a bolt colour to each of the 126 colour variants, across 94 base names, and to no other Equipment", () => {
+    const equipment: { name: string; boltColour?: string | null }[] = JSON.parse(
+      readFileSync(join(current, "equipment.json"), "utf8"),
+    );
+    const coloured = equipment.filter((e) => e.boltColour != null);
+
+    expect(coloured.length).toBe(126);
+    expect(new Set(coloured.map((e) => e.name.slice(0, -2))).size).toBe(94);
+    expect(coloured.every((e) => / [RGOB]$/.test(e.name))).toBe(true);
+    expect(equipment.filter((e) => / [RGOB]$/.test(e.name) && e.boltColour == null)).toEqual([]);
+  });
+
   // Checked against each Seller's buy screen on 2026-11-21 (#112): each Seller names its own copy of a licence type.
   it("names the X-wing XJ-3/5's Licence as each Seller's buy screen does", () => {
     const read = (file: string) => JSON.parse(readFileSync(join(current, `${file}.json`), "utf8"));
@@ -35,5 +48,20 @@ describe.skipIf(!hasSnapshot)("Game Data check: game-data/current", () => {
 
     expect(nameFrom("incom")).toBe("Corporation Unique Ships Access");
     expect(nameFrom("rebelalliance")).toBe("Rebellion Advanced Ships Access");
+  });
+
+  // The buy screen's group headings, from each family's factoryname (#135).
+  it("names the six Software Families as the game's buy screen does", () => {
+    const equipment = JSON.parse(readFileSync(join(current, "equipment.json"), "utf8"));
+    const names = new Set(equipment.filter((e: { kind: string }) => e.kind === "software").map((e: { familyName: string }) => e.familyName));
+
+    expect([...names].sort()).toEqual([
+      "Docking Software",
+      "Flight Assist Software",
+      "Long Range Scanner Software",
+      "Object Scanner Software",
+      "Targeting Software",
+      "Trading Software",
+    ]);
   });
 });

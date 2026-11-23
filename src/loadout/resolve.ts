@@ -6,8 +6,9 @@
  * Equipment, Slots or Slot Groups, and Equipment that no longer fits, are
  * dropped; a count above the new capacity is clamped. Crew over the Ship's
  * crew capacity is cut to fit, service crew first (ADR 0004). Of two pieces
- * of software in one Software Family, the newer is kept. Ids are matched as
- * they are: there are no rename tables. A version change on its own isn't a
+ * of software in one Software Family, the newer is kept, and a mandatory
+ * Software Family with none fitted gets the Ship's default ware of it (ADR 0006). Ids
+ * are matched as they are: there are no rename tables. A version change on its own isn't a
  * Repair.
  *
  * None of these rules live here: the stored Loadout is replayed through the
@@ -15,7 +16,7 @@
  */
 import type { GameData } from "../../shared/game-data/validateSnapshot.ts";
 import { indexGameData } from "../gameDataIndex.ts";
-import { CREW_CUT_ORDER, emptyLoadout, type Loadout, type SlotGroupKind } from "./loadout.ts";
+import { bareLoadout, CREW_CUT_ORDER, type Loadout, type SlotGroupKind } from "./loadout.ts";
 import type { LoadoutRepair } from "./repairs.ts";
 import { loadoutRules, type Edit } from "./rules.ts";
 
@@ -28,7 +29,7 @@ export type Resolution =
       status: "ok";
       /** The repaired Loadout, stamped with the bundled Game Data's versions. */
       loadout: Loadout;
-      /** Every drop and clamp; empty when everything still fits. */
+      /** Every addition, drop and clamp; empty when everything still fits. */
       repairs: LoadoutRepair[];
       versions: { from: GameDataVersions; to: GameDataVersions };
     };
@@ -40,8 +41,8 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
   if (!ship) return { status: "unavailable", ship: loadout.ship };
 
   const rules = loadoutRules(gameData, ship);
-  // The Empty Loadout is stamped with the bundled Game Data's versions, and no edit changes them.
-  let repaired = emptyLoadout(gameData, ship);
+  // The bare Loadout is stamped with the bundled Game Data's versions, and no edit changes them.
+  let repaired = bareLoadout(gameData, ship);
   const repairs: LoadoutRepair[] = [];
   const replay = (edit: Edit) => {
     repaired = edit.loadout;
@@ -64,6 +65,8 @@ export function resolveLoadout(gameData: GameData, loadout: Loadout): Resolution
   // That order is only the replay's: what is kept stays in the order it was stored.
   const kept = new Set(repaired.software);
   if (kept.size > 0) repaired = { ...repaired, software: [...new Set(loadout.software)].filter((id) => kept.has(id)) };
+  // A mandatory Software Family with nothing fitted gets the Ship's default ware of it (ADR 0006).
+  replay(rules.withMandatorySoftware(repaired));
   // Consumables of one kind share its capacity in the order they were stored.
   for (const [id, count] of Object.entries(loadout.consumables ?? {})) replay(rules.setConsumable(repaired, id, count));
   // Marines go in first, so any cut to fit the crew capacity lands on service crew first (ADR 0004).

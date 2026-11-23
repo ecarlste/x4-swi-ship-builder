@@ -1,6 +1,6 @@
 /**
  * Resolving Loadouts against the bundled Game Data (the tiny fixture under
- * Vitest: SWI "999", X4 "9.99").
+ * Vitest: SWI "999", X4 "999").
  */
 import { describe, expect, test } from "vitest";
 import { gameData } from "../gameData.ts";
@@ -9,10 +9,17 @@ import { describeRepair } from "./repairs.ts";
 import { resolveLoadout } from "./resolve.ts";
 import { gameData as fixtureGameData, ship, software } from "./testing/fixtures.ts";
 
-const current = { swi: "999", x4: "9.99" };
-const older = { swi: "091", x4: "8.00" };
+const current = { swi: "999", x4: "999" };
+const older = { swi: "091", x4: "800" };
 
-const loadout = (over: Partial<Loadout> = {}): Loadout => ({ format: 1, gameData: current, ship: "fx_courier", ...over });
+/** A Courier Loadout, with the Flight Assist every fixture Ship must fit (ADR 0006). */
+const loadout = (over: Partial<Loadout> = {}): Loadout => ({
+  format: 1,
+  gameData: current,
+  ship: "fx_courier",
+  software: ["fx_flightassist"],
+  ...over,
+});
 
 describe("resolveLoadout", () => {
   test("a Ship that isn't in the Game Data makes the Loadout Unavailable", () => {
@@ -210,6 +217,29 @@ describe("resolveLoadout: Slot Groups", () => {
   });
 });
 
+describe("resolveLoadout: mandatory software (ADR 0006)", () => {
+  test("a mandatory Software Family with nothing fitted gets the Ship's default ware, reported as an addition", () => {
+    const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_bramble", software: ["fx_scanner"] }));
+    expect(repaired.software).toEqual(["fx_scanner", "fx_flightassist", "fx_dock_mk1"]);
+    expect(repairs.map(describeRepair)).toEqual([
+      "Flight Assist Mk1 in software: added, the Ship must fit Flight Assist Software",
+      "Docking Computer Mk1 in software: added, the Ship must fit Docking Software",
+    ]);
+  });
+
+  test("a mandatory ware earlier than the Ship's default is dropped and replaced by the default", () => {
+    // The Needle's default is the Docking Computer Mk2; the Mk1 on its fit list isn't offered.
+    const { loadout: repaired, repairs } = resolved(
+      loadout({ ship: "fx_needle", software: ["fx_flightassist", "fx_dock_mk1"] }),
+    );
+    expect(repaired.software).toEqual(["fx_flightassist", "fx_dock_mk2"]);
+    expect(repairs.map((r) => [r.type, r.name])).toEqual([
+      ["dropped", "Docking Computer Mk1"],
+      ["added", "Docking Computer Mk2"],
+    ]);
+  });
+});
+
 describe("resolveLoadout: thruster and software", () => {
   test("a thruster or software the Ship no longer takes, or that isn't in the Game Data, is dropped", () => {
     const { loadout: repaired, repairs } = resolved(
@@ -264,7 +294,7 @@ describe("resolveLoadout: one of each Software Family", () => {
   });
 
   test("software that still fits comes back in the order it was stored", () => {
-    const stored = loadout({ ship: "fx_scout", gameData: { swi: "091", x4: "8.00" }, software: ["fx_lrs_mk2", "fx_trading"] });
+    const stored = loadout({ ship: "fx_scout", gameData: { swi: "091", x4: "800" }, software: ["fx_lrs_mk2", "fx_trading"] });
 
     expect(resolved(stored, families)).toMatchObject({ loadout: stored, repairs: [] });
   });
@@ -354,7 +384,7 @@ describe("resolveLoadout: Crew", () => {
   });
 
   test("a Ship with no crew capacity loses all its Crew, each role cut to 0", () => {
-    const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_needle", crew: { service: 1, marines: 2 } }));
+    const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_needle", software: ["fx_flightassist", "fx_dock_mk2"], crew: { service: 1, marines: 2 } }));
     expect(repaired).not.toHaveProperty("crew");
     expect(repairs).toEqual([
       { type: "clamped", place: { kind: "crew", role: "marines" }, name: "Marines", from: 2, to: 0 },

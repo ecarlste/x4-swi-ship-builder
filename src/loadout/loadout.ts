@@ -53,8 +53,11 @@ export const loadoutSchema = z.object({
 
 export type Loadout = z.infer<typeof loadoutSchema>;
 
-/** A freshly picked Ship, with nothing fitted. */
-export function emptyLoadout(gameData: GameData, ship: Ship): Loadout {
+/**
+ * A Ship with nothing fitted, not even its mandatory software: where an
+ * Empty Loadout (`emptyLoadout` in `rules.ts`) and a resolved Loadout start.
+ */
+export function bareLoadout(gameData: GameData, ship: Ship): Loadout {
   return {
     format: LOADOUT_FORMAT,
     gameData: { swi: gameData.manifest.swi.version, x4: gameData.manifest.x4.version },
@@ -80,6 +83,24 @@ export const CREW_CUT_ORDER: readonly CrewRole[] = ["service", "marines"];
 /** How many Crew a Loadout carries, service crew and marines together. The Captain isn't Crew. */
 export function crewCount(loadout: Loadout): number {
   return (loadout.crew?.service ?? 0) + (loadout.crew?.marines ?? 0);
+}
+
+/**
+ * What the Ship's buy screen calls its Captain: "Pilot" on S and M Ships,
+ * "Captain" on L and XL. The Captain is free, always fitted and not part of
+ * the Loadout (ADR 0004).
+ */
+export function captainTitle(ship: Ship): "Pilot" | "Captain" {
+  return ship.size === "s" || ship.size === "m" ? "Pilot" : "Captain";
+}
+
+/**
+ * The Ship's seats as the game's Crew figure counts them: the Captain's seat
+ * sits on top of the crew capacity, so it adds one to both what's taken and
+ * the total (ADR 0004).
+ */
+export function crewSeats(ship: Ship, loadout: Loadout): { taken: number; total: number } {
+  return { taken: crewCount(loadout) + 1, total: ship.capacities.crew + 1 };
 }
 
 export type ConsumableKind = "missile" | "drone" | "deployable" | "countermeasure";

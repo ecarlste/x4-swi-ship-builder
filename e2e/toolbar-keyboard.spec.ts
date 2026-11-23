@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { toasts } from "./helpers.ts";
 
 const toolbarButton = (page: Page, name: string) =>
   page.getByRole("toolbar").getByRole("button", { name, exact: true });
@@ -86,7 +87,7 @@ test("toolbar actions are triggered from the keyboard with Enter or Space", asyn
     JSON.stringify([
       {
         format: 1,
-        gameData: { swi: "999", x4: "9.99" },
+        gameData: { swi: "999", x4: "999" },
         ship: "fx_courier",
         id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
         name: "Escort",
@@ -123,7 +124,7 @@ test("toolbar actions are triggered from the keyboard with Enter or Space", asyn
   // Copy link copies a Share Link.
   await tabTo(page, toolbarButton(page, "Copy link"));
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("status")).toContainText("Link copied");
+  await expect(toasts(page)).toContainText("Link copied");
 
   // Save asks for a name.
   await page.keyboard.press("Shift+Tab");
@@ -152,12 +153,13 @@ test("disabled toolbar actions don't respond and Tab passes over them", async ({
 
 test("the mandatory-missing count is reached by Tab and opens a Tooltip naming what's missing", async ({ page }) => {
   await pickShipByKeyboard(page, "Swiftwing");
-  const count = page.getByRole("toolbar").getByRole("button", { name: /3 mandatory missing/ });
+  const count = page.getByRole("toolbar").getByRole("button", { name: /2 mandatory missing/ });
   await tabTo(page, count);
 
   const tooltip = page.getByRole("tooltip");
   await expect(tooltip).toBeVisible();
-  await expect(tooltip).toHaveText("Engines Thruster Flight Assist Mk1");
+  // Mandatory software is always fitted, so it's never missing (ADR 0006).
+  await expect(tooltip).toHaveText("Engines Thruster");
 
   // Moving on closes it.
   await page.keyboard.press("Tab");

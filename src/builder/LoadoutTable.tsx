@@ -1,19 +1,21 @@
-import { useId, useMemo, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import type { Equipment, GameData, Ship, SlotKind } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import { shotDamage } from "../stats/firepower.ts";
 import { DotIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "cn";
 import { ComparisonPopover } from "./ComparisonPopover.tsx";
 import { EquipmentSelect } from "./EquipmentSelect.tsx";
 import { TooltipMark } from "./TooltipMark.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
-import { CREW_ROLE_NAMES, crewCount, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
+import { captainTitle, CREW_ROLE_NAMES, crewSeats, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
 import { loadoutLines, type Held, type Line } from "../loadout/lines.ts";
-import { loadoutRules, type Edit, type LoadoutRules } from "../loadout/rules.ts";
+import type { Place } from "../loadout/repairs.ts";
+import { loadoutRules, type ConsumableOptions, type Edit, type LoadoutRules } from "../loadout/rules.ts";
 
 const CONSUMABLE_LABEL: Record<ConsumableKind, string> = {
   missile: "Missiles",
@@ -28,6 +30,18 @@ const KIND_LABEL: Record<SlotKind, string> = {
   shield: "Shield",
   engine: "Engine",
 };
+
+/** A line at a Place of one kind. */
+type LineAt<K extends Place["kind"]> = Line & { place: Extract<Place, { kind: K }> };
+
+/** Whether a line is at a Place of one of these kinds. */
+const isAt =
+  <K extends Place["kind"]>(...kinds: K[]) =>
+  (line: Line): line is LineAt<K> =>
+    line.place !== null && (kinds as readonly Place["kind"][]).includes(line.place.kind);
+
+/** The kinds of Place shown in a section of their own, after the table's main rows. */
+const SECTIONED = ["consumable", "software", "crew"] as const satisfies readonly Place["kind"][];
 
 const MISSING = "Mandatory upgrade missing";
 const CHANGED = "Changed since loading";
@@ -60,8 +74,10 @@ function keyValue(item: Equipment): string {
  * The editable Loadout table, one row per line of the Loadout: the Chassis
  * first, read-only; one row for all the Ship's engines, which take one engine
  * type between them (ADR 0001); one row per other Slot and per Slot Group kind;
- * the thruster, the consumables and the software. After the Equipment, a Crew
- * section for a Ship with crew capacity. Columns: Slot, Equipment, quantity,
+ * and the thruster. Then a section per consumable kind the Ship carries, each
+ * headed by its shared count, then a Software section, one row per Software
+ * Family. After the Equipment, a Crew section for a Ship with crew capacity.
+ * Columns: Slot, Equipment, quantity,
  * key value and average price.
  *
  * Rows, prices, mandatory marks and "was" values come from the Loadout's
@@ -88,6 +104,8 @@ export function LoadoutTable({
   const lines = loadoutLines(gameData, ship, loadout, was);
   const slots = new Map(ship.slots.map((s) => [s.id, s]));
   const consumables = rules.consumables(loadout);
+  /** The kind whose section a consumable is listed in: the first whose items include it. */
+  const kindOf = (id: string) => consumables.find((o) => o.items.some((e) => e.id === id))!;
   const nameOf = (id: string | null) => (id ? (equipment.get(id)?.name ?? id) : "empty");
   /** Applies an edit, discarding its Repairs. */
   const change = (edit: Edit) => onChange(edit.loadout);
@@ -180,6 +198,7 @@ export function LoadoutTable({
                 value={fitted ? count : 0}
                 max={size}
                 limit={size}
+                showMax
                 disabled={!fitted}
                 onChange={(n) => change(rules.setGroupCount(loadout, group, kind, n))}
               />
@@ -204,20 +223,20 @@ export function LoadoutTable({
           />
         );
       case "consumable": {
-        const kind = consumables.find((o) => o.items.some((e) => e.id === place.equipment))!;
+        const kind = kindOf(place.equipment);
         const item = kind.items.find((e) => e.id === place.equipment)!;
         return (
           <Row
             key={`consumable/${item.id}`}
-            label={CONSUMABLE_LABEL[kind.kind]}
+            label={item.name}
             missing={line.missing}
-            equipment={item.name}
+            equipment=""
             quantity={
               <CountInput
                 label={`${item.name} count`}
                 value={count}
+                // Every item of a kind shares the Ship's capacity for it, which the section heading shows.
                 max={kind.capacity}
-                // Every item of a kind shares the Ship's capacity for it.
                 limit={rules.limit(loadout, place)}
                 onChange={(n) => change(rules.setConsumable(loadout, item.id, n))}
               />
@@ -228,33 +247,18 @@ export function LoadoutTable({
           />
         );
       }
+      // Software has its own section, one row per Software Family, and the Crew theirs.
       case "software":
-        return (
-          <Row
-            key={`software/${place.equipment}`}
-            label="Software"
-            missing={line.missing}
-            equipment={
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={count > 0}
-                  onCheckedChange={(checked) => change(rules.setSoftware(loadout, place.equipment, checked))}
-                />
-                {nameOf(place.equipment)}
-              </label>
-            }
-            quantity={count > 0 ? "1" : ""}
-            keyValue=""
-            price={price}
-            was={wasText((held) => (held ? "fitted" : "not fitted"))}
-          />
-        );
       case "crew":
         return null;
     }
   };
 
-  const crew = lines.filter((l) => l.place?.kind === "crew");
+  const crew = lines.filter(isAt("crew"));
+  const consumableLines = lines.filter(isAt("consumable"));
+  const software = lines.filter(isAt("software"));
+  const inSection = isAt(...SECTIONED);
+  const equipmentLines = lines.filter((l) => !inSection(l));
   return (
     <Table aria-label="Loadout">
       <TableHeader>
@@ -276,47 +280,159 @@ export function LoadoutTable({
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>{lines.map(row)}</TableBody>
+      <TableBody>{equipmentLines.map(row)}</TableBody>
+      {consumables.map((kind) => {
+        const kindLines = consumableLines.filter((l) => kindOf(l.place.equipment) === kind);
+        return (
+          kindLines.length > 0 && (
+            <ConsumableSection key={kind.kind} kind={kind} loadout={loadout}>
+              {kindLines.map(row)}
+            </ConsumableSection>
+          )
+        );
+      })}
+      {rules.softwareFamilies().length > 0 && (
+        <SoftwareSection rules={rules} loadout={loadout} lines={software} onChange={change} />
+      )}
       {crew.length > 0 && (
-        <CrewSection rules={rules} capacity={ship.capacities.crew} loadout={loadout} lines={crew} onChange={change} />
+        <CrewSection rules={rules} ship={ship} loadout={loadout} lines={crew} onChange={change} />
       )}
     </Table>
   );
 }
 
 /**
- * The Crew, after the Equipment: service crew and marines, sharing the Ship's
- * crew capacity, each at the crew price. The Captain is free and not a count
- * (ADR 0004).
+ * One consumable kind's rows under a heading with the kind's shared count
+ * against its capacity, as the game's sections show it. The rows show only
+ * their own counts.
  */
-function CrewSection({
+function ConsumableSection({
+  kind,
+  loadout,
+  children,
+}: {
+  kind: ConsumableOptions;
+  loadout: Loadout;
+  children: ReactNode;
+}) {
+  const used = kind.items.reduce((sum, e) => sum + (loadout.consumables?.[e.id] ?? 0), 0);
+  return (
+    <Section heading={CONSUMABLE_LABEL[kind.kind]} used={used} capacity={kind.capacity}>
+      {children}
+    </Section>
+  );
+}
+
+/**
+ * The software, after the other Equipment: one row per Software Family,
+ * under the game's name for it and marked Mandatory when the Ship must fit
+ * it. A family fits at most one piece of software, from those the Ship can
+ * fit. A mandatory family is always fitted (ADR 0006): with one option it
+ * has no control, with several a choice with no None. An optional family is
+ * a toggle with one option, and a choice with None with several.
+ */
+function SoftwareSection({
   rules,
-  capacity,
   loadout,
   lines,
   onChange,
 }: {
   rules: LoadoutRules;
-  capacity: number;
   loadout: Loadout;
-  /** The Crew's lines, one per role. */
-  lines: Line[];
+  /** The software's lines, one per piece of software. */
+  lines: LineAt<"software">[];
   onChange: (edit: Edit) => void;
 }) {
-  const headingId = useId();
-  const used = crewCount(loadout);
   return (
-    <TableBody aria-labelledby={headingId}>
-      <TableRow className="hover:bg-transparent">
-        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
-          Crew{" "}
-          <span className="text-muted-foreground">
-            {formatNumber(used)} / {formatNumber(capacity)}
-          </span>
-        </TableHead>
-      </TableRow>
+    <Section heading="Software">
+      {rules.softwareFamilies().map((family) => {
+        const ids = new Set(family.options.map((e) => e.id));
+        const own = lines.filter((l) => ids.has(l.place.equipment));
+        const fitted = own.find((l) => l.count > 0) ?? null;
+        const fittedItem = fitted?.equipment ?? null;
+        // The software the Loaded Loadout had, when the family's lines differ from it.
+        const changed = own.some((l) => l.was !== undefined);
+        const before = own.find((l) => (l.was === undefined ? l.count > 0 : l.was !== null))?.place;
+        const beforeName = family.options.find((e) => e.id === before?.equipment)?.name;
+        const [soleOption] = family.options;
+        /** Fits the picked software, or with null removes what's fitted. */
+        const pick = (id: string | null) => {
+          if (id !== null) onChange(rules.setSoftware(loadout, id, true));
+          else if (fittedItem) onChange(rules.setSoftware(loadout, fittedItem.id, false));
+        };
+        let control: ReactNode;
+        if (family.options.length > 1) {
+          control = (
+            <EquipmentSelect
+              label={`${family.name} Equipment`}
+              options={family.options}
+              value={fittedItem?.id ?? null}
+              onChange={pick}
+              emptyLabel={family.mandatory ? null : "None"}
+            />
+          );
+        } else if (family.mandatory) {
+          control = soleOption!.name;
+        } else {
+          control = (
+            <label className="flex items-center gap-2">
+              <Checkbox checked={fittedItem !== null} onCheckedChange={(checked) => pick(checked ? soleOption!.id : null)} />
+              {soleOption!.name}
+            </label>
+          );
+        }
+        return (
+          <Row
+            key={family.id}
+            label={
+              <>
+                {family.name}
+                {family.mandatory && (
+                  <>
+                    {" "}
+                    <span className="rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">Mandatory</span>
+                  </>
+                )}
+              </>
+            }
+            equipment={control}
+            quantity={fittedItem ? "1" : ""}
+            keyValue=""
+            price={fitted && fittedItem ? formatCredits(fitted.price.average) : ""}
+            was={changed ? (beforeName ?? "not fitted") : undefined}
+          />
+        );
+      })}
+    </Section>
+  );
+}
+
+/**
+ * The Crew, after the Equipment: the Captain first, then service crew and
+ * marines, sharing the Ship's crew capacity, each at the crew price. The
+ * Captain is a fixed, free display row, not a Place or part of the Loadout
+ * (ADR 0004); its seat sits on top of the crew capacity, and the heading
+ * counts it, as the game's Crew figure does.
+ */
+function CrewSection({
+  rules,
+  ship,
+  loadout,
+  lines,
+  onChange,
+}: {
+  rules: LoadoutRules;
+  ship: Ship;
+  loadout: Loadout;
+  /** The Crew's lines, one per role. */
+  lines: LineAt<"crew">[];
+  onChange: (edit: Edit) => void;
+}) {
+  const seats = crewSeats(ship, loadout);
+  return (
+    <Section heading="Crew" used={seats.taken} capacity={seats.total}>
+      <Row label={captainTitle(ship)} equipment="" quantity="1" keyValue="" price="Free" />
       {lines.map((line) => {
-        if (line.place?.kind !== "crew") return null;
         const place = line.place;
         const label = CREW_ROLE_NAMES[place.role];
         return (
@@ -329,6 +445,7 @@ function CrewSection({
                 label={`${label} count`}
                 value={line.count}
                 // Service crew and marines share the Ship's crew capacity, which the header shows.
+                max={ship.capacities.crew}
                 limit={rules.limit(loadout, place)}
                 onChange={(n) => onChange(rules.setCrew(loadout, place.role, n))}
               />
@@ -339,32 +456,99 @@ function CrewSection({
           />
         );
       })}
+    </Section>
+  );
+}
+
+/**
+ * A section of the table after its main rows: a row group named by its
+ * heading, which can show how much of a shared capacity its rows use.
+ */
+function Section({
+  heading,
+  used,
+  capacity,
+  children,
+}: {
+  heading: string;
+  /** With capacity, shown after the heading as "used / capacity". */
+  used?: number;
+  capacity?: number;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <TableBody aria-labelledby={headingId}>
+      <TableRow className="hover:bg-transparent">
+        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
+          {heading}
+          {used !== undefined && capacity !== undefined && (
+            <>
+              {" "}
+              <span className="text-muted-foreground">
+                {formatNumber(used)} / {formatNumber(capacity)}
+              </span>
+            </>
+          )}
+        </TableHead>
+      </TableRow>
+      {children}
     </TableBody>
   );
 }
 
 /**
- * A count, shown as "count / max" when given a max. The input stops at
- * limit, which is lower than max when other items share the capacity; the
- * edit itself clamps a typed value over it.
+ * A count, as a slider beside a number input showing the same value. The
+ * slider's track spans max, the capacity the row draws on; its thumb stops at
+ * limit, which is lower than max when other rows share the capacity. A typed
+ * value applies on blur or Enter, clamped to 0..limit. The limit comes from the
+ * rules; the control only keeps to it.
  */
 function CountInput({
   label,
   value,
   max,
   limit,
+  showMax = false,
   disabled,
   onChange,
 }: {
   label: string;
   value: number;
-  max?: number;
+  /** The capacity the slider's track spans. */
+  max: number;
   limit: number;
+  /** Shows "/ max" after the number. */
+  showMax?: boolean;
   disabled?: boolean;
   onChange: (count: number) => void;
 }) {
+  /** What's typed but not yet applied, while it differs from the count. */
+  const [draft, setDraft] = useState<string | null>(null);
+  const set = (n: number) => {
+    const count = Math.min(limit, Math.max(0, n));
+    if (count !== value) onChange(count);
+  };
+  const commit = () => {
+    if (draft === null) return;
+    const n = Math.floor(Number(draft));
+    set(Number.isFinite(n) ? n : value);
+    setDraft(null);
+  };
   return (
-    <span className="inline-flex items-center gap-1 text-muted-foreground">
+    <span className="inline-flex items-center gap-2 text-muted-foreground">
+      <Slider
+        className="w-28"
+        aria-label={label}
+        min={0}
+        max={max}
+        step={1}
+        largeStep={10}
+        // One thumb: the wrapper draws a thumb per value, and two for a bare number.
+        value={[value]}
+        disabled={disabled}
+        onValueChange={(v) => set(Array.isArray(v) ? v[0] : v)}
+      />
       <Input
         type="number"
         className="h-7 w-18 text-right text-foreground"
@@ -372,14 +556,15 @@ function CountInput({
         min={0}
         max={limit}
         step={1}
-        value={value}
+        value={draft ?? value}
         disabled={disabled}
-        onChange={(e) => {
-          const n = Math.floor(Number(e.target.value));
-          onChange(Number.isFinite(n) ? Math.max(0, n) : 0);
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
         }}
       />
-      {max !== undefined && <>/ {formatNumber(max)}</>}
+      {showMax && <>/ {formatNumber(max)}</>}
     </span>
   );
 }

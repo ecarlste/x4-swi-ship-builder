@@ -105,6 +105,36 @@ function readCandidates(files: GameFiles): Candidate[] {
 /** A software ware's `<software predecessor>`: the software it replaces, or null. */
 const predecessorOf = (ware: JsonElement) => attr(child(ware, "software"), "predecessor") ?? null;
 
+/**
+ * A Software Family's name: the `factoryname` of the oldest ware in the
+ * chain of `<software predecessor>` links, which the buy screen heads the
+ * family's group with. The chain is walked through every software ware, so a
+ * family is named even when no Ship lists its oldest ware.
+ */
+function familyNameOf(software: Candidate, known: Map<string, Candidate>, text: TextResolver, warnings: string[]): string {
+  const seen = new Set([software.id]);
+  let oldest = software;
+  for (let at = predecessorOf(oldest.ware); at !== null && !seen.has(at); ) {
+    const ware = known.get(at);
+    if (ware?.kind !== "software") break;
+    seen.add(at);
+    oldest = ware;
+    at = predecessorOf(ware.ware);
+  }
+  const where = `Software Family ${oldest.id}`;
+  const factoryName = attr(oldest.ware, "factoryname");
+  if (factoryName === undefined) throw new ExtractError(`${where} has no name: ware ${oldest.id} has no factoryname`);
+  const name = text.resolve(factoryName, where);
+  const own = attr(software.ware, "factoryname");
+  if (own !== undefined && own !== factoryName) {
+    warnings.push(
+      `${software.id}: its factoryname "${text.resolve(own, `ware ${software.id}`)}" isn't its family's, ` +
+        `so it is named after ${oldest.id}: "${name}"`,
+    );
+  }
+  return name;
+}
+
 /** Every tag of `needed` is in `offered`. */
 const allIn = (needed: string[], offered: string[]) => needed.every((t) => offered.includes(t));
 
@@ -273,7 +303,7 @@ export function readEquipment(
       });
       return;
     }
-    const item = readItem(files, text, candidate, sellers, defaults);
+    const item = readItem({ files, text, defaults, known, warnings }, candidate, sellers);
     if (typeof item === "string") {
       leftOut.push({ ware: id, reason: item });
       warnings.push(`${id}: ${item}`);
@@ -377,17 +407,23 @@ export function readEquipment(
   };
 }
 
+/** What reading every item draws on: the game files and text, and what's collected across all items. */
+interface ItemContext {
+  files: GameFiles;
+  text: TextResolver;
+  /** Class properties from libraries/defaults.xml, by class. */
+  defaults: Map<string, JsonElement>;
+  /** Every candidate ware, by id. */
+  known: Map<string, Candidate>;
+  warnings: string[];
+}
+
 /**
  * An included item's name, price, licence, Sellers and raw inputs; or, when
  * its data breaks our rules, the reason it is left out.
  */
-function readItem(
-  files: GameFiles,
-  text: TextResolver,
-  c: Candidate,
-  sellers: string[],
-  defaults: Map<string, JsonElement>,
-): Equipment | string {
+function readItem(ctx: ItemContext, c: Candidate, sellers: string[]): Equipment | string {
+  const { files, text, defaults, known, warnings } = ctx;
   const where = `ware ${c.id}`;
   const nameId = attr(c.ware, "name");
   if (nameId === undefined) throw new ExtractError(`${where} has no name`);
@@ -411,10 +447,12 @@ function readItem(
   switch (c.kind) {
     case "weapon":
     case "turret": {
+      const boltColour = text.lastLetterColour(nameId, where);
       if (c.ammunitionTags !== null) {
         return {
           kind: c.kind,
           ...common,
+          boltColour,
           size: c.size,
           damage: { value: 0, noShield: 0, hull: 0 },
           barrelAmount: 1,
@@ -441,6 +479,7 @@ function readItem(
       return {
         kind: c.kind,
         ...common,
+        boltColour,
         size: c.size,
         damage: {
           value: num(bullet, "damage", "value"),
@@ -527,6 +566,11 @@ function readItem(
     case "countermeasure":
       return { kind: c.kind, ...common };
     case "software":
-      return { kind: "software", ...common, predecessor: predecessorOf(c.ware) };
+      return {
+        kind: "software",
+        ...common,
+        predecessor: predecessorOf(c.ware),
+        familyName: familyNameOf(c, known, text, warnings),
+      };
   }
 }
