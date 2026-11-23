@@ -186,10 +186,11 @@ export class FixtureWorld {
       const nameRef = newText(e.name ?? e.id);
       const price = e.price ?? { min: 80, average: 100, max: 120 };
       const isSoftware = e.kind === "software";
+      const factoryName = !isSoftware || e.factoryName === null ? undefined : (e.factoryName ?? newText(`${e.id} Software`));
       const macroName = `${e.id}_macro`;
       wares.push(
         `<ware id="${e.id}" name="${nameRef}" transport="${isSoftware ? "software" : "equipment"}"` +
-          `${isSoftware ? ` group="software"` : ""} tags="${e.tags ?? EQUIPMENT_TAGS[e.kind]}">` +
+          `${isSoftware ? ` group="software"` : ""}${factoryName ? ` factoryname="${factoryName}"` : ""} tags="${e.tags ?? EQUIPMENT_TAGS[e.kind]}">` +
           `<price min="${price.min}" average="${price.average}" max="${price.max}"/>` +
           (isSoftware ? "" : `<component ref="${macroName}" amount="1"/>`) +
           (e.licence ? `<restriction licence="${e.licence}"/>` : "") +
@@ -327,6 +328,11 @@ export interface EquipmentSpec {
   connection?: string;
   /** Software only: the ware's `<software predecessor>`, the software it replaces. */
   predecessor?: string;
+  /**
+   * Software only: the ware's `factoryname`, a text reference that names its
+   * Software Family; null leaves it out. If not given, a made-up family name.
+   */
+  factoryName?: string | null;
 }
 
 const EQUIPMENT_TAGS: Record<FixtureEquipmentKind, string> = {

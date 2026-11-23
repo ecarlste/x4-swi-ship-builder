@@ -49,4 +49,19 @@ describe.skipIf(!hasSnapshot)("Game Data check: game-data/current", () => {
     expect(nameFrom("incom")).toBe("Corporation Unique Ships Access");
     expect(nameFrom("rebelalliance")).toBe("Rebellion Advanced Ships Access");
   });
+
+  // The buy screen's group headings, from each family's factoryname (#135).
+  it("names the six Software Families as the game's buy screen does", () => {
+    const equipment = JSON.parse(readFileSync(join(current, "equipment.json"), "utf8"));
+    const names = new Set(equipment.filter((e: { kind: string }) => e.kind === "software").map((e: { familyName: string }) => e.familyName));
+
+    expect([...names].sort()).toEqual([
+      "Docking Software",
+      "Flight Assist Software",
+      "Long Range Scanner Software",
+      "Object Scanner Software",
+      "Targeting Software",
+      "Trading Software",
+    ]);
+  });
 });
