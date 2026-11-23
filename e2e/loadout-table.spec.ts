@@ -239,28 +239,65 @@ test("service crew and marines share the Ship's crew capacity, and Price adds ea
   const crew = loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ });
   const price = page.getByRole("complementary", { name: "Stats" }).getByRole("region", { name: "Price" });
 
-  // A new Loadout has no Crew, only the Captain, who isn't a count.
-  await expect(crew.getByRole("rowheader")).toHaveText(["Service crew", "Marines"]);
-  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*0 \/ 20$/);
+  // A new Loadout has no Crew, only the Captain, whose seat the heading counts.
+  await expect(crew.getByRole("rowheader")).toHaveText(["Captain", "Service crew", "Marines"]);
+  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*1 \/ 21$/);
   await expect(countOf(page, "Service crew")).toHaveValue("0");
   await expect(countOf(page, "Marines")).toHaveValue("0");
   // The header carries the shared capacity; a count beside it would read as that much more free.
   await expect(rowOf(page, "Service crew").getByRole("cell").nth(1)).not.toContainText("/");
-  await expect(loadoutTable(page)).not.toContainText(/captain/i);
   await expect(price).toContainText("2,500,000 Cr");
 
   // The fixture's crew price averages 6,000 Cr.
   await countOf(page, "Service crew").fill("12");
   await expect(rowOf(page, "Service crew").getByRole("cell").nth(3)).toHaveText("72,000 Cr");
-  await expect(crew.getByRole("columnheader")).toHaveText(/12 \/ 20$/);
+  await expect(crew.getByRole("columnheader")).toHaveText(/13 \/ 21$/);
   await expect(price).toContainText("2,572,000 Cr");
 
   // Marines get only what the service crew leave, and the reverse.
   await countOf(page, "Marines").fill("15");
   await expect(countOf(page, "Marines")).toHaveValue("8");
   await expect(rowOf(page, "Marines").getByRole("cell").nth(3)).toHaveText("48,000 Cr");
-  await expect(crew.getByRole("columnheader")).toHaveText(/20 \/ 20$/);
+  await expect(crew.getByRole("columnheader")).toHaveText(/21 \/ 21$/);
   await expect(price).toContainText("2,620,000 Cr");
+});
+
+test("the Crew section starts with the Captain, called Pilot on S and M Ships, fixed and free", async ({ page }) => {
+  for (const [size, ship, label] of [
+    ["S", "Swiftwing Courier", "Pilot"],
+    ["M", "Lancer Gunship (Corsair Clans)", "Pilot"],
+    ["L", "Ironback Hauler", "Captain"],
+  ] as const) {
+    await openShip(page, size, ship);
+    const crew = loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ });
+    await expect(crew.getByRole("rowheader").first()).toHaveText(label);
+    const captain = row(page, label);
+    // Every Ship has its Captain: nothing to pick, count or remove, and no price (ADR 0004).
+    await expect(captain.getByRole("cell")).toHaveText(["", "1", "", "Free"]);
+    await expect(captain.getByRole("combobox")).toHaveCount(0);
+    await expect(captain.getByRole("spinbutton")).toHaveCount(0);
+    await expect(captain.getByRole("checkbox")).toHaveCount(0);
+  }
+});
+
+test("the Crew heading counts the Captain's seat, as the stats panel's Crew does", async ({ page }) => {
+  // Like an X-wing: one crew place, plus the Captain's seat.
+  await openShip(page, "S", "Swiftwing Courier");
+  const crew = loadoutTable(page).getByRole("rowgroup", { name: /^Crew/ });
+  const statsCrew = page
+    .getByRole("complementary", { name: "Stats" })
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: "Crew", exact: true }) })
+    .first()
+    .getByRole("cell");
+
+  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*1 \/ 2$/);
+  await countOf(page, "Marines").fill("1");
+  await expect(crew.getByRole("columnheader")).toHaveText(/^Crew\s*2 \/ 2$/);
+  await expect(statsCrew).toHaveText("2");
+  // The seat isn't a crew place: the Marine took the only one.
+  await countOf(page, "Service crew").fill("1");
+  await expect(countOf(page, "Service crew")).toHaveValue("0");
 });
 
 test("a Ship with no crew capacity has no Crew section", async ({ page }) => {
