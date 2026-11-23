@@ -4,25 +4,26 @@ import { CircleAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 
-// Added for #138 (shadcn's registry offers Sonner, not Base UI's Toast): a stacked list of toasts in
-// the corner, each with a Dismiss button. `type: "error"` draws a toast in the `destructive` token.
+// Added for #138, on Base UI's Toast like shadcn's base-nova `toast` (`npx shadcn view toast`), but cut
+// down to a plain stacked list of toasts in the corner, each with a Dismiss button, rather than
+// shadcn's swipeable pile. `type: "error"` draws a toast in the `destructive` token.
 
-/** Holds the toasts. Add them with `useToastManager()` from inside it. */
-function ToastProvider(props: React.ComponentProps<typeof Toast.Provider>) {
-  return <Toast.Provider {...props} />
+/**
+ * Holds the toasts. Add them with `useToastManager()` from inside it. Every toast is shown: Base UI
+ * hides all but the newest three unless given a limit, so none is set.
+ */
+function ToastProvider(props: Omit<React.ComponentProps<typeof Toast.Provider>, "limit">) {
+  return <Toast.Provider limit={Number.POSITIVE_INFINITY} {...props} />
 }
 
 /** The toast region: a polite live region that never takes focus. F6 moves focus into it. */
-function Toaster({ className }: { className?: string }) {
+function Toaster() {
   const { toasts } = Toast.useToastManager()
   return (
     <Toast.Portal>
       <Toast.Viewport
         data-slot="toast-viewport"
-        className={cn(
-          "fixed right-4 bottom-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none",
-          className
-        )}
+        className="fixed right-4 bottom-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none"
       >
         {toasts.map((toast) => (
           <Toast.Root
@@ -36,10 +37,7 @@ function Toaster({ className }: { className?: string }) {
           >
             <Toast.Content className="flex items-start gap-2 self-center">
               {toast.type === "error" && <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />}
-              <div>
-                {toast.title && <Toast.Title className="font-medium" />}
-                <Toast.Description />
-              </div>
+              <Toast.Description />
             </Toast.Content>
             <Toast.Close
               aria-label="Dismiss"

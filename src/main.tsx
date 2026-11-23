@@ -6,7 +6,7 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ToastProvider limit={5}>
+    <ToastProvider>
       <App />
     </ToastProvider>
   </StrictMode>,

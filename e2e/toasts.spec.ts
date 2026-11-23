@@ -59,3 +59,11 @@ test("an error toast stays until it's dismissed by keyboard", async ({ page }) =
   await page.keyboard.press("Enter");
   await expect(error).toBeHidden();
 });
+
+test("no toast is hidden, however many stack up", async ({ page }) => {
+  await pickShip(page, "S", "Swiftwing Courier");
+  for (let i = 0; i < 8; i++) await toolbarButton(page, "Copy link").click();
+
+  await expect(toast(page, "Link copied to the clipboard.")).toHaveCount(8);
+  for (const shown of await toast(page, "Link copied to the clipboard.").all()) await expect(shown).toBeVisible();
+});
