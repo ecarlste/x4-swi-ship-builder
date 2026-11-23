@@ -134,18 +134,13 @@ export function checkIntegrity(data: SnapshotData): string[] {
     checkSellersAndLicence("ships", ship);
   }
 
-  // A bolt colour is kept from the game's colour markup, \033#AARRGGBB#, so it must be eight hex digits.
   for (const item of data.equipment) {
-    if ((item.kind === "weapon" || item.kind === "turret") && item.boltColour !== null) {
-      if (!/^[0-9A-Fa-f]{8}$/.test(item.boltColour)) {
+    if (item.kind === "weapon" || item.kind === "turret") {
+      // A bolt colour is kept from the game's colour markup, \033#AARRGGBB#, so it must be eight hex digits.
+      if (item.boltColour !== null && !/^[0-9A-Fa-f]{8}$/.test(item.boltColour)) {
         errors.push(`equipment: ${item.id} bolt colour "${item.boltColour}" isn't an AARRGGBB value`);
       }
-    }
-  }
-
-  for (const item of data.equipment) {
-    if ((item.kind === "weapon" || item.kind === "turret") && item.missiles !== null) {
-      checkFitList(`equipment: ${item.id}`, "missiles", item.missiles, "missile");
+      if (item.missiles !== null) checkFitList(`equipment: ${item.id}`, "missiles", item.missiles, "missile");
     }
     checkSellersAndLicence("equipment", item);
   }
