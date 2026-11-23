@@ -270,7 +270,7 @@ describe("Software Families (ADR 0006)", () => {
   const empty = loadout("fx_ship");
 
   test("groups the Ship's software by family, in fit list order, each with the wares the Ship can fit, earliest in the chain first", () => {
-    expect(rules.softwareFamilies().map((f) => [f.name, f.mandatory, f.wares.map((e) => e.id)])).toEqual([
+    expect(rules.softwareFamilies().map((f) => [f.name, f.mandatory, f.options.map((e) => e.id)])).toEqual([
       ["Long Range Scanner Software", true, ["fx_lrs_mk2"]],
       ["Docking Software", false, ["fx_dock_mk1", "fx_dock_mk2"]],
       ["Flight Assist Software", true, ["fx_assist"]],
@@ -306,7 +306,7 @@ describe("Software Families (ADR 0006)", () => {
     );
 
     test("starts on the Ship's default ware and doesn't offer the earlier one", () => {
-      expect(longprobeRules.softwareFamilies().map((f) => [f.name, f.wares.map((e) => e.id)])).toEqual([
+      expect(longprobeRules.softwareFamilies().map((f) => [f.name, f.options.map((e) => e.id)])).toEqual([
         ["Long Range Scanner Software", ["fx_lrs_mk2"]],
       ]);
       expect(longprobeRules.withMandatorySoftware(empty).loadout.software).toEqual(["fx_lrs_mk2"]);

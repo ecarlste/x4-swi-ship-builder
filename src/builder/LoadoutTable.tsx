@@ -320,10 +320,10 @@ function ConsumableSection({
 /**
  * The software, after the other Equipment: one row per Software Family,
  * under the game's name for it and marked Mandatory when the Ship must fit
- * it. A family fits at most one ware, from those the Ship can fit. A
- * mandatory family is always fitted (ADR 0006): with one ware it has no
- * control, with several a choice with no None. An optional family is a
- * toggle with one ware, and a choice with None with several.
+ * it. A family fits at most one piece of software, from those the Ship can
+ * fit. A mandatory family is always fitted (ADR 0006): with one option it
+ * has no control, with several a choice with no None. An optional family is
+ * a toggle with one option, and a choice with None with several.
  */
 function SoftwareSection({
   rules,
@@ -333,7 +333,7 @@ function SoftwareSection({
 }: {
   rules: LoadoutRules;
   loadout: Loadout;
-  /** The software's lines, one per ware. */
+  /** The software's lines, one per piece of software. */
   lines: Line[];
   onChange: (edit: Edit) => void;
 }) {
@@ -346,26 +346,26 @@ function SoftwareSection({
         </TableHead>
       </TableRow>
       {rules.softwareFamilies().map((family) => {
-        const ids = new Set(family.wares.map((e) => e.id));
+        const ids = new Set(family.options.map((e) => e.id));
         const own = lines.filter((l) => l.place?.kind === "software" && ids.has(l.place.equipment));
         const fitted = own.find((l) => l.count > 0) ?? null;
-        const ware = fitted?.equipment ?? null;
-        // The ware the Loaded Loadout had, when the family's lines differ from it.
+        const fittedItem = fitted?.equipment ?? null;
+        // The software the Loaded Loadout had, when the family's lines differ from it.
         const changed = own.some((l) => l.was !== undefined);
         const before = own.find((l) => (l.was === undefined ? l.count > 0 : l.was !== null))?.place;
-        const beforeName = family.wares.find((e) => before?.kind === "software" && e.id === before.equipment)?.name;
-        const [only] = family.wares;
+        const beforeName = family.options.find((e) => before?.kind === "software" && e.id === before.equipment)?.name;
+        const [only] = family.options;
         const set = (id: string | null) => {
           if (id !== null) onChange(rules.setSoftware(loadout, id, true));
-          else if (ware) onChange(rules.setSoftware(loadout, ware.id, false));
+          else if (fittedItem) onChange(rules.setSoftware(loadout, fittedItem.id, false));
         };
         let control: ReactNode;
-        if (family.wares.length > 1) {
+        if (family.options.length > 1) {
           control = (
             <EquipmentSelect
               label={`${family.name} Equipment`}
-              options={family.wares}
-              value={ware?.id ?? null}
+              options={family.options}
+              value={fittedItem?.id ?? null}
               onChange={set}
               emptyLabel={family.mandatory ? null : "None"}
             />
@@ -375,7 +375,7 @@ function SoftwareSection({
         } else {
           control = (
             <label className="flex items-center gap-2">
-              <Checkbox checked={ware !== null} onCheckedChange={(checked) => set(checked ? only!.id : null)} />
+              <Checkbox checked={fittedItem !== null} onCheckedChange={(checked) => set(checked ? only!.id : null)} />
               {only!.name}
             </label>
           );
@@ -395,9 +395,9 @@ function SoftwareSection({
               </>
             }
             equipment={control}
-            quantity={ware ? "1" : ""}
+            quantity={fittedItem ? "1" : ""}
             keyValue=""
-            price={fitted && ware ? formatCredits(fitted.price.average) : ""}
+            price={fitted && fittedItem ? formatCredits(fitted.price.average) : ""}
             was={changed ? (beforeName ?? "not fitted") : undefined}
           />
         );

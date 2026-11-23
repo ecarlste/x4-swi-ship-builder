@@ -45,7 +45,7 @@ Anything that can be fitted to a ship as part of a loadout: weapons, turrets, sh
 _Avoid_: parts, components, wares
 
 **Software Family**:
-Software where each one replaces the one before, such as Long Range Scanner Mk1 and Mk2, under the name the game gives the family, such as Object Scanner Software. A Ship fits at most one of each family. When a family is mandatory for a Ship, its Loadouts always fit exactly one of it, and any one will do.
+Software where each one replaces the one before, such as Long Range Scanner Mk1 and Mk2, under the name the game gives the family, such as Object Scanner Software. A Ship fits at most one of each family. When a family is mandatory for a Ship, its Loadouts always fit exactly one of it: the Ship's default or any after it in the family.
 _Avoid_: software slot, software group
 
 **Slot**:
@@ -77,7 +77,7 @@ An estimate of what a Loadout costs: the Chassis, each piece of Equipment (the e
 _Avoid_: cost, value, purchase price
 
 **Empty Loadout**:
-The loadout every ship starts with in the builder: no equipment and no Crew, except the Ship's default ware of each of its mandatory Software Families, the earliest it can fit (ADR 0006). Like a shipyard, it starts with only the Captain.
+The loadout every ship starts with in the builder: no equipment and no Crew, except the Ship's default software from each of its mandatory Software Families, the earliest of the family it can fit (ADR 0006). Like a shipyard, it starts with only the Captain.
 _Avoid_: default loadout, base loadout, template
 
 **Loaded Loadout**:
