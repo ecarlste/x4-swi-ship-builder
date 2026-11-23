@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadWarning } from "./load.ts";
+import { loadWarning } from "./machine-load.ts";
 
 const checkout = "/home/dev/x4-swi-ship-builder-164";
 const noProcesses = () => "";

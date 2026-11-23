@@ -33,12 +33,12 @@ export function loadWarning({ load, cores, env, checkout, processList }: LoadSam
 }
 
 /**
- * A playwright or vite process, as node runs it: an absolute path to the
- * checkout's `node_modules` entry point, as its own argument. Shell wrappers
+ * A playwright or vite process, as `ps` shows it once node has followed the
+ * bin link: `node <checkout>/node_modules/.bin/<tool>`, the path as its own argument. Shell wrappers
  * and `pgrep` loops that only mention the name don't match.
  */
 const SUITE_PROCESS =
-  /(?:^|\s)(\/\S*?)\/node_modules\/(?:\.bin\/(?:playwright|vite)|@playwright\/test\/cli\.js|playwright\/cli\.js|vite\/bin\/vite\.js)(?=\s|$)/;
+  /(?:^|\s)(\/\S*?)\/node_modules\/\.bin\/(?:playwright|vite)(?=\s|$)/;
 
 /** The checkouts running playwright or vite, sorted and without repeats. */
 function suiteCheckouts(processList: string): string[] {
