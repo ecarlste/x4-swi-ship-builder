@@ -211,6 +211,7 @@ describe("validateSnapshot", () => {
       it("accepts software whose predecessor is software", () => {
         const raw = loadFixture() as Record<string, any>;
         software(raw, "fx_scanner").predecessor = "fx_flightassist";
+        software(raw, "fx_scanner").familyName = "Flight Assist Software";
 
         expect(validateSnapshot(raw as RawSnapshot).errors).toEqual([]);
       });
@@ -231,6 +232,7 @@ describe("validateSnapshot", () => {
         const errors = errorsAfter((raw) => {
           software(raw, "fx_scanner").predecessor = "fx_flightassist";
           software(raw, "fx_flightassist").predecessor = "fx_scanner";
+          software(raw, "fx_scanner").familyName = "Flight Assist Software";
         });
 
         expect(errors).toEqual([
@@ -252,6 +254,29 @@ describe("validateSnapshot", () => {
         `equipment: fx_turret_m_red bolt colour "FFGG0000" isn't an AARRGGBB value`,
         `equipment: fx_cannon_s bolt colour "FF0000" isn't an AARRGGBB value`,
       ]);
+    });
+
+    describe("a Software Family's name", () => {
+      const software = (raw: Record<string, any>, id: string) => raw.equipment.find((e: any) => e.id === id);
+
+      it("reports a family without a name", () => {
+        const errors = errorsAfter((raw) => {
+          software(raw, "fx_scanner").familyName = " ";
+        });
+
+        expect(errors).toEqual(["equipment: fx_scanner Software Family has no name"]);
+      });
+
+      it("reports wares of one family that name it differently", () => {
+        const errors = errorsAfter((raw) => {
+          software(raw, "fx_scanner").predecessor = "fx_flightassist";
+        });
+
+        expect(errors).toEqual([
+          'equipment: fx_scanner Software Family is named "Long Range Scanner Software", ' +
+            'but fx_flightassist names it "Flight Assist Software"',
+        ]);
+      });
     });
 
     it("reports a name that still carries the game's colour markup", () => {
