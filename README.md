@@ -76,7 +76,7 @@ The **Game Data check** (`shared/game-data/currentSnapshot.test.ts`, part of `np
 npm test
 ```
 
-This runs Vitest (`npm run test:unit`) and then Playwright Test (`npm run test:ui`). Playwright builds the app with the fixture snapshot into `.cache/e2e-dist` and serves that build with `vite preview`; a built app loads much faster than the dev server, so tests don't run out of time when several suites share the machine. The first time, install a browser with `npx playwright install --with-deps chromium`.
+This runs Vitest (`npm run test:unit`) and then Playwright Test (`npm run test:ui`). Playwright builds the app with the fixture snapshot into `.cache/e2e-dist` and serves that build with `vite preview`; a built app loads much faster than the dev server, so tests don't run out of time when several suites share the machine. Before the build, a run checks the 1-minute load average: when it is above the core count, it prints one warning line with both numbers and the other checkouts running `playwright` or `vite`, so a red run under contention reads as contended rather than broken. The warning never fails or slows the run, and CI skips it. The first time, install a browser with `npx playwright install --with-deps chromium`.
 
 Each checkout serves the app on its own port, hashed from the checkout's path into 20000–29999, so UI runs in two worktrees at once don't share a server (two paths can hash to the same port, but rarely). Each run builds and starts its own server; if something is already on the port, the run stops rather than test it. Set `PW_PORT` to pick the port yourself, e.g. `PW_PORT=5301 npm run test:ui`.
 
