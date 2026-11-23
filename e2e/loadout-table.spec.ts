@@ -14,7 +14,7 @@ test("a Slot's dropdown lists only its compatible Equipment, sorted by name, wit
   const weapon = row(page, /con_weapon_01/);
   await expect(weapon.getByRole("combobox")).toHaveText(/— empty —/);
   await weapon.getByRole("combobox").click();
-  await expectOptions(page, ["— empty —", "Dart Launcher", "Pulse Blaster", "Torpedo Tube", "Zephyr Cannon"]);
+  await expectOptions(page, ["— empty —", "Dart Launcher", "Pulse Blaster", "Torpedo Tube", "Zephyr Cannon", "Zip Pod"]);
   await expect(page.getByRole("option", { name: "— empty —" })).toHaveAttribute("aria-selected", "true");
 });
 
@@ -133,6 +133,26 @@ test("missiles are limited to those a fitted launcher can fire, sharing the Ship
   // Removing the Dart Launcher removes its missiles from the Loadout.
   await fit(page, /con_weapon_01/, "— empty —");
   await expect(countOf(page, "Dart Missile")).toHaveCount(0);
+});
+
+test("a launcher's own missile storage adds to the missiles the Ship carries, as in the stats panel (#158)", async ({ page }) => {
+  await openShip(page, "S", "Swiftwing Courier");
+  const missiles = page
+    .getByRole("complementary", { name: "Stats" })
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: "Missiles", exact: true }) })
+    .getByRole("cell");
+
+  // The Courier holds 10 missiles; the Zip Pod fires Darts and holds 6 more of its own.
+  await fit(page, /con_weapon_01/, "Zip Pod");
+  await expect(missiles).toHaveText("16");
+  await countOf(page, "Dart Missile").fill("99");
+  await expect(countOf(page, "Dart Missile")).toHaveValue("16");
+
+  // Swapping it for the Dart Launcher, which has no storage, cuts the Darts back to the Ship's 10.
+  await fit(page, /con_weapon_01/, "Dart Launcher");
+  await expect(missiles).toHaveText("10");
+  await expect(countOf(page, "Dart Missile")).toHaveValue("10");
 });
 
 const MISSING = "Mandatory upgrade missing";

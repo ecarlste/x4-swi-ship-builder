@@ -17,6 +17,7 @@ import { indexGameData } from "../gameDataIndex.ts";
 import {
   CREW_ROLE_NAMES,
   crewCount,
+  missileCapacity,
   shipEngines,
   type ConsumableKind,
   type CrewRole,
@@ -113,8 +114,9 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
 
   /**
    * The consumables this Loadout can carry, by kind. Missiles are those a
-   * fitted launcher (in a Slot or a Slot Group) can fire; the rest come from
-   * the Ship's fit lists. Kinds the Ship has no capacity for are left out.
+   * fitted launcher (in a Slot or a Slot Group) can fire, and their capacity
+   * counts the launchers' own storage; the rest come from the Ship's fit lists.
+   * Kinds the Loadout has no capacity for are left out.
    */
   const consumables = (loadout: Loadout): ConsumableOptions[] => {
     const fittedIds = [
@@ -126,7 +128,7 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
       return (item?.kind === "weapon" || item?.kind === "turret") && item.missiles ? [item.missiles] : [];
     });
     const all: ConsumableOptions[] = [
-      { kind: "missile", capacity: ship.capacities.missiles, items: sortedItems(missileLists) },
+      { kind: "missile", capacity: missileCapacity(ship, loadout, equipment), items: sortedItems(missileLists) },
       { kind: "drone", capacity: ship.capacities.drones, items: sortedItems([ship.drones]) },
       { kind: "deployable", capacity: ship.capacities.deployables, items: sortedItems([ship.deployables]) },
       { kind: "countermeasure", capacity: ship.capacities.countermeasures, items: sortedItems([ship.countermeasures]) },
@@ -134,14 +136,29 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
     return all.filter((o) => o.capacity > 0 && o.items.length > 0);
   };
 
-  /** After a launcher is fitted or removed: drops the consumables the Ship can no longer carry, such as missiles no fitted launcher fires. */
+  /**
+   * After a launcher is fitted or removed: drops the consumables the Ship can
+   * no longer carry, such as missiles no fitted launcher fires, and cuts each
+   * kind to its capacity, which a launcher's own storage changes (#158). As
+   * when resolving, the ones stored first keep their counts.
+   */
   const withoutUncarried = (loadout: Loadout): Edit => {
-    const carried = new Set(consumables(loadout).flatMap((o) => o.items.map((e) => e.id)));
+    const options = consumables(loadout);
+    const kindOf = new Map(options.flatMap((o) => o.items.map((e) => [e.id, o.kind] as const)));
+    const left = new Map(options.map((o) => [o.kind, o.capacity]));
     const repairs: LoadoutRepair[] = [];
     const kept: Record<string, number> = {};
     for (const [id, count] of Object.entries(loadout.consumables ?? {})) {
-      if (carried.has(id)) kept[id] = count;
-      else repairs.push(drop({ kind: "consumable", equipment: id }, id, "doesnt-fit"));
+      const kind = kindOf.get(id);
+      const to = kind === undefined ? 0 : Math.min(count, left.get(kind)!);
+      const place: EquipmentPlace = { kind: "consumable", equipment: id };
+      if (kind === undefined || to === 0) {
+        repairs.push(drop(place, id, "doesnt-fit"));
+        continue;
+      }
+      left.set(kind, left.get(kind)! - to);
+      kept[id] = to;
+      if (to < count) repairs.push({ type: "clamped", place, equipment: id, name: nameOf(id), from: count, to });
     }
     return { loadout: withEntry(loadout, "consumables", kept), repairs };
   };

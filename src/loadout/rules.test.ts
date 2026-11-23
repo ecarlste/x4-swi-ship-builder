@@ -104,6 +104,66 @@ describe("missiles need a launcher", () => {
   });
 });
 
+describe("a launcher's own missile storage (#158)", () => {
+  // Fires Darts and holds 6 of its own, like the Light Rocket Launcher's `storage@capacity`.
+  const pod = launcher("weapon", "fx_pod", "fl_darts", 6);
+  const rules = loadoutRules(gameData([gunboat], [darts, torpedo, dartLauncher, tube, pod], fitLists), gunboat);
+  const missiles = (l: ReturnType<typeof loadout>) => rules.consumables(l).find((o) => o.kind === "missile")?.capacity;
+  const clamped = (id: string, from: number, to: number) => ({
+    type: "clamped",
+    place: { kind: "consumable", equipment: id },
+    equipment: id,
+    name: id,
+    from,
+    to,
+  });
+
+  test("adds to the Ship's missile capacity, once per launcher fitted", () => {
+    const one = loadout("fx_ship", { slots: { con_weapon_01: "fx_pod" } });
+    expect(missiles(one)).toBe(16);
+    expect(rules.limit(one, { kind: "consumable", equipment: "fx_dart" })).toBe(16);
+    expect(rules.setConsumable(one, "fx_dart", 20).loadout.consumables).toEqual({ fx_dart: 16 });
+    expect(missiles(loadout("fx_ship", { slots: { con_weapon_01: "fx_pod", con_weapon_02: "fx_pod" } }))).toBe(22);
+    expect(missiles(loadout("fx_ship", { slots: { con_weapon_01: "fx_pod", con_weapon_02: "fx_tube" } }))).toBe(16);
+  });
+
+  test("emptying its Slot cuts the missiles to what's left, the last stored first", () => {
+    const armed = loadout("fx_ship", {
+      slots: { con_weapon_01: "fx_pod", con_weapon_02: "fx_tube" },
+      consumables: { fx_dart: 8, fx_torpedo: 6 },
+    });
+    const edit = rules.setSlot(armed, "con_weapon_01", null);
+    expect(edit).toEqual({
+      loadout: loadout("fx_ship", { slots: { con_weapon_02: "fx_tube" }, consumables: { fx_dart: 8, fx_torpedo: 2 } }),
+      repairs: [clamped("fx_torpedo", 6, 2)],
+    });
+    expect(describeRepair(edit.repairs[0]!)).toBe("fx_torpedo in consumables: count cut from 6 to 2");
+  });
+
+  test("a missile cut to none is dropped", () => {
+    const armed = loadout("fx_ship", {
+      slots: { con_weapon_01: "fx_pod", con_weapon_02: "fx_tube" },
+      consumables: { fx_dart: 12, fx_torpedo: 2 },
+    });
+    expect(rules.setSlot(armed, "con_weapon_01", "fx_dart_launcher")).toEqual({
+      loadout: loadout("fx_ship", {
+        slots: { con_weapon_01: "fx_dart_launcher", con_weapon_02: "fx_tube" },
+        consumables: { fx_dart: 10 },
+      }),
+      repairs: [
+        clamped("fx_dart", 12, 10),
+        {
+          type: "dropped",
+          place: { kind: "consumable", equipment: "fx_torpedo" },
+          equipment: "fx_torpedo",
+          name: "fx_torpedo",
+          reason: "doesnt-fit",
+        },
+      ],
+    });
+  });
+});
+
 describe("Slot Groups", () => {
   const flak = launcher("turret", "fx_flak", "fl_none");
   const heavy = launcher("turret", "fx_heavy", "fl_none");

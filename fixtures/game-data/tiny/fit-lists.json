@@ -13,5 +13,5 @@
   { "id": "fl_thruster_s", "equipment": ["fx_thruster_s"] },
   { "id": "fl_torpedoes_s", "equipment": ["fx_ion_torpedo", "fx_torpedo"] },
   { "id": "fl_turret_m", "equipment": ["fx_turret_m"] },
-  { "id": "fl_weapon_s", "equipment": ["fx_cannon_s", "fx_launcher_s", "fx_pulse_s", "fx_tube_s"] }
+  { "id": "fl_weapon_s", "equipment": ["fx_cannon_s", "fx_launcher_s", "fx_pulse_s", "fx_tube_s", "fx_zip_pod_s"] }
 ]
