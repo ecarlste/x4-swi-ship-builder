@@ -14,6 +14,7 @@ import { TooltipMark } from "./TooltipMark.tsx";
 import { formatCredits, formatNumber } from "./format.ts";
 import { captainTitle, CREW_ROLE_NAMES, crewSeats, type ConsumableKind, type Loadout, type SlotGroupKind } from "../loadout/loadout.ts";
 import { loadoutLines, type Held, type Line } from "../loadout/lines.ts";
+import type { Place } from "../loadout/repairs.ts";
 import { loadoutRules, type ConsumableOptions, type Edit, type LoadoutRules } from "../loadout/rules.ts";
 
 const CONSUMABLE_LABEL: Record<ConsumableKind, string> = {
@@ -29,6 +30,18 @@ const KIND_LABEL: Record<SlotKind, string> = {
   shield: "Shield",
   engine: "Engine",
 };
+
+/** A line at a Place of one kind. */
+type LineAt<K extends Place["kind"]> = Line & { place: Extract<Place, { kind: K }> };
+
+/** Whether a line is at a Place of one of these kinds. */
+const isAt =
+  <K extends Place["kind"]>(...kinds: K[]) =>
+  (line: Line): line is LineAt<K> =>
+    line.place !== null && (kinds as readonly Place["kind"][]).includes(line.place.kind);
+
+/** The kinds of Place shown in a section of their own, after the table's main rows. */
+const SECTIONED = ["consumable", "software", "crew"] as const satisfies readonly Place["kind"][];
 
 const MISSING = "Mandatory upgrade missing";
 const CHANGED = "Changed since loading";
@@ -210,7 +223,8 @@ export function LoadoutTable({
           />
         );
       case "consumable": {
-        const item = kindOf(place.equipment).items.find((e) => e.id === place.equipment)!;
+        const kind = kindOf(place.equipment);
+        const item = kind.items.find((e) => e.id === place.equipment)!;
         return (
           <Row
             key={`consumable/${item.id}`}
@@ -222,7 +236,7 @@ export function LoadoutTable({
                 label={`${item.name} count`}
                 value={count}
                 // Every item of a kind shares the Ship's capacity for it, which the section heading shows.
-                max={kindOf(place.equipment).capacity}
+                max={kind.capacity}
                 limit={rules.limit(loadout, place)}
                 onChange={(n) => change(rules.setConsumable(loadout, item.id, n))}
               />
@@ -240,10 +254,11 @@ export function LoadoutTable({
     }
   };
 
-  const crew = lines.filter((l) => l.place?.kind === "crew");
-  const consumableLines = lines.filter((l) => l.place?.kind === "consumable");
-  const software = lines.filter((l) => l.place?.kind === "software");
-  const equipmentLines = lines.filter((l) => !["consumable", "software", "crew"].includes(l.place?.kind ?? ""));
+  const crew = lines.filter(isAt("crew"));
+  const consumableLines = lines.filter(isAt("consumable"));
+  const software = lines.filter(isAt("software"));
+  const inSection = isAt(...SECTIONED);
+  const equipmentLines = lines.filter((l) => !inSection(l));
   return (
     <Table aria-label="Loadout">
       <TableHeader>
@@ -267,7 +282,7 @@ export function LoadoutTable({
       </TableHeader>
       <TableBody>{equipmentLines.map(row)}</TableBody>
       {consumables.map((kind) => {
-        const kindLines = consumableLines.filter((l) => l.place?.kind === "consumable" && kindOf(l.place.equipment) === kind);
+        const kindLines = consumableLines.filter((l) => kindOf(l.place.equipment) === kind);
         return (
           kindLines.length > 0 && (
             <ConsumableSection key={kind.kind} kind={kind} loadout={loadout}>
@@ -300,20 +315,11 @@ function ConsumableSection({
   loadout: Loadout;
   children: ReactNode;
 }) {
-  const headingId = useId();
   const used = kind.items.reduce((sum, e) => sum + (loadout.consumables?.[e.id] ?? 0), 0);
   return (
-    <TableBody aria-labelledby={headingId}>
-      <TableRow className="hover:bg-transparent">
-        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
-          {CONSUMABLE_LABEL[kind.kind]}{" "}
-          <span className="text-muted-foreground">
-            {formatNumber(used)} / {formatNumber(kind.capacity)}
-          </span>
-        </TableHead>
-      </TableRow>
+    <Section heading={CONSUMABLE_LABEL[kind.kind]} used={used} capacity={kind.capacity}>
       {children}
-    </TableBody>
+    </Section>
   );
 }
 
@@ -334,28 +340,23 @@ function SoftwareSection({
   rules: LoadoutRules;
   loadout: Loadout;
   /** The software's lines, one per piece of software. */
-  lines: Line[];
+  lines: LineAt<"software">[];
   onChange: (edit: Edit) => void;
 }) {
-  const headingId = useId();
   return (
-    <TableBody aria-labelledby={headingId}>
-      <TableRow className="hover:bg-transparent">
-        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
-          Software
-        </TableHead>
-      </TableRow>
+    <Section heading="Software">
       {rules.softwareFamilies().map((family) => {
         const ids = new Set(family.options.map((e) => e.id));
-        const own = lines.filter((l) => l.place?.kind === "software" && ids.has(l.place.equipment));
+        const own = lines.filter((l) => ids.has(l.place.equipment));
         const fitted = own.find((l) => l.count > 0) ?? null;
         const fittedItem = fitted?.equipment ?? null;
         // The software the Loaded Loadout had, when the family's lines differ from it.
         const changed = own.some((l) => l.was !== undefined);
         const before = own.find((l) => (l.was === undefined ? l.count > 0 : l.was !== null))?.place;
-        const beforeName = family.options.find((e) => before?.kind === "software" && e.id === before.equipment)?.name;
-        const [only] = family.options;
-        const set = (id: string | null) => {
+        const beforeName = family.options.find((e) => e.id === before?.equipment)?.name;
+        const [soleOption] = family.options;
+        /** Fits the picked software, or with null removes what's fitted. */
+        const pick = (id: string | null) => {
           if (id !== null) onChange(rules.setSoftware(loadout, id, true));
           else if (fittedItem) onChange(rules.setSoftware(loadout, fittedItem.id, false));
         };
@@ -366,17 +367,17 @@ function SoftwareSection({
               label={`${family.name} Equipment`}
               options={family.options}
               value={fittedItem?.id ?? null}
-              onChange={set}
+              onChange={pick}
               emptyLabel={family.mandatory ? null : "None"}
             />
           );
         } else if (family.mandatory) {
-          control = only!.name;
+          control = soleOption!.name;
         } else {
           control = (
             <label className="flex items-center gap-2">
-              <Checkbox checked={fittedItem !== null} onCheckedChange={(checked) => set(checked ? only!.id : null)} />
-              {only!.name}
+              <Checkbox checked={fittedItem !== null} onCheckedChange={(checked) => pick(checked ? soleOption!.id : null)} />
+              {soleOption!.name}
             </label>
           );
         }
@@ -402,7 +403,7 @@ function SoftwareSection({
           />
         );
       })}
-    </TableBody>
+    </Section>
   );
 }
 
@@ -424,24 +425,14 @@ function CrewSection({
   ship: Ship;
   loadout: Loadout;
   /** The Crew's lines, one per role. */
-  lines: Line[];
+  lines: LineAt<"crew">[];
   onChange: (edit: Edit) => void;
 }) {
-  const headingId = useId();
   const seats = crewSeats(ship, loadout);
   return (
-    <TableBody aria-labelledby={headingId}>
-      <TableRow className="hover:bg-transparent">
-        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
-          Crew{" "}
-          <span className="text-muted-foreground">
-            {formatNumber(seats.taken)} / {formatNumber(seats.total)}
-          </span>
-        </TableHead>
-      </TableRow>
+    <Section heading="Crew" used={seats.taken} capacity={seats.total}>
       <Row label={captainTitle(ship)} equipment="" quantity="1" keyValue="" price="Free" />
       {lines.map((line) => {
-        if (line.place?.kind !== "crew") return null;
         const place = line.place;
         const label = CREW_ROLE_NAMES[place.role];
         return (
@@ -465,6 +456,43 @@ function CrewSection({
           />
         );
       })}
+    </Section>
+  );
+}
+
+/**
+ * A section of the table after its main rows: a row group named by its
+ * heading, which can show how much of a shared capacity its rows use.
+ */
+function Section({
+  heading,
+  used,
+  capacity,
+  children,
+}: {
+  heading: string;
+  /** With capacity, shown after the heading as "used / capacity". */
+  used?: number;
+  capacity?: number;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <TableBody aria-labelledby={headingId}>
+      <TableRow className="hover:bg-transparent">
+        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
+          {heading}
+          {used !== undefined && capacity !== undefined && (
+            <>
+              {" "}
+              <span className="text-muted-foreground">
+                {formatNumber(used)} / {formatNumber(capacity)}
+              </span>
+            </>
+          )}
+        </TableHead>
+      </TableRow>
+      {children}
     </TableBody>
   );
 }
