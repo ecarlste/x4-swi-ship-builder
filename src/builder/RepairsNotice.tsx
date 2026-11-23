@@ -30,7 +30,7 @@ export function RepairsNotice({
       <Alert variant="warning">
         <TriangleAlert aria-hidden />
         <AlertTitle>
-          <h2 id={headingId}>This Loadout changed with the Game Data</h2>
+          <h2 id={headingId}>This Loadout was repaired to fit its Ship</h2>
         </AlertTitle>
         <AlertDescription>
           {versionChanged && (

@@ -12,7 +12,7 @@ const toolbarButton = (page: Page, name: string) =>
   page.getByRole("toolbar").getByRole("button", { name, exact: true });
 const savedList = (page: Page) => page.getByRole("region", { name: "Saved Loadouts" });
 const savedEntry = (page: Page, name: string | RegExp) => savedList(page).getByRole("listitem").filter({ hasText: name });
-const notice = (page: Page) => page.getByRole("region", { name: "This Loadout changed with the Game Data" });
+const notice = (page: Page) => page.getByRole("region", { name: "This Loadout was repaired to fit its Ship" });
 
 async function showSavedLoadouts(page: Page) {
   await toolbarButton(page, "Saved Loadouts").click();
