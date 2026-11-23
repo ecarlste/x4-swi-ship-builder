@@ -10,7 +10,7 @@ const KEY = "swi-builder:saved-loadouts:v1";
 /** Made with older Game Data; two entries no longer fit the fixture snapshot. */
 const escort = {
   format: 1,
-  gameData: { swi: "091", x4: "8.00" },
+  gameData: { swi: "091", x4: "800" },
   ship: "fx_courier",
   id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
   name: "Escort",

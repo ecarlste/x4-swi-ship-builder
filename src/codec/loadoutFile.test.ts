@@ -5,7 +5,7 @@ import { readSavedLoadouts, type LoadoutStorage } from "./savedLoadouts.ts";
 
 const escort = {
   format: 1 as const,
-  gameData: { swi: "091", x4: "8.00" },
+  gameData: { swi: "091", x4: "800" },
   ship: "ship_xwing",
   slots: { con_weapon_01: "weapon_laser" },
   groups: { group_turrets: { turret: { equipment: "turret_quad", count: 3 } } },

@@ -1,6 +1,6 @@
 /**
  * The builder session's transitions, against the tiny fixture Game Data
- * (SWI "999", X4 "9.99"), in-memory storage and fake clipboard and download.
+ * (SWI "999", X4 "999"), in-memory storage and fake clipboard and download.
  */
 import { describe, expect, test } from "vitest";
 import { gameData } from "../gameData.ts";
@@ -13,8 +13,8 @@ import type { SavedLoadout } from "../codec/loadout.ts";
 import { shareLinkUrl } from "../codec/shareLink.ts";
 import type { SavedLoadoutEntry } from "../codec/savedLoadouts.ts";
 
-const current = { swi: "999", x4: "9.99" };
-const older = { swi: "091", x4: "8.00" };
+const current = { swi: "999", x4: "999" };
+const older = { swi: "091", x4: "800" };
 
 const savedLoadout = (over: Record<string, unknown> = {}): SavedLoadout => ({
   format: 1,
@@ -78,7 +78,7 @@ describe("picking a Ship", () => {
     session.pickShip(ship("fx_courier"));
 
     expect(state()).toMatchObject({
-      loadout: { format: 1, gameData: { swi: "999", x4: "9.99" }, ship: "fx_courier" },
+      loadout: { format: 1, gameData: { swi: "999", x4: "999" }, ship: "fx_courier" },
       ship: { name: "Swiftwing Courier" },
       opened: null,
       loaded: null,

@@ -1,6 +1,6 @@
 /**
  * Loadouts made against older Game Data (#44): stored and shared Loadouts
- * that no longer fit the fixture snapshot (SWI "999", X4 "9.99").
+ * that no longer fit the fixture snapshot (SWI "999", X4 "999").
  */
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
@@ -27,7 +27,7 @@ async function storeRaw(page: Page, value: unknown) {
   await page.reload();
 }
 
-const older = { swi: "091", x4: "8.00" };
+const older = { swi: "091", x4: "800" };
 
 const savedLoadout = (over: Record<string, unknown> = {}) => ({
   format: 1,

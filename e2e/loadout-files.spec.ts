@@ -24,7 +24,7 @@ async function storeRaw(page: Page, value: unknown) {
 
 const savedLoadout = (over: Record<string, unknown> = {}) => ({
   format: 1,
-  gameData: { swi: "999", x4: "9.99" },
+  gameData: { swi: "999", x4: "999" },
   ship: "fx_courier",
   id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
   name: "Escort",
