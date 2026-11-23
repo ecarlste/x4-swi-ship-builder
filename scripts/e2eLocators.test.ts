@@ -41,11 +41,18 @@ describe("findMarkupLocators", () => {
   });
 
   it("leaves a locator alone whose string is not a markup selector", () => {
-    const source = ['const footer = page.locator("footer");', 'const body = page.locator("body");'].join("\n");
+    const source = [
+      'const footer = page.locator("footer");',
+      'const body = page.locator("body");',
+      'const saved = page.locator("text=Saved.");',
+      'const version = page.locator("text=v1.2");',
+      "const save = page.locator('role=button[name=\"Save\"]');",
+      'const label = page.locator("internal:label=Ship.");',
+    ].join("\n");
     expect(findMarkupLocators(source)).toEqual([]);
   });
 
-  it("reports one finding per call, even when several patterns match it", () => {
+  it("reports each forbidden call on a line", () => {
     const source = 'await expect(page.locator(".slot")).toHaveClass(/on/);';
     expect(findMarkupLocators(source)).toHaveLength(2);
   });

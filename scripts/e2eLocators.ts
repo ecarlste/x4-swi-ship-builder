@@ -22,20 +22,25 @@ const FORBIDDEN = [
 /** A `locator()` call with a quoted string; group 2 is the selector. */
 const LOCATOR = /\blocator\(\s*(["'`])(.*?)\1/g;
 
-/** A selector that names a class, id or attribute: `.slot`, `#weapons`, `[data-x]`, or a tag with one (`div.slot`). */
-const MARKUP_SELECTOR = /^[.#[]|[a-z][a-z0-9-]*[.#[]/i;
+/**
+ * A selector that names a class, id or attribute: `.slot`, `#weapons`,
+ * `[data-x]`, or a tag with one (`div.slot`, `tr > td.name`). The tag must
+ * start a selector token, so text in `text=Saved.` or the name filter in
+ * `role=button[name="Save"]` isn't taken for one.
+ */
+const MARKUP_SELECTOR = /^[.#[]|(?:^|[\s>+~,(])[a-z][a-z0-9-]*[.#[]/i;
 
 /** Every call in an e2e source file that locates or asserts by markup. */
 export function findMarkupLocators(source: string): Finding[] {
   const lines = source.split(/\r?\n/);
-  const starts = new Set<number>();
+  const starts: number[] = [];
   for (const pattern of FORBIDDEN) {
-    for (const match of source.matchAll(pattern)) starts.add(match.index);
+    for (const match of source.matchAll(pattern)) starts.push(match.index);
   }
   for (const match of source.matchAll(LOCATOR)) {
-    if (MARKUP_SELECTOR.test(match[2])) starts.add(match.index);
+    if (MARKUP_SELECTOR.test(match[2])) starts.push(match.index);
   }
-  return [...starts]
+  return starts
     .sort((a, b) => a - b)
     .map((index) => {
       const line = source.slice(0, index).split("\n").length;
@@ -44,19 +49,21 @@ export function findMarkupLocators(source: string): Finding[] {
 }
 
 /** Every `.ts` file under `dir`, at any depth, in a stable order. */
-function e2eFiles(dir: string): string[] {
+function tsFilesUnder(dir: string): string[] {
   return readdirSync(dir, { recursive: true, encoding: "utf8" })
     .filter((path) => path.endsWith(".ts"))
     .sort()
     .map((path) => join(dir, path));
 }
 
+const USAGE = "usage: node scripts/e2eLocators.ts [dir]";
+
 function main([dir = "e2e", ...rest]: string[]): number {
   if (rest.length > 0) {
-    console.error("usage: node scripts/e2eLocators.ts [dir]");
+    console.error(USAGE);
     return 2;
   }
-  const findings = e2eFiles(dir).flatMap((file) =>
+  const findings = tsFilesUnder(dir).flatMap((file) =>
     findMarkupLocators(readFileSync(file, "utf8")).map(({ line, text }) => `${file}:${line}: ${text}`),
   );
   if (findings.length === 0) return 0;
