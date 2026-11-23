@@ -1,0 +1,121 @@
+name: Screenshots
+
+# Before and after screenshots on every PR (#150), posted as one comment that
+# updates in place. The PNGs live on the orphan `pr-screenshots` branch, under
+# pr-<number>/<head sha>/; closing the PR deletes its folder. See
+# docs/agents/pr-screenshots.md.
+#
+# Its own workflow, not a job in ci.yml: it needs write permissions `check`
+# doesn't get, and a failure here must not fail `check`. The screenshots aren't
+# a test: a build or a state that fails just leaves that image out.
+#
+# Fork PRs are skipped: their token is read-only, so it can't push the branch
+# or comment.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions: {}
+
+concurrency:
+  group: screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # push to pr-screenshots
+      pull-requests: write # comment on the PR
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      SHOTS_OUT: ${{ runner.temp }}/shots
+      GAME_DATA_DIR: fixtures/game-data/tiny
+    steps:
+      # The head itself, not the merge commit: "after" is the PR as pushed.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Build the head
+        id: build-head
+        continue-on-error: true
+        run: npm run build
+
+      # The base in a worktree of its own, with its own dependencies and fixture snapshot.
+      - name: Build the base
+        id: build-base
+        continue-on-error: true
+        run: |
+          git fetch -q --depth=1 origin "$BASE_SHA"
+          git worktree add -q --detach "$RUNNER_TEMP/base" "$BASE_SHA"
+          cd "$RUNNER_TEMP/base"
+          npm ci
+          npm run build
+
+      # The head's spec drives both builds.
+      - name: Screenshots before
+        if: steps.build-base.outcome == 'success'
+        continue-on-error: true
+        run: npx playwright test -c screenshots/playwright.config.ts
+        env:
+          SHOTS_PHASE: before
+          SHOTS_DIST: ${{ runner.temp }}/base/dist
+
+      - name: Screenshots after
+        if: steps.build-head.outcome == 'success'
+        continue-on-error: true
+        run: npx playwright test -c screenshots/playwright.config.ts
+        env:
+          SHOTS_PHASE: after
+          SHOTS_DIST: dist
+
+      - name: Commit the screenshots to pr-screenshots
+        run: node scripts/prScreenshots.ts publish "$SHOTS_OUT"
+
+      - name: Create or update the PR comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/prScreenshots.ts comment "$SHOTS_OUT" > "$RUNNER_TEMP/comment.md"
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- pr-screenshots -->"))) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F "body=@$RUNNER_TEMP/comment.md"
+          else
+            gh api --silent "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" -F "body=@$RUNNER_TEMP/comment.md"
+          fi
+
+  clean:
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # push to pr-screenshots
+    steps:
+      # The default branch's script: a closed PR's head may never have had it.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
+      - name: Remove the PR's folder from pr-screenshots
+        run: node scripts/prScreenshots.ts clean
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
