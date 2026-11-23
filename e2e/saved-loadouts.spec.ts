@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fit, loadoutTable, pickShip, row, tokenColour } from "./helpers.ts";
+import { fit, loadoutTable, pickShip, row, toasts, tokenColour } from "./helpers.ts";
 
 const KEY = "swi-builder:saved-loadouts:v1";
 
@@ -52,7 +52,7 @@ test("a first save asks for a name, suggesting the Ship's, and the Loadout reope
   await name.fill("Heavy Freighter");
   await saveDialog(page).getByRole("button", { name: "Save" }).click();
   await expect(saveDialog(page)).toBeHidden();
-  await expect(page.getByRole("status")).toContainText("Heavy Freighter");
+  await expect(toasts(page)).toContainText("Heavy Freighter");
 
   await page.reload();
   await expect(loadoutTable(page)).toBeHidden();
@@ -139,7 +139,7 @@ test("the Save dialog opens, fills and saves by keyboard, keeping focus inside a
   await page.keyboard.press("Enter");
 
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole("status")).toContainText("Keyboard Courier");
+  await expect(toasts(page)).toContainText("Keyboard Courier");
   await expect(saveButton(page)).toBeFocused();
   expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toContain("Keyboard Courier");
 });

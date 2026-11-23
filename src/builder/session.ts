@@ -22,7 +22,7 @@ import {
 import { changedSince } from "./changes.ts";
 import { emptyLoadout, type Loadout } from "../loadout/loadout.ts";
 
-/** A status line, or an error, shown under the toolbar. */
+/** A status message, or an error, shown as a toast. */
 export type Message = { kind: "status" | "error"; text: string };
 
 const status = (text: string): Message => ({ kind: "status", text });

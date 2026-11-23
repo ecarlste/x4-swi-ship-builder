@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { fit, openShip } from "./helpers.ts";
 
 /** Where a focused control sits on the page, in reading order. */
-type Area = "toolbar" | "saved" | "table" | "stats" | "footer" | "other";
+type Area = "toolbar" | "saved" | "table" | "stats" | "footer" | "toasts" | "other";
 
 interface Stop {
   area: Area;
@@ -28,7 +28,9 @@ function focused(page: Page): Promise<Stop | null> {
             ? "table"
             : el.closest("footer")
               ? "footer"
-              : "other";
+              : el.closest('[role="region"][aria-label="Notifications"]')
+                ? "toasts"
+                : "other";
     // A ring is something focus adds: compare the control focused with the same control blurred.
     const look = () => {
       const style = getComputedStyle(el);
@@ -78,8 +80,8 @@ test("Tab reaches every control in reading order, each with a visible focus ring
   const stops = await walk(page);
 
   // The page reads top to bottom: toolbar, the Saved Loadouts list under it, the Loadout table,
-  // the stats beside it, then the footer.
-  const order: Area[] = ["toolbar", "saved", "table", "stats", "footer"];
+  // the stats beside it, then the footer, then any toasts (the save's is still showing).
+  const order: Area[] = ["toolbar", "saved", "table", "stats", "footer", "toasts"];
   const areas = stops.map((s) => s.area);
   expect(areas).not.toContain("other");
   for (const area of ["toolbar", "saved", "table", "footer"] as const) expect(areas).toContain(area);

@@ -1,6 +1,7 @@
 import type { Equipment, GameData } from "../gameData.ts";
 import type { Loadout } from "../loadout/loadout.ts";
 import { compareEquipment, type Figure } from "../stats/stats.ts";
+import { EquipmentName } from "./EquipmentName.tsx";
 import { sellerLicenceText } from "./licence.ts";
 import { formatCredits, formatNumber, formatSigned } from "./format.ts";
 import { verdictClass } from "./styles.ts";
@@ -64,7 +65,7 @@ export function ComparisonPopover({
 
   return (
     <>
-      <div className="mb-1 font-medium">{option.name}</div>
+      <div className="mb-1 font-medium"><EquipmentName equipment={option} /></div>
       {comparison.missiles && (
         <Table className="mb-2 w-auto" aria-label="Missiles">
           <TableHeader className="[&_tr]:border-0">
