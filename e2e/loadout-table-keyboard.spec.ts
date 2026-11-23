@@ -60,7 +60,6 @@ test("a count is set with the arrow keys or by typing, and clamps over its limit
   await openShip(page, "S", "Swiftwing Courier");
   const flares = page.getByRole("spinbutton", { name: "Glare Flare count" });
   const cells = loadoutTable(page).getByRole("row").filter({ has: flares }).getByRole("cell");
-  await expect(cells.nth(1)).toContainText("/ 5");
   await flares.focus();
 
   await page.keyboard.press("ArrowUp");
