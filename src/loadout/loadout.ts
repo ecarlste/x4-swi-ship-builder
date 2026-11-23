@@ -53,8 +53,11 @@ export const loadoutSchema = z.object({
 
 export type Loadout = z.infer<typeof loadoutSchema>;
 
-/** A freshly picked Ship, with nothing fitted. */
-export function emptyLoadout(gameData: GameData, ship: Ship): Loadout {
+/**
+ * A Ship with nothing fitted, not even its mandatory software: where an
+ * Empty Loadout (`emptyLoadout` in `rules.ts`) and a resolved Loadout start.
+ */
+export function bareLoadout(gameData: GameData, ship: Ship): Loadout {
   return {
     format: LOADOUT_FORMAT,
     gameData: { swi: gameData.manifest.swi.version, x4: gameData.manifest.x4.version },

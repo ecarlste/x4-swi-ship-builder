@@ -83,7 +83,7 @@ export function SavedLoadoutsList({
               <span className="text-muted-foreground">{shipName(entry.loadout.ship)}</span>
               {repairs > 0 && (
                 <TooltipMark explanation={resolved.repairs.map(describeRepair).join("\n")} className="text-warning">
-                  <WarningGlyph /> {repairs} {repairs === 1 ? "item no longer fits" : "items no longer fit"}
+                  <WarningGlyph /> {repairs} {repairs === 1 ? "Repair" : "Repairs"}
                 </TooltipMark>
               )}
               <Actions>

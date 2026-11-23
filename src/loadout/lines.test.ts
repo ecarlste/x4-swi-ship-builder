@@ -12,7 +12,6 @@ import {
   shieldGroup,
   shieldSlot,
   ship,
-  software,
   thruster,
 } from "./testing/fixtures.ts";
 import { loadoutLines } from "./lines.ts";
@@ -105,43 +104,15 @@ describe("loadoutLines", () => {
     expect(lines[2]).toMatchObject({ equipment: null, count: 1, price: { min: 0, average: 0, max: 0 } });
   });
 
-  test("marks the mandatory Places left empty: the engines, Slots tagged mandatory, the thruster and default software", () => {
+  test("marks the mandatory Places left empty: the engines, Slots tagged mandatory and the thruster", () => {
     const missing = (l: typeof fitted) => loadoutLines(data, cruiser, l).filter((line) => line.missing).map((line) => line.place);
-    expect(missing(loadout("fx_ship"))).toEqual([
-      { kind: "engine" },
-      { kind: "slot", slot: "con_shield_01" },
-      { kind: "thruster" },
-      { kind: "software", equipment: "fx_assist" },
-    ]);
-    expect(missing({ ...fitted, thruster: "fx_nimble", software: ["fx_assist"] })).toEqual([]);
+    expect(missing(loadout("fx_ship"))).toEqual([{ kind: "engine" }, { kind: "slot", slot: "con_shield_01" }, { kind: "thruster" }]);
+    expect(missing({ ...fitted, thruster: "fx_nimble" })).toEqual([]);
   });
 
-  describe("mandatory software is judged by its Software Family", () => {
-    const families = (mandatory: string[]) => {
-      const trader = ship({ software: { fitList: "fl_software", mandatory } });
-      const data = gameData(
-        [trader],
-        [software("fx_lrs_mk1"), software("fx_lrs_mk2", "fx_lrs_mk1"), software("fx_trading")],
-        [{ id: "fl_software", equipment: ["fx_lrs_mk1", "fx_lrs_mk2", "fx_trading"] }],
-      );
-      return (fittedSoftware: string[]) =>
-        loadoutLines(data, trader, loadout("fx_ship", { software: fittedSoftware }))
-          .filter((line) => line.missing && line.place?.kind === "software")
-          .map((line) => line.place);
-    };
-    const lrsMk1 = { kind: "software", equipment: "fx_lrs_mk1" };
-    const trading = { kind: "software", equipment: "fx_trading" };
-
-    test("any ware of the family at or above the Ship's default will do; the mark stays on the default's line", () => {
-      const missing = families(["fx_lrs_mk1", "fx_trading"]);
-      expect(missing([])).toEqual([lrsMk1, trading]);
-      expect(missing(["fx_lrs_mk2"])).toEqual([trading]);
-      expect(missing(["fx_lrs_mk1", "fx_trading"])).toEqual([]);
-    });
-
-    test("a ware below the Ship's default doesn't", () => {
-      expect(families(["fx_lrs_mk2"])(["fx_lrs_mk1"])).toEqual([{ kind: "software", equipment: "fx_lrs_mk2" }]);
-    });
+  test("never marks software, whose mandatory families are always fitted (ADR 0006)", () => {
+    const lines = loadoutLines(data, cruiser, loadout("fx_ship"));
+    expect(lines.filter((line) => line.place?.kind === "software").some((line) => line.missing)).toBe(false);
   });
 
   test("a Ship with no engines isn't missing any", () => {

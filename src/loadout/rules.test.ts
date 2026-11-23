@@ -252,6 +252,58 @@ describe("the engine, thruster and software", () => {
   });
 });
 
+describe("Software Families (ADR 0006)", () => {
+  const at = (average: number) => ({ min: average, average, max: average });
+  const assist = software("fx_assist", null, at(0), "Flight Assist Software");
+  const dockMk1 = software("fx_dock_mk1", null, at(100), "Docking Software");
+  const dockMk2 = software("fx_dock_mk2", "fx_dock_mk1", at(400), "Docking Software");
+  const lrsMk1 = software("fx_lrs_mk1", null, at(200), "Long Range Scanner Software");
+  const lrsMk2 = software("fx_lrs_mk2", "fx_lrs_mk1", at(800), "Long Range Scanner Software");
+  const trader = ship({ software: { fitList: "fl_software", mandatory: ["fx_assist", "fx_lrs_mk2"] } });
+  const rules = loadoutRules(
+    gameData([trader], [assist, dockMk1, dockMk2, lrsMk1, lrsMk2], [
+      // Newest first, and the Mk1 of the mandatory Long Range Scanner left out, as on the M12-L Kimogila.
+      { id: "fl_software", equipment: ["fx_lrs_mk2", "fx_dock_mk2", "fx_assist", "fx_dock_mk1"] },
+    ]),
+    trader,
+  );
+  const empty = loadout("fx_ship");
+
+  test("groups the Ship's software by family, in fit list order, each with the wares the Ship can fit, cheapest first", () => {
+    expect(rules.softwareFamilies().map((f) => [f.name, f.mandatory, f.wares.map((e) => e.id)])).toEqual([
+      ["Long Range Scanner Software", true, ["fx_lrs_mk2"]],
+      ["Docking Software", false, ["fx_dock_mk1", "fx_dock_mk2"]],
+      ["Flight Assist Software", true, ["fx_assist"]],
+    ]);
+  });
+
+  test("fitting the mandatory software adds the cheapest ware of each mandatory family that has none", () => {
+    expect(rules.withMandatorySoftware(empty).loadout.software).toEqual(["fx_lrs_mk2", "fx_assist"]);
+    expect(rules.withMandatorySoftware(loadout("fx_ship", { software: ["fx_assist"] }))).toEqual({
+      loadout: loadout("fx_ship", { software: ["fx_assist", "fx_lrs_mk2"] }),
+      repairs: [
+        {
+          type: "added",
+          place: { kind: "software", equipment: "fx_lrs_mk2" },
+          equipment: "fx_lrs_mk2",
+          name: "fx_lrs_mk2",
+          family: "Long Range Scanner Software",
+        },
+      ],
+    });
+  });
+
+  test("a mandatory family's ware can't be removed, only swapped", () => {
+    const fitted = loadout("fx_ship", { software: ["fx_assist", "fx_lrs_mk2"] });
+    expect(rules.setSoftware(fitted, "fx_assist", false)).toEqual({ loadout: fitted, repairs: [] });
+  });
+
+  test("an optional family's ware can be removed", () => {
+    const fitted = loadout("fx_ship", { software: ["fx_assist", "fx_dock_mk2"] });
+    expect(rules.setSoftware(fitted, "fx_dock_mk2", false).loadout.software).toEqual(["fx_assist"]);
+  });
+});
+
 describe("consumables", () => {
   const flare = priced("countermeasure", "fx_flare", { min: 1, average: 1, max: 1 });
   const chaff = priced("countermeasure", "fx_chaff", { min: 1, average: 1, max: 1 });

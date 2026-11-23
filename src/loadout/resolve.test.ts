@@ -12,7 +12,14 @@ import { gameData as fixtureGameData, ship, software } from "./testing/fixtures.
 const current = { swi: "999", x4: "999" };
 const older = { swi: "091", x4: "800" };
 
-const loadout = (over: Partial<Loadout> = {}): Loadout => ({ format: 1, gameData: current, ship: "fx_courier", ...over });
+/** A Courier Loadout, with the Flight Assist every fixture Ship must fit (ADR 0006). */
+const loadout = (over: Partial<Loadout> = {}): Loadout => ({
+  format: 1,
+  gameData: current,
+  ship: "fx_courier",
+  software: ["fx_flightassist"],
+  ...over,
+});
 
 describe("resolveLoadout", () => {
   test("a Ship that isn't in the Game Data makes the Loadout Unavailable", () => {
@@ -210,6 +217,29 @@ describe("resolveLoadout: Slot Groups", () => {
   });
 });
 
+describe("resolveLoadout: mandatory software (ADR 0006)", () => {
+  test("a mandatory Software Family with nothing fitted gets its cheapest ware, reported as an addition", () => {
+    const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_bramble", software: ["fx_scanner"] }));
+    expect(repaired.software).toEqual(["fx_scanner", "fx_flightassist", "fx_dock_mk1"]);
+    expect(repairs.map(describeRepair)).toEqual([
+      "Flight Assist Mk1 in software: added, the Ship must fit Flight Assist Software",
+      "Docking Computer Mk1 in software: added, the Ship must fit Docking Software",
+    ]);
+  });
+
+  test("a mandatory ware that's dropped is replaced by the cheapest the Ship can fit", () => {
+    // The Needle's fit list has no Docking Computer Mk1, so it gets the Mk2.
+    const { loadout: repaired, repairs } = resolved(
+      loadout({ ship: "fx_needle", software: ["fx_flightassist", "fx_dock_mk1"] }),
+    );
+    expect(repaired.software).toEqual(["fx_flightassist", "fx_dock_mk2"]);
+    expect(repairs.map((r) => [r.type, r.name])).toEqual([
+      ["dropped", "Docking Computer Mk1"],
+      ["added", "Docking Computer Mk2"],
+    ]);
+  });
+});
+
 describe("resolveLoadout: thruster and software", () => {
   test("a thruster or software the Ship no longer takes, or that isn't in the Game Data, is dropped", () => {
     const { loadout: repaired, repairs } = resolved(
@@ -354,7 +384,7 @@ describe("resolveLoadout: Crew", () => {
   });
 
   test("a Ship with no crew capacity loses all its Crew, each role cut to 0", () => {
-    const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_needle", crew: { service: 1, marines: 2 } }));
+    const { loadout: repaired, repairs } = resolved(loadout({ ship: "fx_needle", software: ["fx_flightassist", "fx_dock_mk2"], crew: { service: 1, marines: 2 } }));
     expect(repaired).not.toHaveProperty("crew");
     expect(repairs).toEqual([
       { type: "clamped", place: { kind: "crew", role: "marines" }, name: "Marines", from: 2, to: 0 },

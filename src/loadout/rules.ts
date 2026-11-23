@@ -15,6 +15,7 @@
 import type { Equipment, GameData, Ship } from "../gameData.ts";
 import { indexGameData } from "../gameDataIndex.ts";
 import {
+  bareLoadout,
   CREW_ROLE_NAMES,
   crewCount,
   shipEngines,
@@ -36,6 +37,19 @@ export interface ConsumableOptions {
   kind: ConsumableKind;
   capacity: number;
   items: Equipment[];
+}
+
+/**
+ * One of the Ship's Software Families: the game's name for it, whether the
+ * Ship must fit it, and the wares of it the Ship can fit, earliest in its
+ * upgrade chain (the cheapest) first.
+ */
+export interface SoftwareFamily {
+  /** The family's first ware, the same for every ware of it, whether or not this Ship can fit it. */
+  id: string;
+  name: string;
+  mandatory: boolean;
+  wares: Equipment[];
 }
 
 type Keyed = "slots" | "groups" | "engine" | "thruster" | "software" | "consumables" | "crew";
@@ -83,6 +97,26 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
   const nameOf = (id: string) => equipment.get(id)?.name ?? id;
   // Engine Slots aren't filled one at a time: the engine is fitted to the whole Ship (ADR 0001).
   const slots = new Map(ship.slots.filter((s) => s.kind !== "engine").map((s) => [s.id, s]));
+
+  /**
+   * The Ship's Software Families, in the order its fit list first lists
+   * them. A family is mandatory when one of the Ship's default software is
+   * in it (ADR 0006).
+   */
+  const families: SoftwareFamily[] = [];
+  for (const ware of fitListEquipment(ship.software.fitList)) {
+    if (ware.kind !== "software") continue;
+    const id = familyOf(ware.id);
+    let family = families.find((f) => f.id === id);
+    if (!family) {
+      const mandatory = ship.software.mandatory.some((m) => familyOf(m) === id);
+      family = { id, name: ware.familyName, mandatory, wares: [] };
+      families.push(family);
+    }
+    family.wares.push(ware);
+  }
+  for (const family of families) family.wares.sort((a, b) => softwareChain(a.id).length - softwareChain(b.id).length);
+  const mandatoryFamilyOf = (id: string) => families.find((f) => f.mandatory && f.id === familyOf(id));
 
   const engines = shipEngines(ship);
   const groups = new Map(ship.slotGroups.map((g) => [g.id, g]));
@@ -160,6 +194,29 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
 
   return {
     consumables,
+
+    /** The Ship's Software Families, each with the wares of it the Ship can fit. */
+    softwareFamilies: (): readonly SoftwareFamily[] => families,
+
+    /**
+     * Fits the cheapest ware of each mandatory Software Family the Loadout
+     * has none of, reporting each as an addition (ADR 0006).
+     */
+    withMandatorySoftware(loadout: Loadout): Edit {
+      const fitted = loadout.software ?? [];
+      const missing = families.filter((f) => f.mandatory && !fitted.some((s) => familyOf(s) === f.id));
+      if (missing.length === 0) return noRepairs(loadout);
+      return {
+        loadout: withEntry(loadout, "software", [...fitted, ...missing.map((f) => f.wares[0]!.id)]),
+        repairs: missing.map(({ name: family, wares: [cheapest] }) => ({
+          type: "added",
+          place: { kind: "software", equipment: cheapest!.id },
+          equipment: cheapest!.id,
+          name: cheapest!.name,
+          family,
+        })),
+      };
+    },
 
     /** The most a place can take, which for a place sharing a capacity is what the others leave. */
     limit(loadout: Loadout, place: Place): number {
@@ -268,11 +325,15 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
     /**
      * Adds or removes one piece of software. A Ship fits one of each Software
      * Family, so fitting one swaps out any other of its family, reported as a
-     * drop.
+     * drop. A mandatory family's ware can be swapped but not removed, so
+     * removing it changes nothing (ADR 0006).
      */
     setSoftware(loadout: Loadout, id: string, fitted: boolean): Edit {
       const current = loadout.software ?? [];
-      if (!fitted) return noRepairs(withEntry(loadout, "software", current.filter((s) => s !== id)));
+      if (!fitted) {
+        if (current.includes(id) && mandatoryFamilyOf(id)) return noRepairs(loadout);
+        return noRepairs(withEntry(loadout, "software", current.filter((s) => s !== id)));
+      }
       const reason = refusal(id, ship.software.fitList, "doesnt-fit");
       if (reason) return dropped(loadout, { kind: "software", equipment: id }, id, reason);
       if (current.includes(id)) return noRepairs(loadout);
@@ -325,3 +386,11 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
 }
 
 export type LoadoutRules = ReturnType<typeof loadoutRules>;
+
+/**
+ * The Empty Loadout every Ship starts with: nothing fitted but the cheapest
+ * ware of each of its mandatory Software Families (ADR 0006).
+ */
+export function emptyLoadout(gameData: GameData, ship: Ship): Loadout {
+  return loadoutRules(gameData, ship).withMandatorySoftware(bareLoadout(gameData, ship)).loadout;
+}

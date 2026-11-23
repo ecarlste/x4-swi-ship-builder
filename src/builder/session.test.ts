@@ -20,6 +20,8 @@ const savedLoadout = (over: Record<string, unknown> = {}): SavedLoadout => ({
   format: 1,
   gameData: current,
   ship: "fx_courier",
+  // Every fixture Ship's mandatory Flight Assist (ADR 0006).
+  software: ["fx_flightassist"],
   id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
   name: "Shielded Courier",
   createdAt: "2026-11-01T10:00:00.000Z",
@@ -96,6 +98,96 @@ describe("picking a Ship", () => {
 
     expect(state().loadout?.slots).toEqual({ con_weapon_01: "fx_pulse_s" });
     expect(state().was).toBeNull();
+  });
+});
+
+describe("mandatory software (ADR 0006)", () => {
+  test("picking a Ship opens an Empty Loadout holding the cheapest ware of each mandatory Software Family", () => {
+    const { session, state } = setup();
+
+    session.pickShip(ship("fx_courier"));
+    expect(state().loadout?.software).toEqual(["fx_flightassist"]);
+
+    // The Bramble must fit Docking Software too, and starts on its Mk1.
+    session.pickShip(ship("fx_bramble"));
+    expect(state().loadout?.software).toEqual(["fx_flightassist", "fx_dock_mk1"]);
+  });
+
+  test("a Ship whose fit list has no Mk1 of a mandatory family starts on its Mk2, as the M12-L Kimogila does", () => {
+    const { session, state } = setup();
+
+    session.pickShip(ship("fx_needle"));
+
+    expect(state().loadout?.software).toEqual(["fx_flightassist", "fx_dock_mk2"]);
+  });
+
+  test("the Empty Loadout's Price includes its mandatory software", () => {
+    const { session, state } = setup();
+
+    session.pickShip(ship("fx_bramble"));
+
+    // The Chassis (100,000 Cr) plus Docking Computer Mk1 (2,500 Cr); Flight Assist is free.
+    expect(state().stats?.price).toEqual({ min: 82000, average: 102500, max: 123000 });
+  });
+
+  test("an Empty Loadout misses no mandatory software", () => {
+    const { session, state } = setup();
+
+    session.pickShip(ship("fx_bramble"));
+
+    expect(state().stats?.missing.filter((m) => m.place.kind === "software")).toEqual([]);
+  });
+
+  test("opening a Loadout without a mandatory ware adds the cheapest one as a Repair", () => {
+    const stored = savedLoadout({ ship: "fx_bramble", name: "Bare Bramble", software: undefined });
+    const { session, state, storage } = setup([stored]);
+    const before = storage.raw();
+
+    session.openSaved(stored);
+
+    expect(state().loadout?.software).toEqual(["fx_flightassist", "fx_dock_mk1"]);
+    expect(state().loaded).toEqual(state().loadout);
+    expect(state().notice?.repairs).toEqual([
+      {
+        type: "added",
+        place: { kind: "software", equipment: "fx_flightassist" },
+        equipment: "fx_flightassist",
+        name: "Flight Assist Mk1",
+        family: "Flight Assist Software",
+      },
+      {
+        type: "added",
+        place: { kind: "software", equipment: "fx_dock_mk1" },
+        equipment: "fx_dock_mk1",
+        name: "Docking Computer Mk1",
+        family: "Docking Software",
+      },
+    ]);
+    // Opening doesn't rewrite what was saved.
+    expect(storage.raw()).toBe(before);
+  });
+
+  test("a mandatory family that already has a ware fitted keeps it, with no Repair", () => {
+    const stored = savedLoadout({ ship: "fx_bramble", software: ["fx_dock_mk2", "fx_flightassist"] });
+    const { session, state } = setup([stored]);
+
+    session.openSaved(stored);
+
+    expect(state().loadout?.software).toEqual(["fx_dock_mk2", "fx_flightassist"]);
+    expect(state().notice).toBeNull();
+  });
+
+  test("the repaired Loadout's encoded form is unchanged: software is still a list of ware ids", async () => {
+    const { session, state, copied } = setup();
+    await session.openShareLink(await fragmentFor(sharedOf(savedLoadout({ ship: "fx_bramble", software: undefined }))));
+
+    await session.copyLink(APP);
+    const { session: other, state: otherState } = setup();
+    await other.openShareLink(new URL(copied[0]).hash);
+
+    expect(otherState().loadout).toEqual(state().loadout);
+    expect(otherState().loadout).toMatchObject({ format: 1, software: ["fx_flightassist", "fx_dock_mk1"] });
+    expect(otherState().notice).toBeNull();
   });
 });
 

@@ -33,9 +33,9 @@ export interface Line {
   /** What the line costs: its price times its count (ADR 0003). Empty Places and Equipment not in the Game Data cost 0. */
   price: Price;
   /**
-   * Whether the Place is mandatory and empty; for mandatory software, whether
-   * nothing of its Software Family at or above it is fitted. Nothing is
-   * blocked by it; the builder only points it out.
+   * Whether the Place is mandatory and empty. Never for software, whose
+   * mandatory families are always fitted (ADR 0006). Nothing is blocked by
+   * it; the builder only points it out.
    */
   missing: boolean;
   /**
@@ -55,8 +55,9 @@ const times = (price: Price, count: number): Price => ({
 
 /**
  * Whether a Place is mandatory: the engines (when the Ship has any), Slots
- * tagged `mandatory`, the thruster, and the Ship's `default="1"` software.
- * Slot Groups never are, in game or in the Game Data.
+ * tagged `mandatory` and the thruster. Slot Groups never are, in game or in
+ * the Game Data. Mandatory software is always fitted (ADR 0006), so it's
+ * never missing.
  */
 function mandatory(ship: Ship, place: Place): boolean {
   switch (place.kind) {
@@ -65,8 +66,6 @@ function mandatory(ship: Ship, place: Place): boolean {
       return true;
     case "slot":
       return ship.slots.some((s) => s.id === place.slot && s.mandatory);
-    case "software":
-      return ship.software.mandatory.includes(place.equipment);
     default:
       return false;
   }
@@ -127,13 +126,11 @@ const sameHeld = (a: Held | null, b: Held | null) => a?.equipment === b?.equipme
  * something else says what, in `was`.
  */
 export function loadoutLines(gameData: GameData, ship: Ship, loadout: Loadout, loaded: Loadout | null = null): Line[] {
-  const { equipment, softwareChain } = indexGameData(gameData);
-  // In game any ware of a mandatory family at or above the Ship's default will do, so the mark stays on the default's line.
-  const familyFitted = (id: string) => (loadout.software ?? []).some((s) => softwareChain(s).includes(id));
+  const { equipment } = indexGameData(gameData);
   const line = (place: Place): Line => {
     const held = heldAt(ship, loadout, place);
     const count = held?.count ?? 0;
-    const missing = mandatory(ship, place) && !(place.kind === "software" ? familyFitted(place.equipment) : held);
+    const missing = mandatory(ship, place) && !held;
     const item = held?.equipment ? (equipment.get(held.equipment) ?? null) : null;
     const price = place.kind === "crew" ? times(gameData.crewPrice, count) : item ? times(item.price, count) : FREE;
     const line: Line = { place, equipment: item, count, price, missing };

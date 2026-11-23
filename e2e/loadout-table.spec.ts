@@ -78,20 +78,6 @@ test("the thruster has its own row and dropdown", async ({ page }) => {
   ]);
 });
 
-test("software is chosen from the Ship's software options", async ({ page }) => {
-  await openShip(page, "S", "Swiftwing Courier");
-
-  const scanner = page.getByRole("checkbox", { name: "Long Scanner" });
-  const scannerRow = loadoutTable(page).getByRole("row").filter({ has: scanner });
-  await expect(page.getByRole("checkbox", { name: "Flight Assist Mk1" })).not.toBeChecked();
-  await expect(scanner).not.toBeChecked();
-
-  await scanner.check();
-  await expect(scannerRow.getByRole("cell").nth(3)).toHaveText("11,000 Cr");
-  await scanner.uncheck();
-  await expect(scannerRow.getByRole("cell").nth(3)).toHaveText("");
-});
-
 const countOf = (page: Page, item: string) => page.getByRole("spinbutton", { name: `${item} count` });
 const rowOf = (page: Page, item: string) =>
   loadoutTable(page).getByRole("row").filter({ has: countOf(page, item) });
@@ -180,27 +166,24 @@ const MISSING = "Mandatory upgrade missing";
 test("the toolbar counts missing mandatory upgrades and the table marks their rows", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
-  // Engines, the thruster and default software are mandatory; weapons aren't.
+  // Engines and the thruster are mandatory; weapons aren't. Mandatory software is always fitted (ADR 0006).
   const warning = page.getByText(/mandatory missing/);
-  await expect(warning).toHaveText("⚠ 3 mandatory missing");
-  await expect(warning).toHaveAttribute("title", "Engines\nThruster\nFlight Assist Mk1");
+  await expect(warning).toHaveText("⚠ 2 mandatory missing");
+  await expect(warning).toHaveAttribute("title", "Engines\nThruster");
   await expect(row(page, /^Engines/).getByTitle(MISSING)).toHaveText("*");
   await expect(row(page, "Thruster").getByTitle(MISSING)).toBeVisible();
-  const flightAssist = page.getByRole("checkbox", { name: "Flight Assist Mk1" });
-  await expect(loadoutTable(page).getByRole("row").filter({ has: flightAssist }).getByTitle(MISSING)).toBeVisible();
   await expect(row(page, /con_weapon_01/).getByTitle(MISSING)).toHaveCount(0);
-  await expect(loadoutTable(page).getByTitle(MISSING)).toHaveCount(3);
+  await expect(loadoutTable(page).getByTitle(MISSING)).toHaveCount(2);
 
   // Nothing is blocked: other rows can still be filled.
   await fit(page, /con_weapon_01/, "Pulse Blaster");
-  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+  await expect(warning).toHaveText("⚠ 2 mandatory missing");
 
   await fit(page, /^Engines/, "Sprint Engine S");
-  await expect(warning).toHaveText("⚠ 2 mandatory missing");
+  await expect(warning).toHaveText("⚠ 1 mandatory missing");
   await expect(row(page, /^Engines/).getByTitle(MISSING)).toHaveCount(0);
 
   await fit(page, "Thruster", "Nimble Thruster S");
-  await flightAssist.check();
   await expect(warning).toBeHidden();
   await expect(loadoutTable(page).getByTitle(MISSING)).toHaveCount(0);
 
@@ -214,18 +197,15 @@ test("Slots tagged mandatory and the engines in a Slot Group count as mandatory 
   await openShip(page, "L", "Ironback Hauler");
 
   const warning = page.getByText(/mandatory missing/);
-  await expect(warning).toHaveText("⚠ 4 mandatory missing");
-  await expect(warning).toHaveAttribute(
-    "title",
-    "Engines\nShield con_shield_01\nThruster\nFlight Assist Mk1",
-  );
+  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+  await expect(warning).toHaveAttribute("title", "Engines\nShield con_shield_01\nThruster");
   await expect(row(page, /con_shield_01/).getByTitle(MISSING)).toBeVisible();
   await expect(row(page, /^Engines/).getByTitle(MISSING)).toBeVisible();
   // Turret and shield groups aren't mandatory.
   await expect(row(page, /Turrets group_front/).getByTitle(MISSING)).toHaveCount(0);
 
   await fit(page, /^Engines/, "Haul Engine L");
-  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+  await expect(warning).toHaveText("⚠ 2 mandatory missing");
 });
 
 test("one Engines row fits one engine type to all of the Ship's engines (#50)", async ({ page }) => {

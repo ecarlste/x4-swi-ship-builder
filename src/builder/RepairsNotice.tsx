@@ -10,8 +10,8 @@ const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${formatX4Versi
 
 /**
  * The dismissable notice shown when a Loadout opened from a Saved Loadout, a
- * Share Link or a Loadout File was repaired against the Game Data: every drop
- * and clamp, plus the version change.
+ * Share Link or a Loadout File was repaired against the Game Data: every
+ * Repair, plus the version change.
  */
 export function RepairsNotice({
   repairs,

@@ -87,6 +87,26 @@
     "familyName": "Long Range Scanner Software"
   },
   {
+    "kind": "software", "id": "fx_dock_mk1", "name": "Docking Computer Mk1", "nameId": "{900002,30}",
+    "price": { "min": 2000, "average": 2500, "max": 3000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Docking Software"
+  },
+  {
+    "kind": "software", "id": "fx_dock_mk2", "name": "Docking Computer Mk2", "nameId": "{900002,31}",
+    "price": { "min": 8000, "average": 10000, "max": 12000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": "fx_dock_mk1",
+    "familyName": "Docking Software"
+  },
+  {
+    "kind": "software", "id": "fx_trade_mk1", "name": "Trading Computer Mk1", "nameId": "{900002,32}",
+    "price": { "min": 20000, "average": 25000, "max": 30000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Trading Software"
+  },
+  {
+    "kind": "software", "id": "fx_trade_mk2", "name": "Trading Computer Mk2", "nameId": "{900002,33}",
+    "price": { "min": 40000, "average": 50000, "max": 60000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": "fx_trade_mk1",
+    "familyName": "Trading Software"
+  },
+  {
     "kind": "weapon", "id": "fx_cannon_s", "name": "Zephyr Cannon", "nameId": "{900002,16}",
     "price": { "min": 25000, "average": 30000, "max": 35000 }, "licence": null, "sellers": ["fx_guild"],
     "boltColour": null, "size": "s", "damage": { "value": 300, "noShield": 0, "hull": 0 }, "barrelAmount": 1, "fireRate": 1,

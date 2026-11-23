@@ -12,6 +12,7 @@ const escort = {
   format: 1,
   gameData: { swi: "091", x4: "800" },
   ship: "fx_courier",
+  software: ["fx_flightassist"],
   id: "6f1c1f2e-5d2b-4c1a-9a3e-0b7f6c2d9e11",
   name: "Escort",
   createdAt: "2026-11-01T10:00:00.000Z",

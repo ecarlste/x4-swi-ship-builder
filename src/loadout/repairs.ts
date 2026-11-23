@@ -1,6 +1,6 @@
 /**
- * Places in a Loadout and the Repairs made there: the drops and clamps that
- * make a Loadout fit its Ship and the Game Data.
+ * Places in a Loadout and the Repairs made there: the additions, drops and
+ * clamps that make a Loadout fit its Ship and the Game Data.
  */
 import type { CrewRole, SlotGroupKind } from "./loadout.ts";
 
@@ -31,11 +31,14 @@ export type DropReason =
   | "replaced-in-family";
 
 /**
- * A Repair: one drop of Equipment, or one count clamped to fit. `name` is the
- * Equipment's name, or its raw id when it isn't in the Game Data, or the Crew
- * role's name; a clamp of Crew has no `equipment`.
+ * A Repair: one drop of Equipment, one count clamped to fit, or one piece of
+ * mandatory software added to a Software Family that had none (ADR 0006).
+ * `name` is the Equipment's name, or its raw id when it isn't in the Game
+ * Data, or the Crew role's name; a clamp of Crew has no `equipment`. An
+ * addition names the Software Family it was added to in `family`.
  */
 export type LoadoutRepair =
+  | { type: "added"; place: Extract<Place, { kind: "software" }>; equipment: string; name: string; family: string }
   | { type: "dropped"; place: EquipmentPlace; equipment: string; name: string; reason: DropReason }
   | { type: "clamped"; place: EquipmentPlace; equipment: string; name: string; from: number; to: number }
   | { type: "clamped"; place: Extract<Place, { kind: "crew" }>; name: string; from: number; to: number };
@@ -70,6 +73,8 @@ const DROP_TEXT: Record<DropReason, string> = {
 /** One line saying what a Repair did, for notices and tooltips. */
 export function describeRepair(repair: LoadoutRepair): string {
   switch (repair.type) {
+    case "added":
+      return `${repair.name} ${placeText(repair.place)}: added, the Ship must fit ${repair.family}`;
     case "dropped":
       return `${repair.name} ${placeText(repair.place)}: dropped, ${DROP_TEXT[repair.reason]}`;
     case "clamped":
