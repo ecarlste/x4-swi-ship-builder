@@ -278,33 +278,38 @@ export function LoadoutTable({
       </TableHeader>
       <TableBody>{lines.map(row)}</TableBody>
       {crew.length > 0 && (
-        <CrewSection rules={rules} capacity={ship.capacities.crew} loadout={loadout} lines={crew} onChange={change} />
+        <CrewSection rules={rules} ship={ship} loadout={loadout} lines={crew} onChange={change} />
       )}
     </Table>
   );
 }
 
 /**
- * The Crew, after the Equipment: service crew and marines, sharing the Ship's
- * crew capacity, each at the crew price. The Captain is free and not a count
- * (ADR 0004).
+ * The Crew, after the Equipment: the Captain first, then service crew and
+ * marines, sharing the Ship's crew capacity, each at the crew price. The
+ * Captain is a fixed, free display row, not a Place or part of the Loadout
+ * (ADR 0004); its seat sits on top of the crew capacity, and the heading
+ * counts it, as the game's Crew figure does.
  */
 function CrewSection({
   rules,
-  capacity,
+  ship,
   loadout,
   lines,
   onChange,
 }: {
   rules: LoadoutRules;
-  capacity: number;
+  ship: Ship;
   loadout: Loadout;
   /** The Crew's lines, one per role. */
   lines: Line[];
   onChange: (edit: Edit) => void;
 }) {
   const headingId = useId();
-  const used = crewCount(loadout);
+  // The Captain's seat, on top of the crew capacity.
+  const used = crewCount(loadout) + 1;
+  const capacity = ship.capacities.crew + 1;
+  const captain = ship.size === "s" || ship.size === "m" ? "Pilot" : "Captain";
   return (
     <TableBody aria-labelledby={headingId}>
       <TableRow className="hover:bg-transparent">
@@ -315,6 +320,7 @@ function CrewSection({
           </span>
         </TableHead>
       </TableRow>
+      <Row label={captain} equipment="" quantity="1" keyValue="" price="Free" />
       {lines.map((line) => {
         if (line.place?.kind !== "crew") return null;
         const place = line.place;
