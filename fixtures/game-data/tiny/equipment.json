@@ -72,11 +72,13 @@
   },
   {
     "kind": "software", "id": "fx_flightassist", "name": "Flight Assist Mk1", "nameId": "{900002,14}",
-    "price": { "min": 0, "average": 0, "max": 0 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null
+    "price": { "min": 0, "average": 0, "max": 0 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Flight Assist Software"
   },
   {
     "kind": "software", "id": "fx_scanner", "name": "Long Scanner", "nameId": "{900002,15}",
-    "price": { "min": 10000, "average": 11000, "max": 12000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null
+    "price": { "min": 10000, "average": 11000, "max": 12000 }, "licence": null, "sellers": ["fx_guild"], "predecessor": null,
+    "familyName": "Long Range Scanner Software"
   },
   {
     "kind": "weapon", "id": "fx_cannon_s", "name": "Zephyr Cannon", "nameId": "{900002,16}",

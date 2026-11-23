@@ -165,6 +165,22 @@ export function checkIntegrity(data: SnapshotData): string[] {
     }
   }
 
+  // Every Software Family has the game's name, the same on each of its wares, so its group is never unlabelled.
+  for (const item of data.equipment) {
+    if (item.kind !== "software") continue;
+    if (item.familyName.trim() === "") {
+      errors.push(`equipment: ${item.id} Software Family has no name`);
+      continue;
+    }
+    const predecessor = item.predecessor === null ? undefined : equipment.get(item.predecessor);
+    if (predecessor?.kind === "software" && predecessor.familyName.trim() !== "" && predecessor.familyName !== item.familyName) {
+      errors.push(
+        `equipment: ${item.id} Software Family is named "${item.familyName}", ` +
+          `but ${predecessor.id} names it "${predecessor.familyName}"`,
+      );
+    }
+  }
+
   for (const list of data["fit-lists"]) {
     for (const itemId of list.equipment) {
       if (!equipment.has(itemId)) {

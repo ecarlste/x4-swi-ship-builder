@@ -276,6 +276,12 @@ export const equipmentSchema = z.discriminatedUnion("kind", [
        * one of a family.
        */
       predecessor: id.nullable(),
+      /**
+       * The name the game gives this software's Software Family, e.g.
+       * "Docking Software": the `factoryname` of the oldest ware in its chain
+       * of predecessors, as the buy screen heads the family's group.
+       */
+      familyName: z.string(),
     })
     .strict(),
 ]);
