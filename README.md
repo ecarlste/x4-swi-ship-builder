@@ -88,8 +88,24 @@ Each ticket gets its own worktree, so sessions don't share a working tree, a sna
 npm run worktree -- 76 ticket-worktrees
 ```
 
-This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main`, copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, copies the main checkout's `.env` if it has one, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
+This fetches and adds `../x4-swi-ship-builder-76` on a new branch `76-ticket-worktrees` from `origin/main` (or from `origin/<base>`, given a third argument: an integration-branch ticket passes the integration branch), copies `game-data/` (each worktree owns its snapshot, so a schema change re-extracts only its own), links the read-only `.cache/extract/files`, copies the main checkout's `.env` if it has one, runs `npm ci` there and prints the path to work in. Being its own checkout, it also gets its own Playwright port, as above. See `docs/agents/worktrees.md`.
 
 A tracked pre-commit hook (`.githooks/`, wired up by `npm ci` through the `prepare` script) refuses commits on `main` in every worktree. For a deliberate one, set `ALLOW_MAIN_COMMIT=1`.
 
 No commit credits an AI tool. A tracked commit-msg hook removes `Co-authored-by` trailers naming one, and the `attribution` CI job (`.github/workflows/attribution.yml`, which re-runs when the PR description is edited) fails a PR whose commits (trailers, author or committer email) or description still do. The pattern lives in `scripts/aiAttribution.ts`.
+
+## PR screenshots
+
+Every PR from this repo gets a bot comment with before and after screenshots, so a reviewer can see a UI change without running it. The `Screenshots` workflow (`.github/workflows/screenshots.yml`) builds the app at the PR's base and at its head, both against the fixture snapshot, and runs `screenshots/shots.spec.ts` against each build: full-page shots, 1280px wide, of the empty page, a fitted Loadout with the comparison popover open, Saved Loadouts open and the Save dialog open. The PNGs are committed to the orphan `pr-screenshots` branch under `pr-<number>/<head sha>/`, and one comment, found again by a hidden marker, shows them in a table. Each push replaces the PR's folder and updates the same comment; closing the PR deletes the folder.
+
+The screenshots aren't a test. A build or a state that fails leaves its image out (the comment shows _None_) and never fails `check`. PRs from forks are skipped: their token can't push the branch or comment. To take the screenshots locally:
+
+```bash
+GAME_DATA_DIR=fixtures/game-data/tiny npm run build
+```
+
+```bash
+SHOTS_PHASE=after SHOTS_DIST=dist SHOTS_OUT=test-results/shots npx playwright test -c screenshots/playwright.config.ts
+```
+
+See `docs/agents/pr-screenshots.md`.

@@ -11,6 +11,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
+- **Close after a merge into an integration branch**: GitHub acts on closing keywords (`Closes #<n>`) only when a PR merges into `main`, so a PR into any other branch leaves the issues it names open. Once that PR merges, close each issue it names with `gh issue close <n> --comment "Done in #<pr>, merged to <branch>."` The PR from the integration branch to `main` can still carry `Closes #<spec>`, where `<spec>` is the parent spec issue.
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
