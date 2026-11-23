@@ -69,8 +69,6 @@ export function ShipPicker({
   }, [value?.id, valueSize]);
   const labelIdPrefix = useId();
 
-  const factionName = useMemo(() => new Map(factions.map((f) => [f.id, f.name])), [factions]);
-  const sellerNames = (ship: Ship) => ship.sellers.map((id) => factionName.get(id) ?? id).join(", ");
   /** Factions that sell at least one Ship, by name. */
   const sellerOptions = useMemo(() => {
     const ids = new Set(ships.flatMap((s) => s.sellers));
@@ -123,17 +121,8 @@ export function ShipPicker({
                   <ComboboxLabel>{group.label}</ComboboxLabel>
                   <ComboboxCollection>
                     {(ship: Ship) => (
-                      <ComboboxItem
-                        key={ship.id}
-                        value={ship}
-                        aria-label={ship.name}
-                        aria-describedby={`${labelIdPrefix}-${ship.id}-sellers`}
-                        className="justify-between gap-4"
-                      >
-                        <span>{ship.name}</span>
-                        <span id={`${labelIdPrefix}-${ship.id}-sellers`} className="text-xs text-muted-foreground">
-                          {sellerNames(ship)}
-                        </span>
+                      <ComboboxItem key={ship.id} value={ship}>
+                        {ship.name}
                       </ComboboxItem>
                     )}
                   </ComboboxCollection>
