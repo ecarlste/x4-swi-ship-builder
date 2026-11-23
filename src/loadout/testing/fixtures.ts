@@ -122,7 +122,7 @@ export function gameData(ships: Ship[], equipment: Equipment[] = [], fitLists: F
   return {
     manifest: {
       swi: { version: "091", label: "0.9.1 HF", date: "2026-01-01" },
-      x4: { version: "8.00" },
+      x4: { version: "800" },
       dlcs: [],
       extractedAt: "2026-01-01T00:00:00Z",
       pipelineCommit: "test",
@@ -138,7 +138,7 @@ export function gameData(ships: Ship[], equipment: Equipment[] = [], fitLists: F
 }
 
 export function loadout(shipId: string, parts: Omit<Loadout, "format" | "gameData" | "ship"> = {}): Loadout {
-  return { format: LOADOUT_FORMAT, gameData: { swi: "091", x4: "8.00" }, ship: shipId, ...parts };
+  return { format: LOADOUT_FORMAT, gameData: { swi: "091", x4: "800" }, ship: shipId, ...parts };
 }
 
 // ---------------------------------------------------------------- flight

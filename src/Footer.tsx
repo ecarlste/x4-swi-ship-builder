@@ -1,15 +1,21 @@
 import type { Manifest } from "./gameData.ts";
+import { formatX4Version } from "./builder/format.ts";
+
+const COMMIT_URL = "https://github.com/ecarlste/x4-swi-ship-builder/commit/";
 
 /**
- * Game Data versions plus the notices the Egosoft Fan Content Policy and
- * Lucasfilm's fan-site guidance ask for. Keep it free of ads, sales and
+ * The Snapshot the page uses (its SWI release, X4 version, extraction date
+ * and the commit it was extracted from, linked to GitHub) plus the notices
+ * the Egosoft Fan Content Policy and Lucasfilm's fan-site guidance ask for. Keep it free of ads, sales and
  * donation links: the site must stay non-commercial.
  */
 export function Footer({ manifest }: { manifest: Manifest }) {
   return (
     <footer className="space-y-1 border-t px-4 py-3 text-xs text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-primary">
       <p>
-        Game Data: SWI {manifest.swi.label} · X4 {manifest.x4.version}
+        Game Data: SWI {manifest.swi.label} · X4 {formatX4Version(manifest.x4.version)} · extracted{" "}
+        {manifest.extractedAt.slice(0, 10)} from{" "}
+        <a href={COMMIT_URL + manifest.pipelineCommit}>{manifest.pipelineCommit.slice(0, 7)}</a>
       </p>
       <p>
         X4: Foundations is a game by Egosoft, available on{" "}

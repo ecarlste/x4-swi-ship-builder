@@ -4,9 +4,14 @@ test("the footer shows the Game Data versions and the required notices", async (
   await page.goto("/");
   const footer = page.getByRole("contentinfo");
 
-  // Versions from the fixture snapshot's manifest.
-  await expect(footer).toContainText("SWI 9.9.9 Fixture");
-  await expect(footer).toContainText("X4 9.99");
+  // The Snapshot, from the fixture snapshot's manifest: X4 "999" shows as the game writes it.
+  await expect(footer).toContainText(
+    "Game Data: SWI 9.9.9 Fixture · X4 9.99 · extracted 2026-01-01 from 1f68ba3",
+  );
+  await expect(footer.getByRole("link", { name: "1f68ba3" })).toHaveAttribute(
+    "href",
+    "https://github.com/ecarlste/x4-swi-ship-builder/commit/1f68ba3c0ffee5ca1ab1e0d15ea5edbadc0de123",
+  );
 
   // X4 credit with links to its store pages.
   await expect(footer.getByRole("link", { name: "Steam" })).toHaveAttribute(
