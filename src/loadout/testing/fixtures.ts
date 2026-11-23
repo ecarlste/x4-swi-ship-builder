@@ -72,6 +72,7 @@ export function gun(
   return {
     kind,
     ...tradeable(id),
+    boltColour: null,
     size: "s",
     barrelAmount: 1,
     magazine: null,

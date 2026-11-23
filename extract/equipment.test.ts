@@ -78,6 +78,7 @@ describe("transform: Equipment", () => {
       price: { min: 900, average: 1000, max: 1100 },
       licence: "militaryequipment",
       sellers: ["fx_guild"],
+      boltColour: null,
       size: "s",
       damage: { value: 100, noShield: 20, hull: 7 },
       barrelAmount: 2,
@@ -104,6 +105,21 @@ describe("transform: Equipment", () => {
       heat: null,
     });
     expect(item("fx_tractor")).toMatchObject({ fireRate: 1 });
+  });
+
+  it("keeps a colour variant's bolt colour from the markup on its letter, and gives Equipment without one none", () => {
+    const { item } = run(
+      wharfWorld()
+        .equipment(gun({ id: "fx_laser_green", name: "\\033#95e03b29#XX-20 Heavy Turbolaser\\033X \\033#FF00FF00#G\\033X" }))
+        .equipment(gun({ id: "fx_laser_red", name: "\\033#95e03b29#XX-18-546 Heavy Dual Turbolaser \\033X \\033#ffff0000#R\\033X" }))
+        .equipment(gun({ id: "fx_ion", name: "\\033#993d7bff#V-50 Heavy Ion Cannon\\033X" }))
+        .equipment(gun({ id: "fx_plain", name: "Plain Blaster" })),
+    );
+
+    expect(item("fx_laser_green")).toMatchObject({ name: "XX-20 Heavy Turbolaser G", boltColour: "FF00FF00" });
+    expect(item("fx_laser_red")).toMatchObject({ name: "XX-18-546 Heavy Dual Turbolaser  R", boltColour: "ffff0000" });
+    expect(item("fx_ion")).toMatchObject({ name: "V-50 Heavy Ion Cannon", boltColour: null });
+    expect(item("fx_plain")).toMatchObject({ name: "Plain Blaster", boltColour: null });
   });
 
   it("lists in each Slot the Equipment whose type connection tags, but for `component`, the Slot has", () => {

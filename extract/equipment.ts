@@ -411,10 +411,12 @@ function readItem(
   switch (c.kind) {
     case "weapon":
     case "turret": {
+      const boltColour = text.lastLetterColour(nameId, where);
       if (c.ammunitionTags !== null) {
         return {
           kind: c.kind,
           ...common,
+          boltColour,
           size: c.size,
           damage: { value: 0, noShield: 0, hull: 0 },
           barrelAmount: 1,
@@ -441,6 +443,7 @@ function readItem(
       return {
         kind: c.kind,
         ...common,
+        boltColour,
         size: c.size,
         damage: {
           value: num(bullet, "damage", "value"),

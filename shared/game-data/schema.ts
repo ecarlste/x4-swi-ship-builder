@@ -178,6 +178,11 @@ export type Ship = z.infer<typeof shipSchema>;
 const equipmentSize = sizeSchema.nullable();
 
 const gunFields = {
+  /**
+   * A colour variant's bolt colour, `AARRGGBB` as the game's colour markup on
+   * the variant's R, G, O or B letter writes it; null for Equipment without one.
+   */
+  boltColour: z.string().nullable(),
   size: equipmentSize,
   /** Bullet `damage`: `value`, `noshield` and `hull` all count against hull (#67). */
   damage: z.object({ value: nonNegative, noShield: nonNegative, hull: nonNegative }).strict(),
