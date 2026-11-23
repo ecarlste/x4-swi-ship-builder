@@ -8,6 +8,8 @@ export default defineConfig({
   testDir: "e2e",
   // e2e/*.test.ts are Vitest unit tests of the e2e helpers.
   testMatch: "**/*.spec.ts",
+  // Warns when the machine is under load, so a red run under contention reads as such (#164).
+  globalSetup: "./e2e/global-setup.ts",
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
