@@ -17,6 +17,7 @@ import { indexGameData } from "../gameDataIndex.ts";
 import {
   CREW_ROLE_NAMES,
   crewCount,
+  fittedLaunchers,
   missileCapacity,
   shipEngines,
   type ConsumableKind,
@@ -119,14 +120,7 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
    * Kinds the Loadout has no capacity for are left out.
    */
   const consumables = (loadout: Loadout): ConsumableOptions[] => {
-    const fittedIds = [
-      ...Object.values(loadout.slots ?? {}),
-      ...Object.values(loadout.groups ?? {}).flatMap((kinds) => Object.values(kinds).map((e) => e.equipment)),
-    ];
-    const missileLists = fittedIds.flatMap((id) => {
-      const item = equipment.get(id);
-      return (item?.kind === "weapon" || item?.kind === "turret") && item.missiles ? [item.missiles] : [];
-    });
+    const missileLists = fittedLaunchers(loadout, equipment).flatMap(({ item }) => (item.missiles ? [item.missiles] : []));
     const all: ConsumableOptions[] = [
       { kind: "missile", capacity: missileCapacity(ship, loadout, equipment), items: sortedItems(missileLists) },
       { kind: "drone", capacity: ship.capacities.drones, items: sortedItems([ship.drones]) },
@@ -136,39 +130,45 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
     return all.filter((o) => o.capacity > 0 && o.items.length > 0);
   };
 
-  /**
-   * After a launcher is fitted or removed: drops the consumables the Ship can
-   * no longer carry, such as missiles no fitted launcher fires, and cuts each
-   * kind to its capacity, which a launcher's own storage changes (#158). As
-   * when resolving, the ones stored first keep their counts.
-   */
-  const withoutUncarried = (loadout: Loadout): Edit => {
-    const options = consumables(loadout);
-    const kindOf = new Map(options.flatMap((o) => o.items.map((e) => [e.id, o.kind] as const)));
-    const left = new Map(options.map((o) => [o.kind, o.capacity]));
-    const repairs: LoadoutRepair[] = [];
-    const kept: Record<string, number> = {};
-    for (const [id, count] of Object.entries(loadout.consumables ?? {})) {
-      const kind = kindOf.get(id);
-      const to = kind === undefined ? 0 : Math.min(count, left.get(kind)!);
-      const place: EquipmentPlace = { kind: "consumable", equipment: id };
-      if (kind === undefined || to === 0) {
-        repairs.push(drop(place, id, "doesnt-fit"));
-        continue;
-      }
-      left.set(kind, left.get(kind)! - to);
-      kept[id] = to;
-      if (to < count) repairs.push({ type: "clamped", place, equipment: id, name: nameOf(id), from: count, to });
-    }
-    return { loadout: withEntry(loadout, "consumables", kept), repairs };
-  };
-
   /** How many of a consumable fit beside the others of its kind; 0 for one the Ship can't carry. */
   const consumableLimit = (loadout: Loadout, id: string) => {
     const options = consumables(loadout).find((o) => o.items.some((e) => e.id === id));
     if (!options) return 0;
     const others = options.items.reduce((sum, e) => sum + (e.id === id ? 0 : (loadout.consumables?.[e.id] ?? 0)), 0);
     return Math.max(0, options.capacity - others);
+  };
+
+  /** Sets a consumable's count, clamped to what its kind's capacity leaves; 0 removes it. */
+  const setConsumable = (loadout: Loadout, id: string, typed: number): Edit => {
+    const count = wholeCount(typed);
+    const rest = withoutKey(loadout.consumables, id);
+    if (count <= 0) return noRepairs(withEntry(loadout, "consumables", rest));
+    const place: EquipmentPlace = { kind: "consumable", equipment: id };
+    if (!equipment.has(id)) return dropped(loadout, place, id, "unknown-equipment");
+    const limit = consumableLimit(loadout, id);
+    if (limit === 0) return dropped(loadout, place, id, "doesnt-fit");
+    const to = Math.min(count, limit);
+    const edited = withEntry(loadout, "consumables", { ...rest, [id]: to });
+    if (to === count) return noRepairs(edited);
+    return { loadout: edited, repairs: [{ type: "clamped", place, equipment: id, name: nameOf(id), from: count, to }] };
+  };
+
+  /**
+   * After a launcher is fitted or removed: drops the consumables the Ship can
+   * no longer carry, such as missiles no fitted launcher fires, and cuts each
+   * kind to its capacity, which a launcher's own storage changes (#158). As
+   * when resolving, they are set again in the order they were stored, so the
+   * ones stored first keep their counts.
+   */
+  const withoutUncarried = (loadout: Loadout): Edit => {
+    let carried = withEntry(loadout, "consumables", undefined);
+    const repairs: LoadoutRepair[] = [];
+    for (const [id, count] of Object.entries(loadout.consumables ?? {})) {
+      const edit = setConsumable(carried, id, count);
+      carried = edit.loadout;
+      repairs.push(...edit.repairs);
+    }
+    return { loadout: carried, repairs };
   };
 
   /** How many of a Crew role fit beside the other role in the Ship's crew capacity (ADR 0004). */
@@ -237,20 +237,7 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
       return { loadout: edited, repairs: [{ type: "clamped", place: { kind: "crew", role }, name: CREW_ROLE_NAMES[role], from: count, to }] };
     },
 
-    /** Sets a consumable's count, clamped to what its kind's capacity leaves; 0 removes it. */
-    setConsumable(loadout: Loadout, id: string, typed: number): Edit {
-      const count = wholeCount(typed);
-      const rest = withoutKey(loadout.consumables, id);
-      if (count <= 0) return noRepairs(withEntry(loadout, "consumables", rest));
-      const place: EquipmentPlace = { kind: "consumable", equipment: id };
-      if (!equipment.has(id)) return dropped(loadout, place, id, "unknown-equipment");
-      const limit = consumableLimit(loadout, id);
-      if (limit === 0) return dropped(loadout, place, id, "doesnt-fit");
-      const to = Math.min(count, limit);
-      const edited = withEntry(loadout, "consumables", { ...rest, [id]: to });
-      if (to === count) return noRepairs(edited);
-      return { loadout: edited, repairs: [{ type: "clamped", place, equipment: id, name: nameOf(id), from: count, to }] };
-    },
+    setConsumable,
 
     /** Fits Equipment to a Slot, or empties it with null. */
     setSlot(loadout: Loadout, slotId: string, id: string | null): Edit {
@@ -319,8 +306,10 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
 
     /**
      * Sets how many of a Slot Group's Slots its fitted Equipment of one kind
-     * fills, clamped to the group's size; 0 empties it. With nothing fitted it
-     * changes nothing. A count is taken as a whole number, as in every edit.
+     * fills, clamped to the group's size; 0 empties it. A launcher's storage
+     * counts once per Slot, so the consumables are then cut to what's left.
+     * With nothing fitted it changes nothing. A count is taken as a whole
+     * number, as in every edit.
      */
     setGroupCount(loadout: Loadout, groupId: string, kind: SlotGroupKind, typed: number): Edit {
       const count = wholeCount(typed);
@@ -330,13 +319,11 @@ export function loadoutRules(gameData: GameData, ship: Ship) {
       if (!part) return dropped(loadout, { kind: "group", group: groupId, groupKind: kind }, entry.equipment, "unknown-slot-group");
       if (count <= 0) return withoutUncarried(withGroup(loadout, groupId, kind, null));
       const to = Math.min(count, part.count);
-      const edited = withGroup(loadout, groupId, kind, { equipment: entry.equipment, count: to });
-      if (to === count) return noRepairs(edited);
+      const carried = withoutUncarried(withGroup(loadout, groupId, kind, { equipment: entry.equipment, count: to }));
+      if (to === count) return carried;
       const place: EquipmentPlace = { kind: "group", group: groupId, groupKind: kind };
-      return {
-        loadout: edited,
-        repairs: [{ type: "clamped", place, equipment: entry.equipment, name: nameOf(entry.equipment), from: count, to }],
-      };
+      const clamp: LoadoutRepair = { type: "clamped", place, equipment: entry.equipment, name: nameOf(entry.equipment), from: count, to };
+      return { loadout: carried.loadout, repairs: [clamp, ...carried.repairs] };
     },
   };
 }

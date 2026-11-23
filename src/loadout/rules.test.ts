@@ -162,6 +162,39 @@ describe("a launcher's own missile storage (#158)", () => {
       ],
     });
   });
+
+  test("lowering a Slot Group's count cuts the missiles to the storage its launchers leave", () => {
+    // unconfirmed (#71): no storage launcher in Game Data fits a Slot Group yet.
+    const podTurret = launcher("turret", "fx_pod_turret", "fl_darts", 6);
+    const battery = ship({
+      slotGroups: [turretGroup("group_front", 4)],
+      capacities: { missiles: 10, drones: 0, deployables: 0, countermeasures: 0, crew: 0, cargo: 0 },
+    });
+    const groupRules = loadoutRules(gameData([battery], [darts, podTurret], fitLists), battery);
+    const armed = (count: number, dartCount: number) =>
+      loadout("fx_ship", {
+        groups: { group_front: { turret: { equipment: "fx_pod_turret", count } } },
+        consumables: { fx_dart: dartCount },
+      });
+    expect(groupRules.setGroupCount(armed(4, 30), "group_front", "turret", 2)).toEqual({
+      loadout: armed(2, 22),
+      repairs: [clamped("fx_dart", 30, 22)],
+    });
+    // A count over the group's size is cut to it first, then the missiles to what that leaves.
+    const groupPlace = { kind: "group", group: "group_front", groupKind: "turret" } as const;
+    expect(groupRules.setGroupCount(armed(6, 40), "group_front", "turret", 9)).toEqual({
+      loadout: armed(4, 34),
+      repairs: [
+        { type: "clamped", place: groupPlace, equipment: "fx_pod_turret", name: "fx_pod_turret", from: 9, to: 4 },
+        clamped("fx_dart", 40, 34),
+      ],
+    });
+    // Picking the same launcher again keeps the count, and the missiles with it.
+    expect(groupRules.setGroupEquipment(armed(2, 22), "group_front", "turret", "fx_pod_turret")).toEqual({
+      loadout: armed(2, 22),
+      repairs: [],
+    });
+  });
 });
 
 describe("Slot Groups", () => {

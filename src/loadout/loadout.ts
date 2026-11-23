@@ -92,14 +92,28 @@ export type ConsumableKind = "missile" | "drone" | "deployable" | "countermeasur
  * counts once per count; no launcher with storage fits a Slot Group in Game Data.
  */
 export function missileCapacity(ship: Ship, loadout: Loadout, equipment: ReadonlyMap<string, Equipment>): number {
+  return fittedLaunchers(loadout, equipment).reduce(
+    (total, { item, count }) => total + item.missileStorage * count,
+    ship.capacities.missiles,
+  );
+}
+
+/**
+ * The weapons and turrets a Loadout fits in its Slots and Slot Groups, each
+ * with how many are fitted: 1 in a Slot, the count in a Slot Group.
+ */
+export function fittedLaunchers(
+  loadout: Loadout,
+  equipment: ReadonlyMap<string, Equipment>,
+): { item: Extract<Equipment, { kind: "weapon" | "turret" }>; count: number }[] {
   const fitted = [
     ...Object.values(loadout.slots ?? {}).map((id) => ({ id, count: 1 })),
     ...Object.values(loadout.groups ?? {}).flatMap((kinds) => Object.values(kinds).map((e) => ({ id: e.equipment, count: e.count }))),
   ];
-  return fitted.reduce((total, { id, count }) => {
+  return fitted.flatMap(({ id, count }) => {
     const item = equipment.get(id);
-    return item?.kind === "weapon" || item?.kind === "turret" ? total + item.missileStorage * count : total;
-  }, ship.capacities.missiles);
+    return item?.kind === "weapon" || item?.kind === "turret" ? [{ item, count }] : [];
+  });
 }
 
 /**
