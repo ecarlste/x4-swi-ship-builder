@@ -2,10 +2,11 @@ import { useId } from "react";
 import { TriangleAlert, X } from "lucide-react";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { formatX4Version } from "./format.ts";
 import { describeRepair, type LoadoutRepair } from "../loadout/repairs.ts";
 import type { GameDataVersions } from "../loadout/resolve.ts";
 
-const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${v.x4}`;
+const versionText = (v: GameDataVersions) => `SWI ${v.swi} · X4 ${formatX4Version(v.x4)}`;
 
 /**
  * The dismissable notice shown when a Loadout opened from a Saved Loadout, a

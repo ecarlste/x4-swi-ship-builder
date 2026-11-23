@@ -7,7 +7,7 @@ import {
   saveLoadout,
 } from "./savedLoadouts.ts";
 
-const loadout = { format: 1 as const, gameData: { swi: "091", x4: "8.00" }, ship: "ship_xwing" };
+const loadout = { format: 1 as const, gameData: { swi: "091", x4: "800" }, ship: "ship_xwing" };
 
 const stored = {
   ...loadout,

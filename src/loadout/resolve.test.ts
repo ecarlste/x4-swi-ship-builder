@@ -1,6 +1,6 @@
 /**
  * Resolving Loadouts against the bundled Game Data (the tiny fixture under
- * Vitest: SWI "999", X4 "9.99").
+ * Vitest: SWI "999", X4 "999").
  */
 import { describe, expect, test } from "vitest";
 import { gameData } from "../gameData.ts";
@@ -9,8 +9,8 @@ import { describeRepair } from "./repairs.ts";
 import { resolveLoadout } from "./resolve.ts";
 import { gameData as fixtureGameData, ship, software } from "./testing/fixtures.ts";
 
-const current = { swi: "999", x4: "9.99" };
-const older = { swi: "091", x4: "8.00" };
+const current = { swi: "999", x4: "999" };
+const older = { swi: "091", x4: "800" };
 
 const loadout = (over: Partial<Loadout> = {}): Loadout => ({ format: 1, gameData: current, ship: "fx_courier", ...over });
 
@@ -264,7 +264,7 @@ describe("resolveLoadout: one of each Software Family", () => {
   });
 
   test("software that still fits comes back in the order it was stored", () => {
-    const stored = loadout({ ship: "fx_scout", gameData: { swi: "091", x4: "8.00" }, software: ["fx_lrs_mk2", "fx_trading"] });
+    const stored = loadout({ ship: "fx_scout", gameData: { swi: "091", x4: "800" }, software: ["fx_lrs_mk2", "fx_trading"] });
 
     expect(resolved(stored, families)).toMatchObject({ loadout: stored, repairs: [] });
   });

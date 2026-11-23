@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { parseLoadout, parseSavedLoadout } from "./loadout.ts";
 
-const empty = { format: 1, gameData: { swi: "091", x4: "8.00" }, ship: "ship_xwing" };
+const empty = { format: 1, gameData: { swi: "091", x4: "800" }, ship: "ship_xwing" };
 
 const full = {
   ...empty,
