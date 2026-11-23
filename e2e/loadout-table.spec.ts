@@ -1,5 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { fit, loadoutTable, openShip, row } from "./helpers.ts";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import { explanationOf, fit, loadoutTable, openShip, row } from "./helpers.ts";
 
 /** Checks the open dropdown lists exactly these options, in order. */
 async function expectOptions(page: Page, names: string[]) {
@@ -29,7 +29,6 @@ test("filling a Slot shows its Equipment, quantity, key value and average price,
   // The fitted item is ticked.
   await weapon.getByRole("combobox").click();
   await expect(page.getByRole("option", { name: "Zephyr Cannon" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("option", { name: "Zephyr Cannon" })).toContainText("✓");
   await page.getByRole("option", { name: "— empty —" }).click();
 
   await expect(weapon.getByRole("combobox")).toHaveText(/— empty —/);
@@ -136,56 +135,60 @@ test("missiles are limited to those a fitted launcher can fire, sharing the Ship
 });
 
 const MISSING = "Mandatory upgrade missing";
+/** The toolbar's count of missing mandatory upgrades. */
+const missingCount = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: /mandatory missing/ });
+/** The marks on rows missing a mandatory upgrade, within `scope`. */
+const missingMarks = (scope: Locator) => scope.getByRole("button", { name: MISSING, exact: true });
 
 test("the toolbar counts missing mandatory upgrades and the table marks their rows", async ({ page }) => {
   await openShip(page, "S", "Swiftwing Courier");
 
   // Engines, the thruster and default software are mandatory; weapons aren't.
-  const warning = page.getByText(/mandatory missing/);
-  await expect(warning).toHaveText("⚠ 3 mandatory missing");
-  await expect(warning).toHaveAttribute("title", "Engines\nThruster\nFlight Assist Mk1");
-  await expect(row(page, /^Engines/).getByTitle(MISSING)).toHaveText("*");
-  await expect(row(page, "Thruster").getByTitle(MISSING)).toBeVisible();
+  const count = missingCount(page);
+  await expect(count).toHaveAccessibleName("3 mandatory missing");
+  const explanation = await explanationOf(count);
+  await expect.poll(() => explanation.innerText()).toBe("Engines\nThruster\nFlight Assist Mk1");
+  await expect(missingMarks(row(page, /^Engines/))).toHaveText("*");
+  await expect(missingMarks(row(page, "Thruster"))).toBeVisible();
   const flightAssist = page.getByRole("checkbox", { name: "Flight Assist Mk1" });
-  await expect(loadoutTable(page).getByRole("row").filter({ has: flightAssist }).getByTitle(MISSING)).toBeVisible();
-  await expect(row(page, /con_weapon_01/).getByTitle(MISSING)).toHaveCount(0);
-  await expect(loadoutTable(page).getByTitle(MISSING)).toHaveCount(3);
+  await expect(missingMarks(loadoutTable(page).getByRole("row").filter({ has: flightAssist }))).toBeVisible();
+  await expect(missingMarks(row(page, /con_weapon_01/))).toHaveCount(0);
+  await expect(missingMarks(loadoutTable(page))).toHaveCount(3);
 
   // Nothing is blocked: other rows can still be filled.
   await fit(page, /con_weapon_01/, "Pulse Blaster");
-  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+  await expect(count).toHaveAccessibleName("3 mandatory missing");
 
   await fit(page, /^Engines/, "Sprint Engine S");
-  await expect(warning).toHaveText("⚠ 2 mandatory missing");
-  await expect(row(page, /^Engines/).getByTitle(MISSING)).toHaveCount(0);
+  await expect(count).toHaveAccessibleName("2 mandatory missing");
+  await expect(missingMarks(row(page, /^Engines/))).toHaveCount(0);
 
   await fit(page, "Thruster", "Nimble Thruster S");
   await flightAssist.check();
-  await expect(warning).toBeHidden();
-  await expect(loadoutTable(page).getByTitle(MISSING)).toHaveCount(0);
+  await expect(count).toBeHidden();
+  await expect(missingMarks(loadoutTable(page))).toHaveCount(0);
 
   // Emptying a mandatory row brings the warning back.
   await fit(page, "Thruster", "— empty —");
-  await expect(warning).toHaveText("⚠ 1 mandatory missing");
-  await expect(warning).toHaveAttribute("title", "Thruster");
+  await expect(count).toHaveAccessibleName("1 mandatory missing");
+  const stillMissing = await explanationOf(count);
+  await expect.poll(() => stillMissing.innerText()).toBe("Thruster");
 });
 
 test("Slots tagged mandatory and the engines in a Slot Group count as mandatory upgrades", async ({ page }) => {
   await openShip(page, "L", "Ironback Hauler");
 
-  const warning = page.getByText(/mandatory missing/);
-  await expect(warning).toHaveText("⚠ 4 mandatory missing");
-  await expect(warning).toHaveAttribute(
-    "title",
-    "Engines\nShield con_shield_01\nThruster\nFlight Assist Mk1",
-  );
-  await expect(row(page, /con_shield_01/).getByTitle(MISSING)).toBeVisible();
-  await expect(row(page, /^Engines/).getByTitle(MISSING)).toBeVisible();
+  const count = missingCount(page);
+  await expect(count).toHaveAccessibleName("4 mandatory missing");
+  const explanation = await explanationOf(count);
+  await expect.poll(() => explanation.innerText()).toBe("Engines\nShield con_shield_01\nThruster\nFlight Assist Mk1");
+  await expect(missingMarks(row(page, /con_shield_01/))).toBeVisible();
+  await expect(missingMarks(row(page, /^Engines/))).toBeVisible();
   // Turret and shield groups aren't mandatory.
-  await expect(row(page, /Turrets group_front/).getByTitle(MISSING)).toHaveCount(0);
+  await expect(missingMarks(row(page, /Turrets group_front/))).toHaveCount(0);
 
   await fit(page, /^Engines/, "Haul Engine L");
-  await expect(warning).toHaveText("⚠ 3 mandatory missing");
+  await expect(count).toHaveAccessibleName("3 mandatory missing");
 });
 
 test("one Engines row fits one engine type to all of the Ship's engines (#50)", async ({ page }) => {

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fit, openShip } from "./helpers.ts";
+import { explanationOf, fit, openShip } from "./helpers.ts";
 
 const stats = (page: Page) => page.getByRole("complementary", { name: "Stats" });
 /** The value cell of the first Stats row with this label. */
@@ -73,7 +73,8 @@ test("Avg. Turret Output averages Slot Group turrets over six directions, with t
 
   const row = stats(page).getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Avg. Turret Output (MW)" }) });
   await expect(row.getByRole("cell")).toHaveText("205");
-  await expect(row).toHaveAttribute("title", "all turrets' damage averaged over six directions");
+  const mark = row.getByRole("button", { name: "Avg. Turret Output (MW)" });
+  await expect(await explanationOf(mark)).toHaveText("all turrets' damage averaged over six directions");
   await expect(stat(page, "Burst Weapon Output (MW)")).toHaveText("0");
 });
 
