@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fit, pickShip, row } from "./helpers.ts";
+import { fit, pickShip, row, toasts } from "./helpers.ts";
 
 const copyLink = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: "Copy link" });
 const saveButton = (page: Page) => page.getByRole("toolbar").getByRole("button", { name: "Save", exact: true });
@@ -28,7 +28,7 @@ test("a copied link opens the same Loadout, with its name, in a new page", async
   await saveDialog(page).getByRole("button", { name: "Save" }).click();
 
   await copyLink(page).click();
-  await expect(page.getByRole("status")).toContainText("Link copied");
+  await expect(toasts(page)).toContainText("Link copied");
   const link = await readClipboard(page);
   expect(link).toMatch(/\/#l=[A-Za-z0-9_-]+$/);
 

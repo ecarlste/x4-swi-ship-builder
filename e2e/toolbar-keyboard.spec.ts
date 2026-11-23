@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { toasts } from "./helpers.ts";
 
 const toolbarButton = (page: Page, name: string) =>
   page.getByRole("toolbar").getByRole("button", { name, exact: true });
@@ -123,7 +124,7 @@ test("toolbar actions are triggered from the keyboard with Enter or Space", asyn
   // Copy link copies a Share Link.
   await tabTo(page, toolbarButton(page, "Copy link"));
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("status")).toContainText("Link copied");
+  await expect(toasts(page)).toContainText("Link copied");
 
   // Save asks for a name.
   await page.keyboard.press("Shift+Tab");
