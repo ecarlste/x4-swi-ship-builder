@@ -98,7 +98,7 @@ export function missile(
   return { kind: "missile", ...tradeable(id), explosionDamage, hullDamage, barrelAmount, reloadTime };
 }
 
-/** The Software Family name fixture software carries. */
+/** The Software Family name fixture software carries unless given one. */
 const FAMILY_NAME = "Fixture Software";
 
 /** A piece of Equipment of a kind with no stats of its own, at a price. */
@@ -110,13 +110,14 @@ export function priced(
   return kind === "software" ? { kind, ...tradeable(id), price, predecessor: null, familyName: FAMILY_NAME } : { kind, ...tradeable(id), price };
 }
 
-/** Software that replaces `predecessor` in its Software Family, at a price. */
+/** Software that replaces `predecessor` in its Software Family, at a price, under the family's name. */
 export function software(
   id: string,
   predecessor: string | null = null,
   price = { min: 0, average: 0, max: 0 },
+  familyName = FAMILY_NAME,
 ): Equipment {
-  return { kind: "software", ...tradeable(id), price, predecessor, familyName: FAMILY_NAME };
+  return { kind: "software", ...tradeable(id), price, predecessor, familyName };
 }
 
 export function gameData(ships: Ship[], equipment: Equipment[] = [], fitLists: FitList[] = []): GameData {

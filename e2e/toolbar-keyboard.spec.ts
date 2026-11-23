@@ -152,12 +152,13 @@ test("disabled toolbar actions don't respond and Tab passes over them", async ({
 
 test("the mandatory-missing count is reached by Tab and opens a Tooltip naming what's missing", async ({ page }) => {
   await pickShipByKeyboard(page, "Swiftwing");
-  const count = page.getByRole("toolbar").getByRole("button", { name: /3 mandatory missing/ });
+  const count = page.getByRole("toolbar").getByRole("button", { name: /2 mandatory missing/ });
   await tabTo(page, count);
 
   const tooltip = page.getByRole("tooltip");
   await expect(tooltip).toBeVisible();
-  await expect(tooltip).toHaveText("Engines Thruster Flight Assist Mk1");
+  // Mandatory software is always fitted, so it's never missing (ADR 0006).
+  await expect(tooltip).toHaveText("Engines Thruster");
 
   // Moving on closes it.
   await page.keyboard.press("Tab");

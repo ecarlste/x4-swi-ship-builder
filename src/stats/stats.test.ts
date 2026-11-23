@@ -445,7 +445,7 @@ describe("the configuration screen's rows", () => {
 });
 
 describe("mandatory upgrades", () => {
-  test("lists one engine row for all the Ship's engines, then mandatory Slots, the thruster and default software", () => {
+  test("lists one engine row for all the Ship's engines, then mandatory Slots and the thruster, but never software (ADR 0006)", () => {
     const data = gameData(
       [
         ship({
@@ -465,7 +465,6 @@ describe("mandatory upgrades", () => {
       { place: { kind: "engine" }, label: "Engines" },
       { place: { kind: "slot", slot: "con_shield_01" }, label: "Shield con_shield_01" },
       { place: { kind: "thruster" }, label: "Thruster" },
-      { place: { kind: "software", equipment: "assist" }, label: "assist" },
     ]);
   });
 });

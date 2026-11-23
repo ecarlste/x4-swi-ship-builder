@@ -10,8 +10,8 @@ const EMPTY_LABEL = "— empty —";
 const SURFACE = "rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10";
 
 /**
- * A Slot's Equipment Select in the Loadout table: plain names sorted by name, "— empty —" first,
- * the fitted item ticked. No search or grouping. It works by keyboard: Enter, Space or the arrow
+ * A Slot's Equipment Select in the Loadout table: plain names sorted by name, "— empty —" (or the
+ * given empty label, or none) first, the fitted item ticked. No search or grouping. It works by keyboard: Enter, Space or the arrow
  * keys open it, the arrow keys and typed letters move through it, Enter fits and Escape closes
  * it unchanged. The highlighted option, hovered or arrowed to, shows `compare`'s popover beside
  * the list: each option takes real focus as it is highlighted (Base UI), so the popover follows focus.
@@ -22,6 +22,7 @@ export function EquipmentSelect({
   value,
   onChange,
   compare,
+  emptyLabel = EMPTY_LABEL,
 }: {
   /** Accessible name, e.g. "con_weapon_01 Equipment". */
   label: string;
@@ -31,6 +32,8 @@ export function EquipmentSelect({
   onChange: (equipment: string | null) => void;
   /** The comparison popover's content for the highlighted option. */
   compare?: (option: Equipment) => ReactNode;
+  /** The empty option's label, first in the list; null for a Select that can't be emptied. */
+  emptyLabel?: string | null;
 }) {
   /** The option the comparison popover compares with the fitted item, if it shows. */
   const [compared, setCompared] = useState<Equipment | null>(null);
@@ -38,7 +41,7 @@ export function EquipmentSelect({
 
   const sorted = [...options].sort((a, b) => a.name.localeCompare(b.name));
   const items: { value: string | null; label: string }[] = [
-    { value: null, label: EMPTY_LABEL },
+    ...(emptyLabel === null ? [] : [{ value: null, label: emptyLabel }]),
     ...sorted.map((e) => ({ value: e.id, label: e.name })),
   ];
   const fitted = sorted.find((e) => e.id === value) ?? null;

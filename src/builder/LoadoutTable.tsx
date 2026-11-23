@@ -60,8 +60,8 @@ function keyValue(item: Equipment): string {
  * The editable Loadout table, one row per line of the Loadout: the Chassis
  * first, read-only; one row for all the Ship's engines, which take one engine
  * type between them (ADR 0001); one row per other Slot and per Slot Group kind;
- * the thruster, the consumables and the software. After the Equipment, a Crew
- * section for a Ship with crew capacity. Columns: Slot, Equipment, quantity,
+ * the thruster and the consumables. After them, a Software section, one row
+ * per Software Family, and a Crew section for a Ship with crew capacity. Columns: Slot, Equipment, quantity,
  * key value and average price.
  *
  * Rows, prices, mandatory marks and "was" values come from the Loadout's
@@ -228,32 +228,14 @@ export function LoadoutTable({
           />
         );
       }
+      // Software has its own section, one row per Software Family, and the Crew theirs.
       case "software":
-        return (
-          <Row
-            key={`software/${place.equipment}`}
-            label="Software"
-            missing={line.missing}
-            equipment={
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={count > 0}
-                  onCheckedChange={(checked) => change(rules.setSoftware(loadout, place.equipment, checked))}
-                />
-                {nameOf(place.equipment)}
-              </label>
-            }
-            quantity={count > 0 ? "1" : ""}
-            keyValue=""
-            price={price}
-            was={wasText((held) => (held ? "fitted" : "not fitted"))}
-          />
-        );
       case "crew":
         return null;
     }
   };
 
+  const software = lines.filter((l) => l.place?.kind === "software");
   const crew = lines.filter((l) => l.place?.kind === "crew");
   return (
     <Table aria-label="Loadout">
@@ -277,10 +259,102 @@ export function LoadoutTable({
         </TableRow>
       </TableHeader>
       <TableBody>{lines.map(row)}</TableBody>
+      {rules.softwareFamilies().length > 0 && (
+        <SoftwareSection rules={rules} loadout={loadout} lines={software} onChange={change} />
+      )}
       {crew.length > 0 && (
         <CrewSection rules={rules} ship={ship} loadout={loadout} lines={crew} onChange={change} />
       )}
     </Table>
+  );
+}
+
+/**
+ * The software, after the other Equipment: one row per Software Family,
+ * under the game's name for it and marked Mandatory when the Ship must fit
+ * it. A family fits at most one ware, from those the Ship can fit. A
+ * mandatory family is always fitted (ADR 0006): with one ware it has no
+ * control, with several a choice with no None. An optional family is a
+ * toggle with one ware, and a choice with None with several.
+ */
+function SoftwareSection({
+  rules,
+  loadout,
+  lines,
+  onChange,
+}: {
+  rules: LoadoutRules;
+  loadout: Loadout;
+  /** The software's lines, one per ware. */
+  lines: Line[];
+  onChange: (edit: Edit) => void;
+}) {
+  const headingId = useId();
+  return (
+    <TableBody aria-labelledby={headingId}>
+      <TableRow className="hover:bg-transparent">
+        <TableHead scope="col" colSpan={5} id={headingId} className="pt-4 font-semibold">
+          Software
+        </TableHead>
+      </TableRow>
+      {rules.softwareFamilies().map((family) => {
+        const ids = new Set(family.wares.map((e) => e.id));
+        const own = lines.filter((l) => l.place?.kind === "software" && ids.has(l.place.equipment));
+        const fitted = own.find((l) => l.count > 0) ?? null;
+        const ware = fitted?.equipment ?? null;
+        // The ware the Loaded Loadout had, when the family's lines differ from it.
+        const changed = own.some((l) => l.was !== undefined);
+        const before = own.find((l) => (l.was === undefined ? l.count > 0 : l.was !== null))?.place;
+        const beforeName = family.wares.find((e) => before?.kind === "software" && e.id === before.equipment)?.name;
+        const [only] = family.wares;
+        const set = (id: string | null) => {
+          if (id !== null) onChange(rules.setSoftware(loadout, id, true));
+          else if (ware) onChange(rules.setSoftware(loadout, ware.id, false));
+        };
+        let control: ReactNode;
+        if (family.wares.length > 1) {
+          control = (
+            <EquipmentSelect
+              label={`${family.name} Equipment`}
+              options={family.wares}
+              value={ware?.id ?? null}
+              onChange={set}
+              emptyLabel={family.mandatory ? null : "None"}
+            />
+          );
+        } else if (family.mandatory) {
+          control = only!.name;
+        } else {
+          control = (
+            <label className="flex items-center gap-2">
+              <Checkbox checked={ware !== null} onCheckedChange={(checked) => set(checked ? only!.id : null)} />
+              {only!.name}
+            </label>
+          );
+        }
+        return (
+          <Row
+            key={family.id}
+            label={
+              <>
+                {family.name}
+                {family.mandatory && (
+                  <>
+                    {" "}
+                    <span className="rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">Mandatory</span>
+                  </>
+                )}
+              </>
+            }
+            equipment={control}
+            quantity={ware ? "1" : ""}
+            keyValue=""
+            price={fitted && ware ? formatCredits(fitted.price.average) : ""}
+            was={changed ? (beforeName ?? "not fitted") : undefined}
+          />
+        );
+      })}
+    </TableBody>
   );
 }
 
